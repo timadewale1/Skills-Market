@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #f97316;
+  /* Orange (buttons, highlights) */
+  --primary-dark: #ea580c;
+  --secondary: #fffdfa;
+  /* VERY faint orange (almost white) */
+  --border: #e5e7eb;
+  --muted: #6b7280;
+}
+
+html,
+body {
+  height: 100%;
+  max-width: 100%;
+    overflow-x: hidden;
+}
