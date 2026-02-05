@@ -203,7 +203,8 @@ export default function Navbar() {
 
 
           <Link href="/login">Login</Link>
-          <Button>Sign Up</Button>
+          <Button><Link href="/signup">Sign Up</Link>
+</Button>
         </div>
 
         {/* MOBILE TOGGLE */}
@@ -399,7 +400,8 @@ export default function Navbar() {
           {/* AUTH */}
           <div className="pt-4 flex flex-col gap-3">
             <Button><Link href="/login">Login</Link></Button>
-            <Button>Sign Up</Button>
+                      <Button><Link href="/signup">Sign Up</Link></Button>
+
           </div>
         </div>
       )}

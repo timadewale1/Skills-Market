@@ -50,11 +50,11 @@ export default function RootLayout({
 
 
           {/* FOOTER */}
-          <footer className="border-t" style={{ borderColor: "var(--border)" }}>
+          {/* <footer className="border-t" style={{ borderColor: "var(--border)" }}>
             <div className="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600">
               © {new Date().getFullYear()} Skills Marketplace
             </div>
-          </footer>
+          </footer> */}
         </div>
       </body>
     </html>

@@ -1,22 +1,19 @@
-type ButtonProps = {
-  children: React.ReactNode
+import React from "react"
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "outline"
-  onClick?: () => void
 }
 
-export default function Button({
-  children,
-  variant = "primary",
-  onClick,
-}: ButtonProps) {
+export default function Button({ children, variant = "primary", ...rest }: ButtonProps) {
   if (variant === "outline") {
     return (
       <button
-        onClick={onClick}
-        className="px-4 py-2 rounded-md border text-sm font-medium hover:bg-gray-50"
+        {...rest}
+        className={`px-4 py-2 rounded-md border text-sm font-medium hover:bg-gray-50 ${rest.className || ""}`.trim()}
         style={{
           borderColor: "var(--primary)",
           color: "var(--primary)",
+          ...(rest.style || {}),
         }}
       >
         {children}
@@ -26,9 +23,9 @@ export default function Button({
 
   return (
     <button
-      onClick={onClick}
-      className="px-4 py-2 rounded-md text-sm font-medium text-white hover:opacity-90"
-      style={{ backgroundColor: "var(--primary)" }}
+      {...rest}
+      className={`px-4 py-2 rounded-md text-sm font-medium text-white hover:opacity-90 ${rest.className || ""}`.trim()}
+      style={{ backgroundColor: "var(--primary)", ...(rest.style || {}) }}
     >
       {children}
     </button>
