@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import toast from "react-hot-toast"
@@ -11,7 +11,7 @@ import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
 
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore"
 import { nanoid } from "nanoid"
 import { storage } from "@/lib/firebase"
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
@@ -68,10 +68,21 @@ function cleanCsv(value: string) {
 
 export default function PostGigPage() {
   const router = useRouter()
+  const params = useSearchParams()
   const { user } = useAuth()
+
+  const editId = params.get("edit") // gigId when editing
 
   const [profile, setProfile] = useState<UserDoc | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
+
+  // editing
+  const [editing, setEditing] = useState(false)
+  const [loadingGig, setLoadingGig] = useState(false)
+  const [existingAttachments, setExistingAttachments] = useState<
+    { name: string; url: string; size?: number; contentType?: string }[]
+  >([])
+  const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([])
 
   // form
   const [title, setTitle] = useState("")
@@ -92,6 +103,7 @@ export default function PostGigPage() {
 
   const [sdgTags, setSdgTags] = useState<string[]>([])
   const [description, setDescription] = useState("")
+  const [status, setStatus] = useState<"open" | "closed" | "draft">("open")
 
   const [submitting, setSubmitting] = useState(false)
   
@@ -124,6 +136,57 @@ export default function PostGigPage() {
     }
     run()
   }, [user?.uid, router])
+
+  // load gig for editing
+  useEffect(() => {
+    const run = async () => {
+      if (!editId) return
+      setEditing(true)
+      setLoadingGig(true)
+
+      const snap = await getDoc(doc(db, "gigs", editId))
+      if (!snap.exists()) {
+        setLoadingGig(false)
+        toast.error("Gig not found")
+        router.push("/dashboard/gigs")
+        return
+      }
+
+      const d: any = snap.data()
+
+      // ✅ Owner guard
+      if (d?.clientUid !== user?.uid) {
+        setLoadingGig(false)
+        toast.error("You don't have permission to edit this gig")
+        router.push("/dashboard/gigs")
+        return
+      }
+
+      // ✅ Prefill form state
+      setTitle(d.title || "")
+      setDescription(d.description || "")
+      setWorkMode(d.workMode || "Remote")
+      setLocation(d.location || "")
+      setDuration(d.duration || "1–3 months")
+      setExperienceLevel(d.experienceLevel || "Intermediate")
+      setBudgetType(d.budgetType || "hourly")
+      setHourlyRate(d.hourlyRate ? String(d.hourlyRate) : "")
+      setFixedBudget(d.fixedBudget ? String(d.fixedBudget) : "")
+      setRequiredSkills(d.requiredSkills || [])
+      setSdgTags(d.sdgTags || [])
+      setCategoryGroup(d?.category?.group || "")
+      setCategoryItem(d?.category?.item || "")
+      setStatus(d.status || "open")
+
+      setExistingAttachments(d.attachments || [])
+      setAttachmentsToRemove([])
+
+      setLoadingGig(false)
+    }
+
+    run()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, user?.uid])
 
   // keep item list in sync with group
   const groupItems = useMemo(() => {
@@ -245,16 +308,15 @@ export default function PostGigPage() {
 
     setSubmitting(true)
     try {
-      const gigId = nanoid(14)
+      // upload new attachments (if any)
+      const gigId = editing && editId ? editId : nanoid(14)
+      const newAttachments = await uploadAttachments(gigId, user.uid)
 
-      // 1) upload attachments first
-      const attachmentRows = await uploadAttachments(gigId, user.uid)
+      // build final attachments array
+      const keptExisting = existingAttachments.filter((a) => !attachmentsToRemove.includes(a.url))
+      const finalAttachments = [...keptExisting, ...newAttachments]
 
       const payload: any = {
-        id: gigId,
-        clientUid: user.uid,
-        clientName: profile?.fullName || "",
-        clientOrgName: profile?.client?.orgName || "",
         title: title.trim(),
         category: { group: categoryGroup, item: categoryItem },
         sdgTags,
@@ -267,22 +329,39 @@ export default function PostGigPage() {
         duration,
         experienceLevel,
         description: description.trim(),
-        attachments: attachmentRows,
-        status: "open",
-        createdAt: serverTimestamp(),
+        attachments: finalAttachments,
+        status,
         updatedAt: serverTimestamp(),
       }
 
+      // UPDATE MODE
+      if (editing && editId) {
+        await updateDoc(doc(db, "gigs", editId), payload)
+        toast.success("Gig updated")
+        router.push(`/dashboard/gigs/${editId}`)
+        return
+      }
+
+      // CREATE MODE
+      const createPayload = {
+        id: gigId,
+        clientUid: user.uid,
+        clientName: profile?.fullName || "",
+        clientOrgName: profile?.client?.orgName || "",
+        ...payload,
+        createdAt: serverTimestamp(),
+      }
+
       // main gig
-      await setDoc(doc(db, "gigs", gigId), payload, { merge: true })
+      await setDoc(doc(db, "gigs", gigId), createPayload, { merge: true })
 
       // index under user
       await setDoc(
         doc(db, "users", user.uid, "gigs", gigId),
         {
           gigId,
-          title: payload.title,
-          status: "open",
+          title: createPayload.title,
+          status: createPayload.status,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         },
@@ -293,7 +372,7 @@ export default function PostGigPage() {
       router.push(`/dashboard/gigs/${gigId}`)
     } catch (e: any) {
       console.error(e)
-      toast.error(e?.message || "Failed to post gig")
+      toast.error(e?.message || "Failed to save gig")
     } finally {
       setSubmitting(false)
     }
@@ -306,19 +385,38 @@ export default function PostGigPage() {
       <div className="min-h-[calc(100vh-64px)] bg-[var(--secondary)]">
         <div className="max-w-5xl mx-auto px-4 py-8">
           <motion.div initial="hidden" animate="show" variants={fadeUp} custom={0}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Post a gig</h1>
-                <p className="text-gray-600 mt-2">
-                  Create an SDG-aligned gig and start receiving proposals.
-                </p>
-              </div>
+            {loadingGig ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6 text-sm text-gray-600">Loading gig for editing...</CardContent>
+              </Card>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+                    {editing ? "Edit gig" : "Post a gig"}
+                  </h1>
+                  <p className="text-gray-600 mt-2">
+                    {editing ? "Update details and manage attachments." : "Create an SDG-aligned gig and start receiving proposals."}
+                  </p>
+                </div>
 
-              <div className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full border bg-white">
-                <Sparkles size={16} className="text-[var(--primary)]" />
-                <span className="text-gray-700">Upwork-style • SDG-first</span>
+                {editing && (
+                  <Link
+                    href={`/dashboard/gigs/${editId}`}
+                    className="text-sm font-extrabold text-gray-700 hover:text-[var(--primary)] transition"
+                  >
+                    Back to gig →
+                  </Link>
+                )}
+
+                {!editing && (
+                  <div className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full border bg-white">
+                    <Sparkles size={16} className="text-[var(--primary)]" />
+                    <span className="text-gray-700">Upwork-style • SDG-first</span>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </motion.div>
 
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -589,6 +687,62 @@ export default function PostGigPage() {
                       <Label>Reference materials (optional)</Label>
                       <span className="text-xs text-gray-500 font-semibold">Up to 8 files • 15MB each</span>
                     </div>
+
+                    {editing && existingAttachments.length > 0 && (
+                      <div className="mt-3 space-y-2 mb-4">
+                        <div className="text-sm font-extrabold text-gray-900">Existing attachments</div>
+
+                        <div className="space-y-2">
+                          {existingAttachments.map((a) => {
+                            const removing = attachmentsToRemove.includes(a.url)
+                            return (
+                              <div
+                                key={a.url}
+                                className={`rounded-2xl border bg-white p-4 flex items-center justify-between gap-3 ${
+                                  removing ? "opacity-60" : ""
+                                }`}
+                              >
+                                <div className="min-w-0">
+                                  <div className="font-extrabold text-sm truncate">{a.name}</div>
+                                  <div className="text-xs text-gray-500 font-semibold">{a.contentType || "file"}</div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <a
+                                    href={a.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-sm font-extrabold text-[var(--primary)] hover:underline"
+                                  >
+                                    Open
+                                  </a>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAttachmentsToRemove((prev) =>
+                                        prev.includes(a.url) ? prev.filter((u) => u !== a.url) : [...prev, a.url]
+                                      )
+                                    }}
+                                    className={`text-sm font-extrabold ${
+                                      removing ? "text-gray-700" : "text-red-600"
+                                    }`}
+                                  >
+                                    {removing ? "Undo" : "Remove"}
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {attachmentsToRemove.length > 0 && (
+                          <div className="text-xs font-semibold text-gray-600">
+                            {attachmentsToRemove.length} attachment(s) will be removed when you save.
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mt-2 rounded-2xl border bg-white p-4">
                       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
