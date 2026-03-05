@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic"
 
 import { useEffect, useMemo, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import toast from "react-hot-toast"
@@ -70,10 +70,18 @@ function cleanCsv(value: string) {
 
 export default function PostGigPage() {
   const router = useRouter()
-  const params = useSearchParams()
   const { user } = useAuth()
 
-  const editId = params.get("edit") // gigId when editing
+  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(null)
+  useEffect(() => {
+    try {
+      setSearchParams(new URLSearchParams(window.location.search))
+    } catch (e) {
+      setSearchParams(null)
+    }
+  }, [])
+
+  const editId = searchParams?.get("edit") || null // gigId when editing
 
   const [profile, setProfile] = useState<UserDoc | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)

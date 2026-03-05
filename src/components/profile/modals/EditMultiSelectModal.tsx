@@ -67,17 +67,16 @@ export default function EditMultiSelectModal({
                 {items.map((item) => {
                   const active = selected.includes(item)
                   return (
-                    <button
+                    <label
                       key={item}
-                      type="button"
                       onClick={() => toggleItem(item)}
-                      className="w-full flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-orange-50 transition text-left"
+                      className="w-full flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-orange-50 transition cursor-pointer"
                     >
                       <Checkbox checked={active} />
                       <span className={`text-sm font-semibold ${active ? "text-[var(--primary)]" : "text-gray-800"}`}>
                         {item}
                       </span>
-                    </button>
+                    </label>
                   )
                 })}
               </div>

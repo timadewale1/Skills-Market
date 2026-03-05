@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
@@ -8,7 +8,7 @@ import toast from "react-hot-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Button from "@/components/ui/Button"
-import { BadgeCheck, MapPin, Pencil, Plus } from "lucide-react"
+import { BadgeCheck, MapPin, Pencil, Plus, Star } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,7 @@ import EditTextModal from "@/components/profile/modals/EditTextModal"
 import { hireCategories } from "@/data/navCategories"
 import { SDGS } from "@/data/sdgs"
 import { syncPublicProfile, slugifyName } from "@/lib/profileSync"
+import ReviewsList from "../reviews/ReviewsList"
 
 const ALL_CATEGORY_ITEMS = hireCategories.flatMap((c) => c.items)
 
@@ -61,6 +62,10 @@ export default function ClientProfilePage() {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([])
   const [portfolioMode, setPortfolioMode] = useState<"add" | "edit">("add")
   const [portfolioEditing, setPortfolioEditing] = useState<PortfolioItem | null>(null)
+
+  // ratings for client profile
+  const ratingAvg = useMemo(() => Number(userDoc?.rating?.avg || 0), [userDoc])
+  const ratingCount = useMemo(() => Number(userDoc?.rating?.count || 0), [userDoc])
   const [addPortfolioOpen, setAddPortfolioOpen] = useState(false)
   const [viewPortfolioOpen, setViewPortfolioOpen] = useState(false)
   const [activePortfolio, setActivePortfolio] = useState<PortfolioItem | null>(null)
@@ -106,7 +111,7 @@ export default function ClientProfilePage() {
       fullName: userDoc.fullName,
       slug: slugifyName(userDoc.fullName),
       location: userDoc.location || "",
-      sdgTags: userDoc.sdgTags || [],
+      sdgTags: selectedSdgs,
       profileComplete: !!userDoc.profileComplete,
 
       orgProfile: {
@@ -116,7 +121,7 @@ export default function ClientProfilePage() {
         contactPhone: userDoc?.orgProfile?.contactPhone || "",
         portfolio: userDoc?.orgProfile?.portfolio || [],
         socials: socialsFromUser,
-        categories: userDoc?.orgProfile?.categories || categories,
+        categories: categories,
         industries: userDoc?.orgProfile?.industries || [],
       },
 
@@ -124,7 +129,7 @@ export default function ClientProfilePage() {
         photoURL: photo,
         portfolio: userDoc?.orgProfile?.portfolio || [],
         socials: socialsFromUser,
-        categories: userDoc?.orgProfile?.categories || categories,
+        categories: categories,
       },
 
       verification: userDoc?.verification || { status: "not_submitted" },
@@ -232,6 +237,14 @@ export default function ClientProfilePage() {
                 <MapPin size={14} /> {location}
               </div>
 
+              <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                <Star size={14} className="text-[var(--primary)]" />
+                <span className="font-semibold">
+                  {ratingAvg ? ratingAvg.toFixed(1) : "—"}
+                </span>
+                <span>({ratingCount || 0})</span>
+              </div>
+
               <div className="text-sm text-gray-600 mt-2">
                 Your organization profile is what talent will see when applying to your gigs.
               </div>
@@ -249,6 +262,28 @@ export default function ClientProfilePage() {
             </div>
           )}
         </motion.div>
+
+        {/* reviews card for this client profile */}
+        {user?.uid && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            className="mt-6"
+          >
+            <Card className="rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-base font-extrabold">Reviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ReviewsList
+                  userId={user.uid}
+                  emptyMessage="No review available for this client yet."
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {!showTabs && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.08 }} className="mt-6">

@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Navbar from "@/components/layout/Navbar"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useEffect, useState } from "react"
@@ -16,13 +16,20 @@ import PaginatedCard from "@/components/talent/PaginatedList"
 
 
 export default function SearchPage() {
-  const params = useSearchParams()
   const router = useRouter()
+  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(null)
+  useEffect(() => {
+    try {
+      setSearchParams(new URLSearchParams(window.location.search))
+    } catch (e) {
+      setSearchParams(null)
+    }
+  }, [])
 
   const { user } = useAuth()
 
-  const q = params.get("q") || ""
-  const type = params.get("type") || "talent"
+  const q = searchParams?.get("q") || ""
+  const type = searchParams?.get("type") || "talent"
 
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)

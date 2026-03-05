@@ -54,9 +54,10 @@ export default function AuthNavbar() {
         if (!alive) return
         setFullName(String(data?.fullName || ""))
         setPhotoUrl(String(data?.photoUrl || "")) // we’ll set later on profile page
-      } catch {
-        // ignore
-      }
+      }  catch (e) {
+  console.error("AuthNavbar users/{uid} read failed:", e)
+}
+
     }
 
     run()

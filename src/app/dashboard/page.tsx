@@ -159,6 +159,12 @@ export default function DashboardPage() {
           href: "/search?type=talent",
           icon: Search,
         },
+        {
+          title: "Saved talent",
+          desc: "View the talent you've bookmarked.",
+          href: "/dashboard/saved-talents",
+          icon: Users,
+        },
       ]
     }
     return [

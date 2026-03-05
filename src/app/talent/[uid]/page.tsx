@@ -6,12 +6,17 @@ import Navbar from "@/components/layout/Navbar"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, limit, query, where } from "firebase/firestore"
+import { collection, getDocs, getDoc, limit, query, where, addDoc, setDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore"
+import { useRouter } from "next/navigation"
+import toast from "react-hot-toast"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { ensureThread } from "@/lib/chat"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { MapPin, Star, ExternalLink } from "lucide-react"
+import ReviewsList from "@/components/reviews/ReviewsList"
 
 type PublicProfileBlock = {
   photoURL?: string
@@ -169,6 +174,128 @@ export default function PublicTalentProfilePage() {
 
   const socials = data?.publicProfile?.socials || {}
 
+  // load current user's doc for role check
+  const [myUserDoc, setMyUserDoc] = useState<any>(null)
+  useEffect(() => {
+    if (!user?.uid) return
+    getDoc(doc(db, "users", user.uid))
+      .then((snap) => {
+        if (snap.exists()) setMyUserDoc(snap.data())
+      })
+      .catch(() => {})
+  }, [user?.uid])
+
+  const userRole = myUserDoc?.role
+
+  // Invite & Save functionality (clients only)
+  const router = useRouter()
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [clientGigs, setClientGigs] = useState<any[]>([])
+  const [loadingGigs, setLoadingGigs] = useState(false)
+  const [selectedGigId, setSelectedGigId] = useState<string | null>(null)
+  const [sendingInvite, setSendingInvite] = useState(false)
+
+  // track whether current client has saved this talent
+  const [saved, setSaved] = useState(false)
+  const [unsaveOpen, setUnsaveOpen] = useState(false)
+
+  useEffect(() => {
+    if (!user?.uid || userRole !== "client" || !data?.uid) return
+    getDoc(doc(db, `users/${user.uid}/savedTalents/${data.uid}`))
+      .then((snap) => setSaved(snap.exists()))
+      .catch(() => {})
+  }, [user?.uid, userRole, data?.uid])
+
+  const openInviteModal = async () => {
+    if (!user?.uid || userRole !== "client")
+      return toast.error("Login as a client to continue")
+
+    // load client's gigs
+    setLoadingGigs(true)
+    try {
+      const q = query(collection(db, "gigs"), where("clientUid", "==", user.uid))
+      const snap = await getDocs(q)
+      const gigs: any[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
+      setClientGigs(gigs)
+      setInviteOpen(true)
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load your gigs")
+    } finally {
+      setLoadingGigs(false)
+    }
+  }
+
+  const sendInvite = async () => {
+    if (!user?.uid || !selectedGigId || !data) return
+    setSendingInvite(true)
+    try {
+      // fetch gig
+      const gigSnap = await getDocs(query(collection(db, "gigs"), where("id", "==", selectedGigId), limit(1)))
+      // fallback: read by id
+      // ensure thread exists and add initial message
+      const clientPP = await getDocs(query(collection(db, "publicProfiles"), where("uid", "==", user.uid), limit(1)))
+      const talentPP = await getDocs(query(collection(db, "publicProfiles"), where("uid", "==", data.uid), limit(1)))
+
+      const clientName = clientPP && !clientPP.empty ? (clientPP.docs[0].data() as any).fullName : "Client"
+      const gigTitle = (clientGigs.find((g) => g.id === selectedGigId)?.title) || "Gig"
+
+      const threadId = await ensureThread({
+        gigId: selectedGigId,
+        gigTitle,
+        clientUid: user.uid,
+        clientName,
+        talentUid: data.uid,
+        talentName: data.fullName,
+      })
+
+      // add initial message
+      const initialText = `Hello ${data.fullName}, you have been invited to apply for ${gigTitle} by ${clientName}. Please indicate your interest in this chat.`
+      await addDoc(collection(db, "threads", threadId, "messages"), {
+        fromUid: user.uid,
+        text: initialText,
+        // attach meta so the messages UI can render a separate "View gig" button
+        meta: { type: "gig", gigId: selectedGigId },
+        createdAt: serverTimestamp(),
+      })
+
+      setInviteOpen(false)
+      router.push(`/dashboard/messages/${threadId}`)
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to send invite")
+    } finally {
+      setSendingInvite(false)
+    }
+  }
+
+  const unsaveTalent = async () => {
+    if (!user?.uid || userRole !== "client" || !data) return
+    try {
+      await deleteDoc(doc(db, `users/${user.uid}/savedTalents/${data.uid}`))
+      setSaved(false)
+      toast.success("Talent removed from saved")
+      setUnsaveOpen(false)
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to unsave talent")
+    }
+  }
+
+  const saveTalent = async () => {
+    if (!user?.uid || userRole !== "client")
+      return toast.error("Login as a client to continue")
+
+    try {
+      await setDoc(doc(db, `users/${user.uid}/savedTalents/${data!.uid}`), {
+        talentUid: data!.uid,
+        fullName: data!.fullName,
+        photoURL: data!.publicProfile?.photoURL || null,
+        createdAt: serverTimestamp(),
+      })
+      setSaved(true)
+      toast.success("Talent saved")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save talent")
+    }
+  }
   return (
     <div className="min-h-screen bg-[var(--secondary)]">
       {TopNav}
@@ -257,12 +384,27 @@ export default function PublicTalentProfilePage() {
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 gap-2">
-                        <button className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition">
-                          Invite to apply (coming soon)
+                        <button
+                          onClick={openInviteModal}
+                          className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition"
+                        >
+                          Invite to apply
                         </button>
-                        <button className="w-full rounded-2xl border bg-white font-extrabold py-2 hover:shadow-sm transition">
-                          Save talent (coming soon)
-                        </button>
+                        {saved ? (
+                          <button
+                            onClick={() => setUnsaveOpen(true)}
+                            className="w-full rounded-2xl border bg-white font-extrabold py-2 hover:shadow-sm transition text-red-600"
+                          >
+                            Unsave talent
+                          </button>
+                        ) : (
+                          <button
+                            onClick={saveTalent}
+                            className="w-full rounded-2xl border bg-white font-extrabold py-2 hover:shadow-sm transition"
+                          >
+                            Save talent
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -335,6 +477,58 @@ export default function PublicTalentProfilePage() {
                 </CardContent>
               </Card>
             </motion.div>
+
+            {/* Invite modal */}
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+              <DialogContent className="sm:max-w-2xl rounded-2xl p-6">
+                <DialogTitle className="text-xl font-extrabold">Invite talent to apply</DialogTitle>
+
+                <div className="mt-4">
+                  <div className="text-sm text-gray-600 mb-3">Select one of your open gigs to invite this talent to apply for.</div>
+
+                  {loadingGigs ? (
+                    <div className="text-sm text-gray-600">Loading your gigs…</div>
+                  ) : clientGigs.length === 0 ? (
+                    <div className="text-sm text-gray-600">No gigs found. Create a gig first on your dashboard.</div>
+                  ) : (
+                    <div className="space-y-2 max-h-56 overflow-auto">
+                      {clientGigs.map((g) => (
+                        <label key={g.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50">
+                          <input type="radio" name="selectedGig" value={g.id} checked={selectedGigId === g.id} onChange={() => setSelectedGigId(g.id)} />
+                          <div>
+                            <div className="font-semibold">{g.title}</div>
+                            <div className="text-xs text-gray-500">{g.location || "—"}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button onClick={() => setInviteOpen(false)} className="rounded-md px-4 py-2 border">Cancel</button>
+                    <button onClick={sendInvite} disabled={!selectedGigId || sendingInvite} className="rounded-md px-4 py-2 bg-[var(--primary)] text-white font-semibold">
+                      {sendingInvite ? "Sending…" : "Send invitation"}
+                    </button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Unsave confirmation modal */}
+            <Dialog open={unsaveOpen} onOpenChange={setUnsaveOpen}>
+              <DialogContent className="sm:max-w-md rounded-2xl p-6">
+                <DialogTitle className="text-xl font-extrabold">Remove from saved talents?</DialogTitle>
+                <div className="mt-4 text-sm text-gray-600">
+                  Are you sure you want to remove this talent from your saved list?
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => setUnsaveOpen(false)} className="rounded-md px-4 py-2 border">Cancel</button>
+                  <button onClick={unsaveTalent} className="rounded-md px-4 py-2 bg-red-600 text-white font-semibold">
+                    Unsave
+                  </button>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* MAIN */}
             <div className="lg:col-span-2 space-y-4">
@@ -596,6 +790,24 @@ export default function PublicTalentProfilePage() {
                   </Card>
                 </motion.div>
               )}
+
+              {/* ✅ Reviews */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.21 }}
+              >
+                <Card className="rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-base font-extrabold">
+                      Reviews
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {data?.uid && <ReviewsList userId={data.uid} />}
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
           </div>
         )}
@@ -603,3 +815,4 @@ export default function PublicTalentProfilePage() {
     </div>
   )
 }
+

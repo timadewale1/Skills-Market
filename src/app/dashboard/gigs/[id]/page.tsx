@@ -6,7 +6,14 @@ import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore"
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import toast from "react-hot-toast"
@@ -29,9 +36,9 @@ import {
   Pencil,
   Lock,
   Unlock,
+  Users,
 } from "lucide-react"
 
-// shadcn alert dialog
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -62,7 +69,7 @@ type Gig = {
   attachments?: { name: string; url: string; size?: number; contentType?: string }[]
   clientName?: string
   clientOrgName?: string
-  clientUid?: string // ✅ needed to show owner actions
+  clientUid?: string
 }
 
 const fadeUp = {
@@ -89,6 +96,9 @@ export default function GigDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [mutating, setMutating] = useState(false)
 
+  const [proposalCount, setProposalCount] = useState<number>(0)
+  const [countLoading, setCountLoading] = useState(false)
+
   useEffect(() => {
     const run = async () => {
       if (!id) return
@@ -96,6 +106,23 @@ export default function GigDetailsPage() {
       const snap = await getDoc(doc(db, "gigs", id))
       setGig(snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as Gig) : null)
       setLoading(false)
+    }
+    run()
+  }, [id])
+
+  // proposal count (simple + reliable)
+  useEffect(() => {
+    const run = async () => {
+      if (!id) return
+      setCountLoading(true)
+      try {
+        const snap = await getDocs(collection(db, "gigs", id, "proposals"))
+        setProposalCount(snap.size)
+      } catch (e) {
+        // ignore; permissions/index etc
+      } finally {
+        setCountLoading(false)
+      }
     }
     run()
   }, [id])
@@ -118,8 +145,6 @@ export default function GigDetailsPage() {
     setMutating(true)
 
     const nextStatus: "open" | "closed" = gig.status === "open" ? "closed" : "open"
-
-    // ✅ optimistic UI
     const prev = gig.status
     setGig((g) => (g ? { ...g, status: nextStatus } : g))
 
@@ -131,7 +156,6 @@ export default function GigDetailsPage() {
       toast.success(nextStatus === "closed" ? "Gig closed" : "Gig reopened")
     } catch (e: any) {
       console.error(e)
-      // rollback
       setGig((g) => (g ? { ...g, status: prev } : g))
       toast.error(e?.message || "Failed to update gig status")
     } finally {
@@ -155,7 +179,6 @@ export default function GigDetailsPage() {
             </Card>
           ) : (
             <>
-              {/* Top header */}
               <motion.div initial="hidden" animate="show" variants={fadeUp} custom={0} className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <button
@@ -175,14 +198,10 @@ export default function GigDetailsPage() {
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight truncate">
-                        {gig.title}
-                      </h1>
+                      <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight truncate">{gig.title}</h1>
                       <Badge
                         className={`rounded-full ${
-                          gig.status === "open"
-                            ? "bg-[var(--primary)] text-white"
-                            : "bg-gray-200 text-gray-700"
+                          gig.status === "open" ? "bg-[var(--primary)] text-white" : "bg-gray-200 text-gray-700"
                         }`}
                       >
                         {gig.status === "open" ? "Open" : "Closed"}
@@ -211,7 +230,6 @@ export default function GigDetailsPage() {
                     </div>
                   </div>
 
-                  {/* mini trust pill */}
                   <div className="md:w-[280px]">
                     <div className="rounded-2xl border bg-white px-4 py-3 text-sm text-gray-700 flex items-center gap-3">
                       <div className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center">
@@ -226,11 +244,8 @@ export default function GigDetailsPage() {
                 </div>
               </motion.div>
 
-              {/* Body */}
               <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* MAIN */}
                 <div className="lg:col-span-2 space-y-4">
-                  {/* Description */}
                   <motion.div initial="hidden" animate="show" variants={fadeUp} custom={1}>
                     <Card className="rounded-2xl">
                       <CardHeader>
@@ -242,7 +257,6 @@ export default function GigDetailsPage() {
                     </Card>
                   </motion.div>
 
-                  {/* Skills */}
                   <motion.div initial="hidden" animate="show" variants={fadeUp} custom={2}>
                     <Card className="rounded-2xl">
                       <CardHeader>
@@ -265,7 +279,6 @@ export default function GigDetailsPage() {
                     </Card>
                   </motion.div>
 
-                  {/* Attachments */}
                   {!!gig.attachments?.length && (
                     <motion.div initial="hidden" animate="show" variants={fadeUp} custom={3}>
                       <Card className="rounded-2xl">
@@ -286,17 +299,11 @@ export default function GigDetailsPage() {
                                   <Download size={18} className="text-[var(--primary)]" />
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="font-extrabold text-sm text-gray-900 truncate">
-                                    {a.name}
-                                  </div>
-                                  <div className="text-xs text-gray-500 font-semibold">
-                                    {a.contentType || "file"}
-                                  </div>
+                                  <div className="font-extrabold text-sm text-gray-900 truncate">{a.name}</div>
+                                  <div className="text-xs text-gray-500 font-semibold">{a.contentType || "file"}</div>
                                 </div>
                               </div>
-                              <span className="text-sm font-extrabold text-[var(--primary)] group-hover:underline">
-                                Open
-                              </span>
+                              <span className="text-sm font-extrabold text-[var(--primary)] group-hover:underline">Open</span>
                             </a>
                           ))}
                         </CardContent>
@@ -305,9 +312,7 @@ export default function GigDetailsPage() {
                   )}
                 </div>
 
-                {/* SIDEBAR */}
                 <div className="space-y-4">
-                  {/* Summary */}
                   <motion.div initial="hidden" animate="show" variants={fadeUp} custom={2}>
                     <Card className="rounded-2xl">
                       <CardHeader>
@@ -339,17 +344,24 @@ export default function GigDetailsPage() {
 
                         <Separator />
 
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500 font-semibold">Proposals</span>
+                          <span className="font-extrabold inline-flex items-center gap-2">
+                            <Users size={14} className="text-[var(--primary)]" />
+                            {countLoading ? "…" : proposalCount}
+                          </span>
+                        </div>
+
+                        <Separator />
+
                         <div className="space-y-2">
                           <div className="text-gray-500 font-semibold">Client</div>
-                          <div className="font-extrabold">
-                            {gig.clientOrgName || gig.clientName || "—"}
-                          </div>
+                          <div className="font-extrabold">{gig.clientOrgName || gig.clientName || "—"}</div>
                         </div>
                       </CardContent>
                     </Card>
                   </motion.div>
 
-                  {/* SDGs */}
                   <motion.div initial="hidden" animate="show" variants={fadeUp} custom={3}>
                     <Card className="rounded-2xl">
                       <CardHeader>
@@ -375,21 +387,25 @@ export default function GigDetailsPage() {
                     </Card>
                   </motion.div>
 
-                  {/* Actions */}
                   <motion.div initial="hidden" animate="show" variants={fadeUp} custom={4}>
                     <Card className="rounded-2xl">
                       <CardContent className="p-6 space-y-3">
-                        <button className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition">
-                          View proposals (coming soon)
-                        </button>
-
-                        {/* ✅ Owner actions */}
                         {isOwner ? (
+                          <Link href={`/dashboard/gigs/${gig.id}/proposals`} className="w-full block">
+                            <button className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition inline-flex items-center justify-center gap-2">
+                              <Users size={16} />
+                              View proposals
+                            </button>
+                          </Link>
+                        ) : (
+                          <div className="text-xs text-gray-500 font-semibold">
+                            Proposals are visible only to the gig owner.
+                          </div>
+                        )}
+
+                        {isOwner && (
                           <>
-                            <Link
-                              href={`/dashboard/post-gig?edit=${gig.id}`}
-                              className="w-full block"
-                            >
+                            <Link href={`/dashboard/post-gig?edit=${gig.id}`} className="w-full block">
                               <Button variant="outline" className="w-full">
                                 <span className="inline-flex items-center gap-2 font-extrabold">
                                   <Pencil size={16} />
@@ -403,9 +419,7 @@ export default function GigDetailsPage() {
                                 <button
                                   disabled={mutating}
                                   className={`w-full rounded-2xl border bg-white font-extrabold py-2 hover:shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 ${
-                                    gig.status === "open"
-                                      ? "text-gray-900"
-                                      : "text-[var(--primary)]"
+                                    gig.status === "open" ? "text-gray-900" : "text-[var(--primary)]"
                                   }`}
                                 >
                                   {gig.status === "open" ? (
@@ -447,10 +461,6 @@ export default function GigDetailsPage() {
                               </AlertDialogContent>
                             </AlertDialog>
                           </>
-                        ) : (
-                          <div className="text-xs text-gray-500 font-semibold">
-                            Only the gig owner can edit or close this gig.
-                          </div>
                         )}
 
                         <Link

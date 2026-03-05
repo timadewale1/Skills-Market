@@ -1,7 +1,7 @@
 import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import { Toaster } from "react-hot-toast"
-import Navbar from "@/components/layout/Navbar"
+import NavbarWrapper from "@/components/layout/NavbarWrapper"
 import { Plus_Jakarta_Sans } from "next/font/google"
 import { SearchProvider } from "@/context/SearchContext"
 
@@ -23,39 +23,37 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-<body className={`${jakarta.className} bg-white text-gray-900 min-h-screen`}>
-<Toaster
-  position="top-right"
-  toastOptions={{
-    style: {
-      fontSize: "14px",
-    },
-  }}
-/>
+      <body className={`${jakarta.className} bg-white text-gray-900 min-h-screen`}>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              fontSize: "14px",
+            },
+          }}
+        />
+        <AuthProvider>
+          <SearchProvider>
+            <div className="min-h-screen flex flex-col">
+              {/* HEADER */}
+              <header className="border-b" style={{ borderColor: "var(--border)" }}>
+                <NavbarWrapper />
+              </header>
 
-        <div className="min-h-screen flex flex-col">
-          {/* HEADER */}
-          <header className="border-b" style={{ borderColor: "var(--border)" }}>
-            
-            {/* <Navbar /> */}
-          </header>
+              {/* MAIN */}
+              <main className="flex-1 bg-[var(--secondary)] overflow-x-hidden">
+                {children}
+              </main>
 
-          {/* MAIN */}
-         <main className="flex-1 bg-[var(--secondary)] overflow-x-hidden">
-  <SearchProvider>
-  <AuthProvider>{children}</AuthProvider>
-</SearchProvider>
-
-</main>
-
-
-          {/* FOOTER */}
-          {/* <footer className="border-t" style={{ borderColor: "var(--border)" }}>
-            <div className="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600">
-              © {new Date().getFullYear()} Skills Marketplace
+              {/* FOOTER */}
+              {/* <footer className="border-t" style={{ borderColor: "var(--border)" }}>
+                <div className="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600">
+                  © {new Date().getFullYear()} Skills Marketplace
+                </div>
+              </footer> */}
             </div>
-          </footer> */}
-        </div>
+          </SearchProvider>
+        </AuthProvider>
       </body>
     </html>
   )

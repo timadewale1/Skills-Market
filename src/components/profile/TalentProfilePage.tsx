@@ -8,7 +8,8 @@ import toast from "react-hot-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Button from "@/components/ui/Button"
-import { BadgeCheck, MapPin, Pencil, Plus } from "lucide-react"
+import { BadgeCheck, MapPin, Pencil, Plus, Star } from "lucide-react"
+import ReviewsList from "../reviews/ReviewsList"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -88,6 +89,10 @@ export default function TalentProfilePage() {
   const [location, setLocation] = useState("")
   const [photoUrl, setPhotoUrl] = useState("")
   const [verified, setVerified] = useState(false)
+
+  // ratings for talent profile
+  const ratingAvg = useMemo(() => Number(userDoc?.rating?.avg || 0), [userDoc])
+  const ratingCount = useMemo(() => Number(userDoc?.rating?.count || 0), [userDoc])
 
   // from onboarding
   const [roleTitle, setRoleTitle] = useState("—")
@@ -403,6 +408,14 @@ const addEmptyEmployment = () => ({
                 {location || "—"}
               </div>
 
+              <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                <Star size={14} className="text-[var(--primary)]" />
+                <span className="font-semibold">
+                  {ratingAvg ? ratingAvg.toFixed(1) : "—"}
+                </span>
+                <span>({ratingCount || 0})</span>
+              </div>
+
               <div className="text-sm text-gray-600 mt-2">{publicHint}</div>
             </div>
           </div>
@@ -420,6 +433,28 @@ const addEmptyEmployment = () => ({
             )}
           </div>
         </motion.div>
+
+        {/* review card for this talent profile */}
+        {user?.uid && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            className="mt-6"
+          >
+            <Card className="rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-base font-extrabold">Reviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ReviewsList
+                  userId={user.uid}
+                  emptyMessage="No review available for this talent yet."
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* COLLAPSED */}
         {!showTabs && (

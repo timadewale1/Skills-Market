@@ -1,0 +1,339 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+    function isGigOwner() { return signedIn() && resource.data.clientUid == request.auth.uid; }
+    
+    
+     // Allow Storage rules to read workspace docs (for isTalent() check)
+    match /workspaces/{workspaceId} {
+      allow read: if request.auth != null;
+    }
+
+    // PRIVATE user doc + subcollections
+    
+    match /users/{uid} {
+      allow read, write: if isMe(uid);
+
+      // user gigs index (client dashboard list)
+      match /gigs/{gigId} {
+        allow read, write: if isMe(uid);
+      }
+
+      // talent saved gigs
+      match /savedGigs/{gigId} {
+        allow read, write: if isMe(uid);
+      }
+
+      // talent saved talents (bookmarks saved by clients)
+      match /savedTalents/{talentId} {
+        allow read, write: if isMe(uid);
+      }
+
+      // talent proposals index
+      match /proposals/{gigId} {
+        allow read, write: if isMe(uid);
+      }
+    }
+
+    // PUBLIC profiles (talent + client)
+    match /publicProfiles/{uid} {
+      allow read: if true;
+      allow create, update: if isMe(uid);
+      allow delete: if false;
+    }
+
+    // GIGS
+   // GIGS
+match /gigs/{gigId} {
+  allow read: if request.auth != null;
+
+  allow create: if request.auth != null
+    && request.resource.data.clientUid == request.auth.uid;
+
+  allow update, delete: if request.auth != null
+    && resource.data.clientUid == request.auth.uid;
+
+  // PROPOSALS (subcollection)
+  match /proposals/{proposalId} {
+    // Talent creates their own proposal doc (we use {talentUid} as id)
+    allow create: if request.auth != null
+      && request.resource.data.talentUid == request.auth.uid;
+
+    // Talent can read their own; client owner can read all proposals for this gig
+    allow read: if request.auth != null
+      && (
+        resource.data.talentUid == request.auth.uid
+        || get(/databases/$(database)/documents/gigs/$(gigId)).data.clientUid == request.auth.uid
+      );
+
+    // Updates:
+    // - Client owner can update (shortlist/accept/reject, viewedAt, etc)
+    // - Talent can update ONLY if client has not viewed it yet (viewedAt == null)
+    allow update: if request.auth != null
+      && (
+        get(/databases/$(database)/documents/gigs/$(gigId)).data.clientUid == request.auth.uid
+        || (
+          resource.data.talentUid == request.auth.uid
+          && resource.data.viewedAt == null
+        )
+      );
+
+    // No deletes for now (optional)
+    allow delete: if false;
+  }
+}
+
+// Talent proposal index
+match /users/{uid}/proposals/{proposalId} {
+  allow read, write: if request.auth != null && request.auth.uid == uid;
+}
+
+match /threads/{threadId} {
+
+  function signedIn() { return request.auth != null; }
+  function isParticipant() {
+    return signedIn() && (request.auth.uid in resource.data.participants);
+  }
+
+  // 🔒 READ: any participant can read the thread
+  allow read: if isParticipant();
+
+  // ✅ CREATE: enforce shape
+  allow create: if signedIn()
+    && request.resource.data.type == "thread"
+    && request.resource.data.schemaVersion == 1
+    && request.resource.data.threadId is string
+    && request.resource.data.gigId is string
+    && request.resource.data.gigTitle is string
+
+    && request.resource.data.participants is list
+    && request.resource.data.participants.size() == 2
+    && request.auth.uid in request.resource.data.participants
+
+    && request.resource.data.clientUid is string
+    && request.resource.data.talentUid is string
+    && request.resource.data.clientUid in request.resource.data.participants
+    && request.resource.data.talentUid in request.resource.data.participants
+
+    // allow serverTimestamp() by only requiring presence
+    && request.resource.data.createdAt != null
+    && request.resource.data.updatedAt != null;
+
+  // 🔐 UPDATE: participant can update ONLY mutable fields (lock the identity fields)
+  allow update: if isParticipant()
+    // keep identity/ownership fields immutable
+    && request.resource.data.type == resource.data.type
+    && request.resource.data.schemaVersion == resource.data.schemaVersion
+    && request.resource.data.threadId == resource.data.threadId
+    && request.resource.data.gigId == resource.data.gigId
+    && request.resource.data.clientUid == resource.data.clientUid
+    && request.resource.data.talentUid == resource.data.talentUid
+    && request.resource.data.participants == resource.data.participants
+    // allow serverTimestamp()
+    && request.resource.data.updatedAt != null;
+
+  allow delete: if false;
+
+  match /messages/{messageId} {
+    allow read: if signedIn()
+      && (request.auth.uid in get(/databases/$(database)/documents/threads/$(threadId)).data.participants);
+
+    allow create: if signedIn()
+      && (request.auth.uid in get(/databases/$(database)/documents/threads/$(threadId)).data.participants)
+      && request.resource.data.fromUid == request.auth.uid
+      && request.resource.data.text is string
+      // allow serverTimestamp()
+      && request.resource.data.createdAt != null;
+
+    allow update, delete: if false;
+  }
+
+  match /agreement/{agreementId} {
+
+  function signedIn() { return request.auth != null; }
+
+  function thread() {
+    return get(/databases/$(database)/documents/threads/$(threadId)).data;
+  }
+
+  function isParticipant() {
+    return signedIn() && (request.auth.uid in thread().participants);
+  }
+
+  function isClient() {
+    return signedIn() && request.auth.uid == thread().clientUid;
+  }
+
+  function isTalent() {
+    return signedIn() && request.auth.uid == thread().talentUid;
+  }
+
+  allow read: if isParticipant();
+
+  // Client creates the initial draft (usually "current")
+  allow create: if isClient()
+    && request.resource.data.status == "draft"
+    && request.resource.data.terms is map
+    && request.resource.data.clientSignature == null
+    && request.resource.data.talentSignature == null
+    && request.resource.data.updatedAt != null;
+
+  allow update: if isParticipant()
+    && resource.data.terms is map
+    && request.resource.data.updatedAt != null
+    && (
+      // ✅ CLIENT PATHS
+      (
+        isClient()
+        && (
+          // draft -> draft (editing terms)
+          (resource.data.status == "draft" && request.resource.data.status == "draft")
+          ||
+          // draft -> sent_to_talent (client signs & sends)
+          (resource.data.status == "draft" && request.resource.data.status == "sent_to_talent")
+          ||
+          // sent_to_talent -> cancelled (optional)
+          (resource.data.status == "sent_to_talent" && request.resource.data.status == "cancelled")
+          ||
+          // talent_declined -> draft (client revises & resend flow)
+          (resource.data.status == "talent_declined" && request.resource.data.status == "draft")
+        )
+        // client controls their signature; can also set pdfUrl
+        && request.resource.data.clientSignature != null
+      )
+      ||
+      // ✅ TALENT PATHS
+      (
+        isTalent()
+        && (
+          // sent_to_talent -> fully_signed (talent signs)
+          (resource.data.status == "sent_to_talent" && request.resource.data.status == "fully_signed")
+          ||
+          // sent_to_talent -> talent_declined (talent declines)
+          (resource.data.status == "sent_to_talent" && request.resource.data.status == "talent_declined")
+        )
+        // talent must set their signature when fully signing; can also set pdfUrl
+        && (
+          request.resource.data.status != "fully_signed"
+          || request.resource.data.talentSignature != null
+        )
+      )
+    );
+
+  allow delete: if false;
+}
+}
+
+// ===== WALLETS =====
+    match /wallets/{uid} {
+      allow read, write: if isMe(uid);
+
+      match /transactions/{txId} {
+        allow read: if isMe(uid);
+        allow write: if false;  // Server only
+      }
+
+      match /withdrawals/{withdrawalId} {
+        allow read: if isMe(uid);
+        allow write: if false;  // Server only
+      }
+    }
+
+
+
+// REVIEWS
+match /reviews/{reviewId} {
+  // public reviews are readable by anyone; authors and recipients can read their own
+  allow read: if resource.data.isPublic == true
+               || (request.auth != null && (
+                    request.auth.uid == resource.data.fromUserId
+                    || request.auth.uid == resource.data.toUserId
+                  ));
+
+  // creation requires authentication and correct ownership of fromUserId
+  allow create: if request.auth != null
+                && request.resource.data.fromUserId == request.auth.uid
+                // basic shape validation
+                && request.resource.data.workspaceId is string
+                && request.resource.data.rating is number
+                && request.resource.data.fromRole in ["client", "talent"]
+                && request.resource.data.toRole in ["client", "talent"]
+                && request.resource.data.isPublic is bool;
+
+  // no updates or deletes by clients (handled server-side if needed)
+  allow update, delete: if false;
+}
+
+// WORKSPACES (placeholder)
+match /workspaces/{workspaceId} {
+  allow read: if request.auth != null
+    && (request.auth.uid == resource.data.clientUid || request.auth.uid == resource.data.talentUid);
+
+  allow create: if request.auth != null
+    && (request.auth.uid == request.resource.data.clientUid || request.auth.uid == request.resource.data.talentUid);
+
+  allow update: if request.auth != null
+    && (request.auth.uid == resource.data.clientUid || request.auth.uid == resource.data.talentUid);
+
+  allow delete: if false;
+}
+
+// WORKSPACE SUBCOLLECTIONS
+match /workspaces/{workspaceId}/{subPath=**} {
+  function signedIn() { return request.auth != null; }
+  function ws() {
+    return get(/databases/$(database)/documents/workspaces/$(workspaceId)).data;
+  }
+  function isParticipant() {
+    return signedIn()
+      && (request.auth.uid == ws().clientUid || request.auth.uid == ws().talentUid);
+  }
+  function isClient() { return signedIn() && request.auth.uid == ws().clientUid; }
+  function isTalent() { return signedIn() && request.auth.uid == ws().talentUid; }
+
+  // Default for any workspace subpath: participants can read
+  allow read: if isParticipant();
+
+  // Milestones
+  match /milestones/{milestoneId} {
+    allow create: if isTalent();
+    allow update: if isParticipant(); // (simple for now; you can tighten later)
+    allow delete: if false;
+  }
+
+  // Payout requests
+  match /payoutRequests/{payoutId} {
+    allow create: if isTalent();
+    allow update: if isParticipant(); // client approves/declines; system auto-approves; talent can read
+    allow delete: if false;
+  }
+
+  // Hourly session doc
+  match /hourly/session {
+    allow create, update: if isTalent(); // only talent starts/pauses/resumes
+    allow delete: if false;
+
+    // Hourly checkins subcollection
+    match /checkins/{checkinId} {
+      allow create: if isTalent();
+      allow read: if isParticipant();
+      allow update: if isParticipant(); // client disputes, talent defends, system adds preview url
+      allow delete: if false;
+    }
+  }
+}
+
+
+
+
+
+    // default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,84 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ===== HELPER FUNCTIONS =====
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function wsExists(workspaceId) {
+      return exists(/databases/(default)/documents/workspaces/$(workspaceId));
+    }
+
+    function isWorkspaceParticipant(workspaceId) {
+      return signedIn() && wsExists(workspaceId) && (
+        request.auth.uid == get(/databases/(default)/documents/workspaces/$(workspaceId)).data.clientUid
+        || request.auth.uid == get(/databases/(default)/documents/workspaces/$(workspaceId)).data.talentUid
+      );
+    }
+
+    function isWorkspaceTalent(workspaceId) {
+      return signedIn() && wsExists(workspaceId) &&
+        request.auth.uid == get(/databases/(default)/documents/workspaces/$(workspaceId)).data.talentUid;
+    }
+
+    // ===== USER PROPOSALS =====
+    // Talent uploads proposal files here
+    match /users/{userId}/proposals/{proposalId}/{allPaths=**} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // ===== AGREEMENTS =====
+    // Simplified: just check if signed in. Firestore rules validate thread participation.
+    match /agreements/{threadId}/{fileName} {
+      allow read, write: if signedIn();
+    }
+
+    // ===== MILESTONES: RAW + PREVIEWS =====
+    match /workspaces/{workspaceId}/milestones/{milestoneId}/raw/{allPaths=**} {
+      allow write: if signedIn() && isWorkspaceTalent(workspaceId);
+      allow read: if false;  // Only previews visible externally
+    }
+
+    match /workspaces/{workspaceId}/milestones/{milestoneId}/previews {
+      allow read: if signedIn();  // List folder
+    }
+
+    match /workspaces/{workspaceId}/milestones/{milestoneId}/previews/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if false;  // Cloud Functions writes previews
+    }
+
+    // ===== HOURLY CHECKINS =====
+    match /workspaces/{workspaceId}/hourly/checkins/{checkinId}/raw/{allPaths=**} {
+      allow read, write: if signedIn() && isWorkspaceTalent(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/hourly/checkins/{checkinId}/previews {
+      allow read: if signedIn();
+    }
+
+    match /workspaces/{workspaceId}/hourly/checkins/{checkinId}/previews/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if false;  // Cloud Functions writes previews
+    }
+
+    // ===== FINAL WORK =====
+    match /workspaces/{workspaceId}/finalWork/raw/{allPaths=**} {
+      allow read: if signedIn() && isWorkspaceTalent(workspaceId);
+      allow write: if signedIn() && isWorkspaceTalent(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/finalWork/previews/{allPaths=**} {
+      allow read: if isWorkspaceParticipant(workspaceId);
+      allow write: if false;  // Cloud Functions writes previews
+      allow delete: if false;
+    }
+
+    // ===== DEFAULT DENY =====
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
