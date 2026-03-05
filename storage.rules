@@ -7,29 +7,44 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isDisputeParticipant(disputeId) {
+      let dispute = firestore.get(/databases/(default)/documents/disputes/$(disputeId)).data;
+      let ws = firestore.get(/databases/(default)/documents/workspaces/$(dispute.workspaceId)).data;
+      return signedIn() && (
+        request.auth.uid == ws.clientUid
+        || request.auth.uid == ws.talentUid
+      );
+    }
+
+    function isDisputeAdmin() {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/publicProfiles/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/publicProfiles/$(request.auth.uid)).data.role == "admin";
+    }
+
     function wsExists(workspaceId) {
-      return exists(/databases/(default)/documents/workspaces/$(workspaceId));
+      return firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId));
     }
 
     function isWorkspaceParticipant(workspaceId) {
       return signedIn() && wsExists(workspaceId) && (
-        request.auth.uid == get(/databases/(default)/documents/workspaces/$(workspaceId)).data.clientUid
-        || request.auth.uid == get(/databases/(default)/documents/workspaces/$(workspaceId)).data.talentUid
+        request.auth.uid == firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)).data.clientUid
+        || request.auth.uid == firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)).data.talentUid
       );
     }
 
     function isWorkspaceTalent(workspaceId) {
       return signedIn() && wsExists(workspaceId) &&
-        request.auth.uid == get(/databases/(default)/documents/workspaces/$(workspaceId)).data.talentUid;
+        request.auth.uid == firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)).data.talentUid;
     }
 
     // ===== USER PROPOSALS =====
-    // Talent uploads proposal files here
     match /users/{userId}/proposals/{proposalId}/{allPaths=**} {
       allow read, write: if signedIn() && request.auth.uid == userId;
     }
 
     // ===== AGREEMENTS =====
+   // ===== AGREEMENTS =====
     // Simplified: just check if signed in. Firestore rules validate thread participation.
     match /agreements/{threadId}/{fileName} {
       allow read, write: if signedIn();
@@ -74,6 +89,12 @@ service firebase.storage {
       allow read: if isWorkspaceParticipant(workspaceId);
       allow write: if false;  // Cloud Functions writes previews
       allow delete: if false;
+    }
+
+    // ===== DISPUTES =====
+    match /disputes/{disputeId}/evidence/{allPaths=**} {
+      allow write: if isDisputeParticipant(disputeId) || isDisputeAdmin();
+      allow read: if isDisputeParticipant(disputeId) || isDisputeAdmin();
     }
 
     // ===== DEFAULT DENY =====

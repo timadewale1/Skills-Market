@@ -250,12 +250,18 @@ export default function PublicTalentProfilePage() {
 
       // add initial message
       const initialText = `Hello ${data.fullName}, you have been invited to apply for ${gigTitle} by ${clientName}. Please indicate your interest in this chat.`
-      await addDoc(collection(db, "threads", threadId, "messages"), {
-        fromUid: user.uid,
-        text: initialText,
-        // attach meta so the messages UI can render a separate "View gig" button
-        meta: { type: "gig", gigId: selectedGigId },
-        createdAt: serverTimestamp(),
+      const token = await user.getIdToken()
+      await fetch("/api/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          threadId,
+          text: initialText,
+          meta: { type: "gig", gigId: selectedGigId },
+        }),
       })
 
       setInviteOpen(false)

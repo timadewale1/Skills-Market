@@ -292,6 +292,28 @@ export default function TalentGigDetailsPage() {
       })
       setApplyOpen(false)
       resetApplyForm()
+
+      // Send notification to gig client via API
+      if (gig.clientUid) {
+        try {
+          const token = await user.getIdToken()
+          await fetch("/api/proposals/submitted", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              gigId: id,
+              gigTitle: gig.title,
+              clientUid: gig.clientUid,
+              talentEmail: user.email,
+            }),
+          })
+        } catch (err) {
+          console.error("Failed to send notification:", err)
+        }
+      }
     } catch (e: any) {
       console.error(e)
       alert(e?.message || "Failed to submit proposal.")

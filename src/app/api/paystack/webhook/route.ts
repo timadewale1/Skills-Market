@@ -3,6 +3,7 @@ import crypto from "crypto"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
+import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 
 export const runtime = "nodejs"
 
@@ -130,12 +131,35 @@ export async function POST(req: Request) {
 
     console.log("[Paystack Webhook] Payment and workspace updated successfully")
 
-    // Client spend tally (wallet)
+    // Notify client and talent that workspace is funded
     const wsSnap = await wsRef.get()
     const ws = wsSnap.data() as any
     const clientUid = ws?.clientUid
+    const talentUid = ws?.talentUid
+
     if (clientUid) {
-      const walletRef = db.doc(`wallets/${clientUid}`)
+      await notifyUser({
+        userId: clientUid,
+        type: "workspace_funded",
+        title: "Workspace funded",
+        message: "Your workspace payment has been confirmed and work can now begin",
+        link: `/dashboard/workspaces/${wsId}`,
+      })
+    }
+
+    if (talentUid) {
+      await notifyUser({
+        userId: talentUid,
+        type: "workspace_funded",
+        title: "Workspace funded",
+        message: "The workspace has been funded and you can now start work",
+        link: `/dashboard/workspaces/${wsId}`,
+      })
+    }
+
+    // Client spend tally (wallet)
+    const walletRef = db.doc(`wallets/${clientUid}`)
+    if (clientUid) {
       await db.runTransaction(async (tx: Transaction) => {
         const wSnap = (await tx.get(walletRef)) as any
         const existing = wSnap?.exists ? (wSnap.data() as any) : {}

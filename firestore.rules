@@ -268,6 +268,70 @@ match /reviews/{reviewId} {
   allow update, delete: if false;
 }
 
+// DISPUTES
+match /disputes/{disputeId} {
+  function signedIn() { return request.auth != null; }
+  
+  function ws() {
+    return get(/databases/$(database)/documents/workspaces/$(resource.data.workspaceId)).data;
+  }
+  
+  function isParticipant() {
+    return signedIn()
+      && (request.auth.uid == ws().clientUid || request.auth.uid == ws().talentUid);
+  }
+  
+  function isAdmin() {
+    return signedIn()
+      && exists(/databases/$(database)/documents/publicProfiles/$(request.auth.uid))
+      && get(/databases/$(database)/documents/publicProfiles/$(request.auth.uid)).data.role == "admin";
+  }
+  
+  // READ: workspace participants and admins
+  allow read: if isParticipant() || isAdmin();
+  
+  // CREATE: participants can raise disputes (API validates workspace status)
+  allow create: if isParticipant()
+    && request.resource.data.workspaceId is string
+    && request.resource.data.clientId is string
+    && request.resource.data.talentId is string
+    && request.resource.data.raisedBy == request.auth.uid
+    && request.resource.data.reason is string
+    && request.resource.data.status is string
+    && request.resource.data.stage is string
+    && request.resource.data.createdAt != null;
+  
+  // UPDATE: admins during resolution
+  allow update: if isAdmin()
+    && request.resource.data.workspaceId == resource.data.workspaceId;
+  
+  allow delete: if false;
+  
+  // DISPUTE MESSAGES
+  match /disputeMessages/{messageId} {
+    allow read: if isParticipant() || isAdmin();
+    
+    allow create: if (isParticipant() || isAdmin())
+      && request.resource.data.senderId == request.auth.uid
+      && request.resource.data.text is string
+      && request.resource.data.createdAt != null;
+    
+    allow update, delete: if false;
+  }
+  
+  // DISPUTE EVIDENCE
+  match /disputeEvidence/{evidenceId} {
+    allow read: if isParticipant() || isAdmin();
+    
+    allow create: if (isParticipant() || isAdmin())
+      && request.resource.data.uploadedBy == request.auth.uid
+      && request.resource.data.fileUrl is string
+      && request.resource.data.createdAt != null;
+    
+    allow update, delete: if false;
+  }
+}
+
 // WORKSPACES (placeholder)
 match /workspaces/{workspaceId} {
   allow read: if request.auth != null
@@ -336,4 +400,12 @@ match /workspaces/{workspaceId}/{subPath=**} {
       allow read, write: if false;
     }
   }
+}
+
+// NOTIFICATIONS
+match /notifications/{notificationId} {
+  allow read: if signedIn() && resource.data.userId == request.auth.uid;
+  allow create: if false;  // Server only
+  allow update: if signedIn() && resource.data.userId == request.auth.uid && request.resource.data.read == true;  // Only mark as read
+  allow delete: if false;
 }

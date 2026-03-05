@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import Button from "@/components/ui/Button"
 
 import {
   ArrowLeft,
@@ -138,6 +139,8 @@ type Workspace = {
   workspaceId?: string
   threadId: string
   gigId: string
+  disputeId?: string
+  disputeStatus?: string
   status?: string
 
   clientUid: string
@@ -606,6 +609,12 @@ export default function WorkspaceDetailsPage() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
   const [hasAlreadyReviewed, setHasAlreadyReviewed] = useState(false)
 
+  // Dispute system
+  const [raiseDisputeOpen, setRaiseDisputeOpen] = useState(false)
+  const [disputeReasonText, setDisputeReasonText] = useState("")
+  const [disputeDescription, setDisputeDescription] = useState("")
+  const [raisingDispute, setRaisingDispute] = useState(false)
+
   // fallback preview paths (when Firestore metadata is missing)
   const [fallbackPreviewPaths, setFallbackPreviewPaths] = useState<Record<string, string[]>>({})
 
@@ -1063,8 +1072,21 @@ const unsubCheckins = onSnapshot(
       return
     }
     try {
-      const fn = httpsCallable(functions, "hourlyStartWork")
-      await fn({ wsId: id })
+      const token = await user.getIdToken()
+      const response = await fetch("/api/workspaces/hourly/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ wsId: id }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to start work")
+      }
+
       toast.success("Work started")
     } catch (e: any) {
       console.error(e)
@@ -1075,8 +1097,21 @@ const unsubCheckins = onSnapshot(
   const hourlyPauseWork = async () => {
     if (!id || !user?.uid || !isTalent) return
     try {
-      const fn = httpsCallable(functions, "hourlyPauseWork")
-      await fn({ wsId: id })
+      const token = await user.getIdToken()
+      const response = await fetch("/api/workspaces/hourly/pause", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ wsId: id }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to pause")
+      }
+
       toast.success("Paused")
     } catch (e: any) {
       console.error(e)
@@ -1087,8 +1122,21 @@ const unsubCheckins = onSnapshot(
   const hourlyResumeWork = async () => {
     if (!id || !user?.uid || !isTalent) return
     try {
-      const fn = httpsCallable(functions, "hourlyResumeWork")
-      await fn({ wsId: id })
+      const token = await user.getIdToken()
+      const response = await fetch("/api/workspaces/hourly/resume", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ wsId: id }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to resume")
+      }
+
       toast.success("Resumed")
     } catch (e: any) {
       console.error(e)
@@ -1105,19 +1153,50 @@ const unsubCheckins = onSnapshot(
 
     setSubmittingCheckin(true)
     try {
-      // 1) create checkin doc first (server validated will accept/reject hour timing)
-      const fnCreate = httpsCallable(functions, "hourlyCreateCheckin")
-      const resp: any = await fnCreate({ wsId: id, note: hourlyNote.trim() })
-      const checkinId = resp?.data?.checkinId as string
-      if (!checkinId) throw new Error("Failed to create check-in")
+      // 1) create checkin doc
+      const token = await user.getIdToken()
+      const createResp = await fetch("/api/workspaces/hourly/checkin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          wsId: id,
+          note: hourlyNote.trim(),
+        }),
+      })
+
+      if (!createResp.ok) {
+        const error = await createResp.json()
+        throw new Error(error.error || "Failed to create check-in")
+      }
+
+      const { checkinId } = await createResp.json()
 
       // 2) upload raw screenshot to storage
       const wsId = id
       const raw = await uploadHourlyCheckinRawImage(wsId, checkinId, hourlyShot)
 
-      // 3) tell server where raw is, so it can generate preview + set url
-      const fnAttach = httpsCallable(functions, "hourlyAttachCheckinScreenshot")
-      await fnAttach({ wsId: id, checkinId, rawStoragePath: raw.storagePath, contentType: raw.contentType })
+      // 3) tell server where raw is
+      const attachResp = await fetch("/api/workspaces/hourly/attach-screenshot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          wsId: id,
+          checkinId,
+          rawStoragePath: raw.storagePath,
+          contentType: raw.contentType,
+        }),
+      })
+
+      if (!attachResp.ok) {
+        const error = await attachResp.json()
+        throw new Error(error.error || "Failed to attach screenshot")
+      }
 
       toast.success("Hour check-in submitted")
       setHourlyNote("")
@@ -1135,8 +1214,25 @@ const unsubCheckins = onSnapshot(
     const r = disputeReason.trim()
     if (r.length < 15) return toast.error("Dispute reason must be clear (min 15 chars).")
     try {
-      const fn = httpsCallable(functions, "hourlyDisputeCheckin")
-      await fn({ wsId: id, checkinId: disputingHour.id, reason: r })
+      const token = await user.getIdToken()
+      const response = await fetch("/api/workspaces/hourly/dispute", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          wsId: id,
+          checkinId: disputingHour.id,
+          reason: r,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to dispute")
+      }
+
       toast.success("Hour disputed")
       setDisputingHour(null)
       setDisputeReason("")
@@ -1151,14 +1247,86 @@ const unsubCheckins = onSnapshot(
     const n = defenseNote.trim()
     if (n.length < 12) return toast.error("Defense note too short (min 12 chars).")
     try {
-      const fn = httpsCallable(functions, "hourlyDefendCheckin")
-      await fn({ wsId: id, checkinId: defendingHour.id, note: n })
+      const token = await user.getIdToken()
+      const response = await fetch("/api/workspaces/hourly/defend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          wsId: id,
+          checkinId: defendingHour.id,
+          note: n,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to submit defense")
+      }
+
       toast.success("Defense submitted")
       setDefendingHour(null)
       setDefenseNote("")
     } catch (e: any) {
       console.error(e)
       toast.error(e?.message || "Failed to submit defense")
+    }
+  }
+
+  const raiseDispute = async () => {
+    if (!id || !user?.uid || !ws) return
+    if (ws.status !== "completed") {
+      toast.error("Workspace must be completed to raise a dispute")
+      return
+    }
+    if (ws.disputeId) {
+      toast.error("Dispute already exists for this workspace")
+      return
+    }
+
+    const reason = disputeReasonText.trim()
+    const description = disputeDescription.trim()
+
+    if (!reason || !description) {
+      toast.error("Please provide both reason and description")
+      return
+    }
+
+    setRaisingDispute(true)
+    try {
+      const response = await fetch("/api/disputes/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({
+          workspaceId: id,
+          raisedBy: user.uid,
+          reason,
+          description
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success("Dispute raised successfully")
+        setRaiseDisputeOpen(false)
+        setDisputeReason("")
+        setDisputeDescription("")
+        // Refresh the page to show the dispute section
+        window.location.reload()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || "Failed to raise dispute")
+      }
+    } catch (error) {
+      console.error("Error raising dispute:", error)
+      toast.error("Failed to raise dispute")
+    } finally {
+      setRaisingDispute(false)
     }
   }
 
@@ -1991,6 +2159,45 @@ const unsubCheckins = onSnapshot(
                       You can continue chatting even after workspace creation.
                     </CardContent>
                   </Card>
+
+                  {/* Dispute Section */}
+                  {ws?.status === "completed" && (
+                    <Card className="rounded-2xl">
+                      <CardHeader>
+                        <CardTitle className="text-base font-extrabold">Dispute Resolution</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {ws?.disputeId ? (
+                          <div className="rounded-2xl border bg-orange-50 p-4">
+                            <div className="font-extrabold text-orange-900 mb-2">Dispute Active</div>
+                            <div className="text-sm text-orange-800 mb-3">
+                              Status: <span className="font-extrabold">{ws?.disputeStatus}</span>
+                            </div>
+                            <Link href={`/dashboard/disputes/${ws?.disputeId}`}> 
+                              <Button className="w-full">
+                                View Dispute
+                              </Button>
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="rounded-2xl border bg-white p-4">
+                            <div className="font-extrabold mb-2">Raise a Dispute</div>
+                            <div className="text-sm text-gray-600 mb-3">
+                              If you're not satisfied with the work or payment, you can raise a formal dispute.
+                            </div>
+                            <Button
+                              variant="outline"
+                              onClick={() => setRaiseDisputeOpen(true)}
+                              className="w-full"
+                            >
+                              <AlertTriangle className="w-4 h-4 mr-2" />
+                              Raise Dispute
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </div>
 
@@ -2135,6 +2342,71 @@ const unsubCheckins = onSnapshot(
                         className="flex-1 rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2"
                       >
                         Submit defense
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Raise Dispute Modal */}
+              {raiseDisputeOpen && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-end md:items-center justify-center p-0 md:p-6">
+                  <div className="w-full md:max-w-xl bg-white rounded-t-2xl md:rounded-2xl overflow-hidden">
+                    <div className="p-5 border-b">
+                      <div className="text-lg font-extrabold">Raise a Dispute</div>
+                      <div className="text-xs text-gray-500 font-semibold mt-1">
+                        Provide clear details about the issue. This will notify the other party and involve admin mediation.
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-3">
+                      <div>
+                        <label className="block text-sm font-extrabold text-gray-700 mb-2">Reason</label>
+                        <select
+                          value={disputeReasonText}
+                          onChange={(e) => setDisputeReasonText(e.target.value)}
+                          className="w-full rounded-2xl border p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                          required
+                        >
+                          <option value="">Select a reason</option>
+                          <option value="Work not completed">Work not completed</option>
+                          <option value="Poor quality">Poor quality</option>
+                          <option value="Late delivery">Late delivery</option>
+                          <option value="Communication issues">Communication issues</option>
+                          <option value="Payment issues">Payment issues</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-extrabold text-gray-700 mb-2">Description</label>
+                        <textarea
+                          value={disputeDescription}
+                          onChange={(e) => setDisputeDescription(e.target.value)}
+                          placeholder="Provide detailed explanation of the issue..."
+                          className="w-full min-h-[120px] rounded-2xl border p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-5 border-t flex gap-2">
+                      <button
+                        onClick={() => {
+                          setRaiseDisputeOpen(false)
+                          setDisputeReasonText("")
+                          setDisputeDescription("")
+                        }}
+                        className="flex-1 rounded-2xl border bg-white font-extrabold py-2"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={raiseDispute}
+                        disabled={raisingDispute || !disputeReasonText || !disputeDescription.trim()}
+                        className="flex-1 rounded-2xl bg-red-600 text-white font-extrabold py-2 disabled:opacity-60"
+                      >
+                        {raisingDispute ? "Raising..." : "Raise Dispute"}
                       </button>
                     </div>
                   </div>

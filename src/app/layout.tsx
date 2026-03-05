@@ -37,7 +37,7 @@ export default function RootLayout({
             <div className="min-h-screen flex flex-col">
               {/* HEADER */}
               <header className="border-b" style={{ borderColor: "var(--border)" }}>
-                <NavbarWrapper />
+                {/* <NavbarWrapper /> */}
               </header>
 
               {/* MAIN */}

@@ -416,6 +416,9 @@ export default function ThreadPage() {
   const [notes, setNotes] = useState<string>("")
   const [disclaimerOk, setDisclaimerOk] = useState(false)
 
+  // allow optional meta payload on messages (e.g. { type: 'gig', gigId })
+  const [metaPayload, setMetaPayload] = useState<MsgMeta | undefined>(undefined)
+
   const scrollerRef = useRef<HTMLDivElement | null>(null)
 
   // Inline doodle SVG background (no external file needed)
@@ -473,20 +476,27 @@ export default function ThreadPage() {
 
     setSending(true)
     try {
-      await addDoc(collection(db, "threads", threadId, "messages"), {
-        fromUid: user.uid,
-        text: t,
-        createdAt: serverTimestamp(),
+      const token = await user.getIdToken()
+      const response = await fetch("/api/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          threadId,
+          text: t,
+          meta: metaPayload,
+        }),
       })
 
-      await updateDoc(doc(db, "threads", threadId), {
-        lastMessageText: t,
-        lastMessageAt: serverTimestamp(),
-        lastMessageBy: user.uid,
-        updatedAt: serverTimestamp(),
-      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to send message")
+      }
 
       setText("")
+      setMetaPayload(undefined)
     } catch (e: any) {
       console.error(e)
       toast.error(e?.message || "Failed to send message")
@@ -496,7 +506,7 @@ export default function ThreadPage() {
   }
 
   const rejectTalentInChat = async () => {
-    if (!thread || !threadId || !isClient) return
+    if (!thread || !threadId || !isClient || !user) return
     try {
       await updateDoc(doc(db, "threads", threadId), {
         proposalStatus: "rejected",
@@ -508,11 +518,36 @@ export default function ThreadPage() {
         updatedAt: serverTimestamp(),
       })
 
-      await addDoc(collection(db, "threads", threadId, "messages"), {
-        fromUid: thread.clientUid,
-        text: "Client rejected the talent from chat (revoked shortlist/accept).",
-        createdAt: serverTimestamp(),
+      const token = await user.getIdToken()
+      await fetch("/api/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          threadId,
+          text: "Client rejected the talent from chat (revoked shortlist/accept).",
+        }),
       })
+
+      // notify via proposals/rejected endpoint as well
+      try {
+        await fetch("/api/proposals/rejected", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            gigId: thread.gigId,
+            gigTitle: thread.gigTitle,
+            talentUid: thread.talentUid,
+          }),
+        })
+      } catch (notifErr) {
+        console.error("Failed to send rejection notification from chat:", notifErr)
+      }
 
       toast.success("Talent rejected (chat)")
     } catch (e: any) {
@@ -613,11 +648,37 @@ export default function ThreadPage() {
         updatedAt: serverTimestamp(),
       })
 
-      await addDoc(collection(db, "threads", threadId, "messages"), {
-        fromUid: thread.clientUid,
-        text: "Client sent a hiring agreement. Please review and sign.",
-        createdAt: serverTimestamp(),
+      if (!user) return
+      const token = await user.getIdToken()
+      await fetch("/api/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          threadId,
+          text: "Client sent a hiring agreement. Please review and sign.",
+        }),
       })
+
+      // notify talent via agreements/client-signed
+      try {
+        await fetch("/api/agreements/client-signed", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            threadId,
+            gigTitle: thread.gigTitle,
+            talentUid: thread.talentUid,
+          }),
+        })
+      } catch (notifErr) {
+        console.error("Failed to send client signed notification:", notifErr)
+      }
 
       toast.success("Agreement sent to talent")
       setAgreementOpen(false)
@@ -630,6 +691,7 @@ export default function ThreadPage() {
   const talentSign = async () => {
     if (!thread || !threadId || !isTalent) return
     if (!agreement || agreement.status !== "sent_to_talent") return
+    if (!user) return
 
     try {
       const signatureText = thread.talentName || "Talent"
@@ -644,10 +706,17 @@ export default function ThreadPage() {
         updatedAt: serverTimestamp(),
       })
 
-      await addDoc(collection(db, "threads", threadId, "messages"), {
-        fromUid: thread.talentUid,
-        text: "Talent signed the agreement.",
-        createdAt: serverTimestamp(),
+      const token = await (user as any).getIdToken()
+      await fetch("/api/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          threadId,
+          text: "Talent signed the agreement.",
+        }),
       })
 
       // 2) Create workspace with denormalized fields + timeline + milestones placeholder
@@ -722,6 +791,25 @@ export default function ThreadPage() {
     pdfGeneratedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+
+  // notify client via agreements/talent-signed with PDF
+  try {
+    await fetch("/api/agreements/talent-signed", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        threadId,
+        gigTitle: thread.gigTitle,
+        clientUid: thread.clientUid,
+        pdfUrl: url,
+      }),
+    })
+  } catch (notifErr) {
+    console.error("Failed to send talent signed notification:", notifErr)
+  }
 } catch (e: any) {
   console.error("[agreement-pdf] FAILED:", e)
   toast.error(e?.message || "Failed to generate/upload agreement PDF")
@@ -748,10 +836,18 @@ export default function ThreadPage() {
         updatedAt: serverTimestamp(),
       })
 
-      await addDoc(collection(db, "threads", threadId, "messages"), {
-        fromUid: thread.talentUid,
-        text: `Talent declined the agreement: ${declineReason.trim()}`,
-        createdAt: serverTimestamp(),
+      if (!user) return
+      const token = await user.getIdToken()
+      await fetch("/api/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          threadId,
+          text: `Talent declined the agreement: ${declineReason.trim()}`,
+        }),
       })
 
       toast.success("Decline sent to client")

@@ -3,6 +3,7 @@ import crypto from "crypto"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
+import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 
 export const runtime = "nodejs"
 
@@ -118,6 +119,15 @@ export async function POST(req: Request) {
       },
       { merge: true }
     )
+
+    // Send notification for withdrawal request
+    await notifyUser({
+      userId: uid,
+      type: "withdrawal",
+      title: "Withdrawal requested",
+      message: `Your withdrawal of ₦${amountNaira.toLocaleString()} has been submitted and is being processed`,
+      link: `/dashboard/wallet`,
+    })
 
     return NextResponse.json({ ok: true, withdrawalId })
   } catch (e: any) {

@@ -1,5 +1,6 @@
 import { getAdminDb } from "@/lib/firebaseAdmin"
 import * as admin from "firebase-admin"
+import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 
 export async function POST(req: Request) {
   try {
@@ -76,6 +77,15 @@ export async function POST(req: Request) {
       privateFeedback: fromRole === "client" ? privateFeedback : undefined,
       isPublic,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    // Notify the reviewed user
+    await notifyUser({
+      userId: toUserId,
+      type: "review",
+      title: "You received a new review",
+      message: `${fromRole === "client" ? "Client" : "Talent"} left you a ${rating}-star review`,
+      link: `/dashboard/profile`,
     })
 
     // ✅ Update user rating aggregates

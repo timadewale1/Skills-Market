@@ -284,6 +284,50 @@ export default function GigProposalsPage() {
         const nextAcceptedCount = nextItems.filter((x) => x.status === "accepted").length
         const hiresNeeded = Math.max(1, Number(gig.hiresNeeded || 1))
         await maybeAutoCloseOrReopen(nextAcceptedCount, hiresNeeded, gig.status)
+
+        // Send acceptance notification to talent via API
+        try {
+          if (user?.uid) {
+            const token = await user.getIdToken()
+            await fetch("/api/proposals/accepted", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                gigId: id,
+                gigTitle: gig.title,
+                talentUid: p.talentUid,
+              }),
+            })
+          }
+        } catch (err) {
+          console.error("Failed to send notification:", err)
+        }
+      }
+
+      // send rejection notification when proposal is rejected
+      if (next === "rejected") {
+        try {
+          if (user?.uid) {
+            const token = await user.getIdToken()
+            await fetch("/api/proposals/rejected", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                gigId: id,
+                gigTitle: gig.title,
+                talentUid: p.talentUid,
+              }),
+            })
+          }
+        } catch (err) {
+          console.error("Failed to send rejection notification:", err)
+        }
       }
 
       toast.success(

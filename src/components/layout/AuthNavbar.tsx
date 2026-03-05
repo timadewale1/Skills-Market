@@ -22,6 +22,7 @@ import { useUserRole } from "@/hooks/useUserRole"
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AvatarUploader from "@/components/profile/parts/AvatarUploader"
+import NotificationBell from "@/components/NotificationBell"
 
 
 type Role = "talent" | "client" | null
@@ -94,6 +95,7 @@ export default function AuthNavbar() {
         { href: "/dashboard/find-work", label: "Find Work", icon: Briefcase },
         { href: "/dashboard/proposals", label: "Proposals", icon: PlusCircle },
         { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+        { href: "/dashboard/notifications", label: "Notifications", icon: MessageSquare },
       ]
     }
 
@@ -102,6 +104,7 @@ export default function AuthNavbar() {
       { href: "/dashboard/hire", label: "Hire Talent", icon: Users },
       { href: "/dashboard/post-gig", label: "Post a Gig", icon: PlusCircle },
       { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+      { href: "/dashboard/notifications", label: "Notifications", icon: MessageSquare },
     ]
   }, [role, loadingRole])
 
@@ -166,6 +169,8 @@ export default function AuthNavbar() {
               className="px-2 py-2 text-sm outline-none w-72"
             />
           </form>
+
+          <NotificationBell />
 
           <Link href="/dashboard/profile" className="flex items-center gap-2">
             {/* <Avatar className="h-9 w-9">
