@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 export default async function SettingsPage() {
   // TODO: Add proper auth middleware for admin routes
 

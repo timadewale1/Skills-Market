@@ -1,4 +1,5 @@
 import { getAdminDb } from "@/lib/firebaseAdmin"
+export const dynamic = "force-dynamic"
 
 async function getClients() {
   const db = getAdminDb()

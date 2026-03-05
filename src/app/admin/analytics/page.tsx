@@ -1,24 +1,37 @@
 import { getAdminDb } from "@/lib/firebaseAdmin"
+export const dynamic = "force-dynamic"
 
 async function getAnalytics() {
-  const db = getAdminDb()
-  const usersSnap = await db.collection("users").get()
-  const gigsSnap = await db.collection("gigs").get()
-  const transactionsSnap = await db.collection("transactions").get()
+  try {
+    const db = getAdminDb()
+    const usersSnap = await db.collection("users").get()
+    const gigsSnap = await db.collection("gigs").get()
+    const transactionsSnap = await db.collection("transactions").get()
 
-  const totalRevenue = transactionsSnap.docs.reduce((sum: number, doc: any) => sum + (doc.data().amount || 0), 0)
-  const activeGigs = gigsSnap.docs.filter((doc: any) => doc.data().status === "open").length
-  const avgGigValue = gigsSnap.docs.reduce((sum: number, doc: any) => {
-    const data = doc.data()
-    return sum + (data.fixedBudget || data.hourlyRate || 0)
-  }, 0) / gigsSnap.size || 0
+    const totalRevenue = transactionsSnap.docs.reduce((sum: number, doc: any) => sum + (doc.data().amount || 0), 0)
+    const activeGigs = gigsSnap.docs.filter((doc: any) => doc.data().status === "open").length
+    const avgGigValue = gigsSnap.docs.reduce((sum: number, doc: any) => {
+      const data = doc.data()
+      return sum + (data.fixedBudget || data.hourlyRate || 0)
+    }, 0) / gigsSnap.size || 0
 
-  return {
-    totalUsers: usersSnap.size,
-    totalGigs: gigsSnap.size,
-    activeGigs,
-    totalRevenue,
-    avgGigValue,
+    return {
+      totalUsers: usersSnap.size,
+      totalGigs: gigsSnap.size,
+      activeGigs,
+      totalRevenue,
+      avgGigValue,
+    }
+  } catch (err) {
+    // likely running during build without env vars; return safe defaults
+    console.warn("Analytics unavailable during prerender", err)
+    return {
+      totalUsers: 0,
+      totalGigs: 0,
+      activeGigs: 0,
+      totalRevenue: 0,
+      avgGigValue: 0,
+    }
   }
 }
 
