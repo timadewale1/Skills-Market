@@ -1,12 +1,19 @@
 import nodemailer from "nodemailer"
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-})
+// create transporter only when needed and verify credentials
+function createTransporter() {
+  const user = process.env.EMAIL_USER
+  const pass = process.env.EMAIL_PASS
+
+  if (!user || !pass) {
+    throw new Error("Missing EMAIL_USER or EMAIL_PASS environment variable")
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  })
+}
 
 export async function sendEmail({
   to,
@@ -17,11 +24,22 @@ export async function sendEmail({
   subject: string
   html: string
 }) {
+  let transporter
+  try {
+    transporter = createTransporter()
+  } catch (err: any) {
+    console.warn("Skipping email send, credentials not configured:", err.message)
+    return
+  }
 
-  await transporter.sendMail({
-    from: `"Skills Market" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  })
+  try {
+    await transporter.sendMail({
+      from: `"Skills Market" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    })
+  } catch (err) {
+    console.error("sendEmail failed:", err)
+  }
 }

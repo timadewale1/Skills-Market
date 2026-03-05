@@ -1,5 +1,5 @@
-import { getAdminDb } from "@/lib/firebaseAdmin"
-import * as admin from "firebase-admin"
+import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin"
+import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 
 export async function POST(req: Request) {
@@ -14,10 +14,12 @@ export async function POST(req: Request) {
 
     const token = authHeader.slice(7)
     
+    const auth = getAdminAuth()
+    
     // Verify token and get user
     let userId: string
     try {
-      const decodedToken = await admin.auth().verifyIdToken(token)
+      const decodedToken = await auth.verifyIdToken(token)
       userId = decodedToken.uid
     } catch {
       return Response.json({ error: "Invalid token" }, { status: 401 })
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
       paymentReliabilityRating: fromRole === "talent" ? paymentReliabilityRating : undefined,
       privateFeedback: fromRole === "client" ? privateFeedback : undefined,
       isPublic,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     })
 
     // Notify the reviewed user
@@ -131,7 +133,7 @@ async function updateUserRating(userId: string) {
         count: total
       },
       ratingBreakdown: breakdown,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     })
 
     // ✅ Also update publicProfiles if exists
@@ -140,7 +142,7 @@ async function updateUserRating(userId: string) {
         avg: Math.round(avg * 10) / 10,
         count: total
       },
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     }).catch(() => {
       // public profile may not exist yet, that's ok
     })

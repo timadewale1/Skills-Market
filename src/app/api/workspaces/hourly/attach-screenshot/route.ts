@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAuth } from "firebase-admin/auth"
+import { getAdminAuth } from "@/lib/firebaseAdmin"
 import { getAdminDb } from "@/lib/firebaseAdmin"
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = getAuth()
+    const auth = getAdminAuth()
     const db = getAdminDb()
 
     // Verify authentication

@@ -1,4 +1,4 @@
-import { getAdminDb, getAdminStorage, getAdminApp } from "@/lib/firebaseAdmin"
+import { getAdminDb, getAdminStorage, getAdminAuth } from "@/lib/firebaseAdmin"
 import { NextResponse } from "next/server"
 import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const adminDb = getAdminDb()
     const adminStorage = getAdminStorage()
-    const adminApp = getAdminApp()
+    const auth = getAdminAuth()
 
     const authHeader = req.headers.get("authorization")
     if (!authHeader?.startsWith("Bearer ")) {
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     }
 
     const token = authHeader.slice(7)
-    const decoded = await adminApp.auth().verifyIdToken(token)
+    const decoded = await auth.verifyIdToken(token)
     const userId = decoded.uid
 
     const form = await req.formData()

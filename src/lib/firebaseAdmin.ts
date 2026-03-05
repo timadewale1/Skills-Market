@@ -70,6 +70,11 @@ export function getAdminDb() {
   return getAdminApp().firestore()
 }
 
-export function getAdminStorage() {
-  return admin.storage()
+export function getAdminAuth() {
+  return admin.auth(getAdminApp())
 }
+
+export function getAdminStorage() {
+  return admin.storage(getAdminApp())
+}
+
