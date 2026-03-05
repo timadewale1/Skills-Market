@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { adminDb, adminApp } from "@/lib/firebaseAdmin"
+import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
 
@@ -8,6 +8,8 @@ export const runtime = "nodejs"
 
 export async function POST(req: Request) {
   try {
+    const adminDb = getAdminDb()
+    const adminApp = getAdminApp()
     const { amount } = await req.json()
     const amountNaira = Number(amount || 0)
 

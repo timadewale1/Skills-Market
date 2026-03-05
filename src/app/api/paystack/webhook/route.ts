@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { adminDb, adminApp } from "@/lib/firebaseAdmin"
+import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
 
@@ -28,6 +28,8 @@ export async function POST(req: Request) {
   console.log("[Paystack Webhook] Event received:", event.event, "Reference:", event?.data?.reference)
 
   try {
+    const adminDb = getAdminDb()
+    const adminApp = getAdminApp()
     const db = adminDb
 
     // We only handle charge.success for funding

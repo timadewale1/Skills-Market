@@ -1,4 +1,4 @@
-import { adminDb } from "@/lib/firebaseAdmin"
+import { getAdminDb } from "@/lib/firebaseAdmin"
 import * as admin from "firebase-admin"
 
 export async function POST(req: Request) {
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     const { workspaceId, rating, title, publicComment, communicationRating, professionalismRating, timelinessRating, skillRating, clarityRating, paymentReliabilityRating, privateFeedback, isPublic, fromRole } = body
 
     // Validate workspace exists and is completed
+    const adminDb = getAdminDb()
     const workspaceSnap = await adminDb.collection("workspaces").doc(workspaceId).get()
     
     if (!workspaceSnap.exists) {
@@ -92,6 +93,7 @@ export async function POST(req: Request) {
 
 async function updateUserRating(userId: string) {
   try {
+    const adminDb = getAdminDb()
     const reviewsSnap = await adminDb
       .collection("reviews")
       .where("toUserId", "==", userId)

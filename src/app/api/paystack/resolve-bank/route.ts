@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
-import { adminApp } from "@/lib/firebaseAdmin"
+import { getAdminApp, getAdminDb } from "@/lib/firebaseAdmin"
 
 export const runtime = "nodejs"
 
 export async function POST(req: Request) {
   try {
+    const adminApp = getAdminApp()
+    const adminDb = getAdminDb()
     const { accountNumber, bankCode } = await req.json()
 
     if (!accountNumber || String(accountNumber).length !== 10) {

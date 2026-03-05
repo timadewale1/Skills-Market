@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { adminDb, adminApp } from "@/lib/firebaseAdmin"
+import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 
 export const runtime = "nodejs"
@@ -17,6 +17,8 @@ export async function POST(req: Request) {
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+    const adminApp = getAdminApp()
+    const adminDb = getAdminDb()
     const decoded = await adminApp.auth().verifyIdToken(token)
     const uid = decoded.uid
 

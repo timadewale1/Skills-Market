@@ -18,7 +18,9 @@ export async function GET() {
     
     // Try to import and initialize
     try {
-      const { adminApp, adminDb } = await import("@/lib/firebaseAdmin")
+      const { getAdminApp, getAdminDb } = await import("@/lib/firebaseAdmin")
+      const adminApp = getAdminApp()
+      const adminDb = getAdminDb()
       console.log("Firebase Admin import: ✓")
       console.log("adminApp:", adminApp ? "✓ initialized" : "✗ null")
       console.log("adminDb:", adminDb ? "✓ initialized" : "✗ null")

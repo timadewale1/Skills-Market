@@ -69,6 +69,3 @@ export function getAdminApp() {
 export function getAdminDb() {
   return getAdminApp().firestore()
 }
-
-export const adminApp = getAdminApp()
-export const adminDb = adminApp.firestore()
