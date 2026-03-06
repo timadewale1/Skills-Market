@@ -5,13 +5,21 @@ function createTransporter() {
   const user = process.env.EMAIL_USER
   const pass = process.env.EMAIL_PASS
 
+console.log("EMAIL_USER:", process.env.EMAIL_USER)
+console.log("EMAIL_PASS exists:", !!process.env.EMAIL_PASS)
+
   if (!user || !pass) {
     throw new Error("Missing EMAIL_USER or EMAIL_PASS environment variable")
   }
 
   return nodemailer.createTransport({
-    service: "gmail",
-    auth: { user, pass },
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user,
+      pass,
+    },
   })
 }
 
