@@ -647,6 +647,7 @@ export default function WorkspaceDetailsPage() {
 
   const payType = (agreement?.terms?.payType || "fixed") as "fixed" | "hourly"
   const paymentStatus = ws?.payment?.status || "unfunded"
+  const isFunded = paymentStatus === "funded"
   const canWork =
     payType === "fixed"
       ? paymentStatus === "initiated" || paymentStatus === "funded"
@@ -1465,9 +1466,10 @@ const unsubCheckins = onSnapshot(
                           <button
                             onClick={startPaystackFunding}
                             className="mt-3 w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition inline-flex items-center justify-center gap-2"
+                            disabled={isFunded}
                           >
                             <Wallet size={16} />
-                            Fund workspace on Paystack
+                            {isFunded ? "Workspace funded" : "Fund workspace on Paystack"}
                           </button>
 
                           <div className="mt-3 pt-3 border-t space-y-2 text-xs">

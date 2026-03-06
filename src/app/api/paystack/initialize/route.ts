@@ -64,7 +64,14 @@ export async function POST(req: Request) {
     const secret = process.env.PAYSTACK_SECRET_KEY
     if (!secret) return NextResponse.json({ error: "Missing PAYSTACK_SECRET_KEY" }, { status: 500 })
 
-    const reference = `ws_${wsId}_${Date.now()}_${crypto.randomBytes(6).toString("hex")}`
+    // create a shorter, human-readable reference using gig title
+    const rawTitle = String(ws?.gigTitle || "workspace").toLowerCase()
+    const slug = rawTitle
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50) // limit length
+    const shortId = crypto.randomBytes(3).toString("hex")
+    const reference = `ws_${slug}_${shortId}`
     await wsRef.collection("payments").doc(reference).set({
       reference,
       amount: totalAmountNaira,
@@ -86,7 +93,7 @@ export async function POST(req: Request) {
         email: clientEmail,
         amount: Math.round(totalAmountNaira * 100),
         reference,
-        metadata: { wsId, threadId, type: "workspace_funding" },
+        metadata: { wsId, threadId, type: "workspace_funding", gigTitle: ws?.gigTitle || null },
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/workspaces/${wsId}?paid=1`,
       }),
     })

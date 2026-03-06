@@ -72,21 +72,21 @@ export async function POST(request: NextRequest) {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>New Message</title>
           </head>
-          <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
+          <body style="margin: 0; padding: 0; background-color: #fef7ed; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(249, 115, 22, 0.1);">
               <!-- Header -->
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 30px; text-align: center;">
                 <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">
                   Skills Market
                 </h1>
-                <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">
+                <p style="color: #fed7aa; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">
                   New Message Received
                 </p>
               </div>
 
               <!-- Content -->
               <div style="padding: 40px 30px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 3px; margin-bottom: 30px;">
+                <div style="background: linear-gradient(135deg, #fed7aa 0%, #fdba74 50%, #f97316 100%); border-radius: 8px; padding: 3px; margin-bottom: 30px;">
                   <div style="background: #ffffff; border-radius: 6px; padding: 25px;">
                     <h2 style="color: #1e293b; margin: 0 0 15px 0; font-size: 20px; font-weight: 600;">
                       📬 New Message from ${threadData.clientUid === userId ? threadData.clientName : threadData.talentName}
@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
                     <p style="color: #475569; margin: 0 0 15px 0; font-size: 16px;">
                       You have a new message in <strong>"${threadData.gigTitle || 'your conversation'}"</strong>
                     </p>
-                    <div style="background: #f8fafc; border-left: 4px solid #667eea; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                      <p style="margin: 0; color: #334155; font-style: italic; font-size: 16px; line-height: 1.5;">
+                    <div style="background: #fef3c7; border-left: 4px solid #f97316; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                      <p style="margin: 0; color: #92400e; font-style: italic; font-size: 16px; line-height: 1.5;">
                         "${text.trim()}"
                       </p>
                     </div>
@@ -103,13 +103,13 @@ export async function POST(request: NextRequest) {
                 </div>
 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://skills-market.vercel.app/dashboard/messages/${threadId}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
+                  <a href="https://skills-market.vercel.app/dashboard/messages/${threadId}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4); transition: all 0.3s ease;">
                     💬 View Message
                   </a>
                 </div>
 
-                <div style="background: #f1f5f9; border-left: 4px solid #667eea; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <p style="margin: 0; color: #334155; font-size: 14px;">
+                <div style="background: #fef3c7; border-left: 4px solid #f97316; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <p style="margin: 0; color: #92400e; font-size: 14px;">
                     💡 <strong>Quick tip:</strong> Reply directly in your dashboard to keep the conversation flowing smoothly.
                   </p>
                 </div>
@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
                 <div style="border-top: 1px solid #334155; padding-top: 20px; margin-top: 20px;">
                   <p style="color: #64748b; margin: 0; font-size: 12px;">
                     © 2024 Skills Market. All rights reserved.<br>
-                    <a href="https://skills-market.vercel.app" style="color: #667eea; text-decoration: none;">Visit our platform</a> |
-                    <a href="mailto:support@skills-market.com" style="color: #667eea; text-decoration: none;">Contact Support</a>
+                    <a href="https://skills-market.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
+                    <a href="mailto:support@skills-market.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
                   </p>
                 </div>
               </div>
