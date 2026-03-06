@@ -1,6 +1,6 @@
 import { getAdminDb } from "@/lib/firebaseAdmin"
+import { Card, CardContent } from "@/components/ui/card"
 export const dynamic = "force-dynamic"
-
 
 async function getUsers() {
   const db = getAdminDb()
@@ -12,39 +12,62 @@ async function getUsers() {
 }
 
 export default async function UsersPage() {
-  // TODO: Add proper auth middleware for admin routes
   const users: any = await getUsers()
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Users</h1>
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2">ID</th>
-            <th className="p-2">Name</th>
-            <th className="p-2">Email</th>
-            <th className="p-2">Role</th>
-            <th className="p-2">Created At</th>
-            <th className="p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u: any) => (
-            <tr key={u.id} className="border-t">
-              <td className="p-2">{u.id}</td>
-              <td className="p-2">{u.name}</td>
-              <td className="p-2">{u.email}</td>
-              <td className="p-2">{u.role}</td>
-              <td className="p-2">{u.createdAt?.toDate?.().toLocaleDateString() || "N/A"}</td>
-              <td className="p-2">
-                <button className="text-blue-600 hover:underline">Edit</button>
-                <button className="text-red-600 hover:underline ml-2">Suspend</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Users</h1>
+        <div className="space-y-4">
+          {users.length === 0 ? (
+            <Card className="rounded-xl">
+              <CardContent className="p-8 text-center text-gray-600">
+                No users found
+              </CardContent>
+            </Card>
+          ) : (
+            users.map((u: any) => (
+              <Card key={u.id} className="rounded-xl hover:shadow-md transition">
+                <CardContent className="p-6 flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-extrabold text-gray-900 mb-2">
+                      {u.name || u.email}
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500 font-semibold">Email</span>
+                        <p className="text-gray-900">{u.email}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 font-semibold">Role</span>
+                        <p className="text-gray-900">{u.role}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 font-semibold">Created</span>
+                        <p className="text-gray-900">
+                          {u.createdAt?.toDate?.().toLocaleDateString() || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 font-semibold">ID</span>
+                        <p className="text-gray-900">{u.id}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition text-sm">
+                      Edit
+                    </button>
+                    <button className="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm">
+                      Suspend
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   )
 }

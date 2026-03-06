@@ -4,23 +4,64 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn()
+      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
     function isMe(uid) { return signedIn() && request.auth.uid == uid; }
     function isGigOwner() { return signedIn() && resource.data.clientUid == request.auth.uid; }
-    
-    
+
+    // helpers that enforce sensible updates to kyc/orgKyc objects.  regular
+    // users may submit their own verification info, but they should not be
+    // able to flip the status to "verified" or write adminNotes.
+    function kycStatusAllowed(oldStatus, newStatus) {
+      return newStatus == oldStatus       // no change
+          || newStatus == "pending";    // submitting or resubmitting
+    }
+
+    function orgKycStatusAllowed(oldStatus, newStatus) {
+      return newStatus == oldStatus
+          || newStatus == "pending";
+    }
+
      // Allow Storage rules to read workspace docs (for isTalent() check)
     match /workspaces/{workspaceId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null || isAdmin();
     }
 
     // PRIVATE user doc + subcollections
     
     match /users/{uid} {
-      allow read, write: if isMe(uid);
+      // base rule: admins may do anything; individual users can only modify
+      // their own document.  we tighten the write permission so that clients
+      // can't give themselves a "verified" badge or inject admin notes.
+      allow read: if isMe(uid) || isAdmin();
+
+      allow write: if isAdmin()
+        || (
+            isMe(uid)
+            // if the request touches the kyc/orgKyc blocks, the new status
+            // must either be unchanged or set to pending.  the adminNotes
+            // field is never writable by the client.
+            && (
+              // either no kyc object included, or it's safe
+              !("kyc" in request.resource.data)
+              || (
+                   kycStatusAllowed(resource.data.kyc.status, request.resource.data.kyc.status)
+                   && !("adminNotes" in request.resource.data.kyc)
+                 )
+            )
+            && (
+              !("orgKyc" in request.resource.data)
+              || (
+                   orgKycStatusAllowed(resource.data.orgKyc.status, request.resource.data.orgKyc.status)
+                   && !("adminNotes" in request.resource.data.orgKyc)
+                 )
+            )
+          );
 
       // user gigs index (client dashboard list)
       match /gigs/{gigId} {
-        allow read, write: if isMe(uid);
+        allow read, write: if isMe(uid) || isAdmin();
       }
 
       // talent saved gigs
@@ -49,16 +90,13 @@ service cloud.firestore {
     // GIGS
    // GIGS
 match /gigs/{gigId} {
-  allow read: if request.auth != null;
+  allow read: if request.auth != null || isAdmin();
 
   allow create: if request.auth != null
     && request.resource.data.clientUid == request.auth.uid;
 
   allow update, delete: if request.auth != null
-    && resource.data.clientUid == request.auth.uid;
-
-  // PROPOSALS (subcollection)
-  match /proposals/{proposalId} {
+    && (resource.data.clientUid == request.auth.uid || isAdmin());
     // Talent creates their own proposal doc (we use {talentUid} as id)
     allow create: if request.auth != null
       && request.resource.data.talentUid == request.auth.uid;
@@ -391,7 +429,14 @@ match /workspaces/{workspaceId}/{subPath=**} {
   }
 }
 
-
+// NOTIFICATIONS
+match /notifications/{notificationId} {
+  // admins may view all notifications in the admin dashboard
+  allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+  allow create: if false;  // Server only
+  allow update: if signedIn() && resource.data.userId == request.auth.uid && request.resource.data.read == true;  // Only mark as read
+  allow delete: if false;
+}
 
 
 
@@ -402,10 +447,3 @@ match /workspaces/{workspaceId}/{subPath=**} {
   }
 }
 
-// NOTIFICATIONS
-match /notifications/{notificationId} {
-  allow read: if signedIn() && resource.data.userId == request.auth.uid;
-  allow create: if false;  // Server only
-  allow update: if signedIn() && resource.data.userId == request.auth.uid && request.resource.data.read == true;  // Only mark as read
-  allow delete: if false;
-}

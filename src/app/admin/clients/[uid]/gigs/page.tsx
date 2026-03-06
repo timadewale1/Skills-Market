@@ -1,28 +1,27 @@
 import Link from "next/link"
 import { getAdminDb } from "@/lib/firebaseAdmin"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 export const dynamic = "force-dynamic"
 
-async function getGigs() {
+async function getClientGigs(clientUid: string) {
   const db = getAdminDb()
-  const snap = await db.collection("gigs").orderBy("createdAt", "desc").get()
+  const snap = await db.collection("gigs").where("clientUid", "==", clientUid).orderBy("createdAt", "desc").get()
   return snap.docs.map((doc: any) => ({
     id: doc.id,
     ...doc.data(),
   }))
 }
 
+async function getClientName(clientUid: string) {
+  const db = getAdminDb()
+  const snap = await db.collection("publicProfiles").doc(clientUid).get()
+  return snap.data()?.fullName || snap.data()?.businessName || clientUid
+}
+
 function money(n?: number | null) {
   if (n === null || n === undefined) return "—"
   return `₦${Number(n).toLocaleString()}`
-}
-
-function gigBudgetLabel(g?: any | null) {
-  if (!g) return "—"
-  if (g.budgetType === "hourly") return `${money(g.hourlyRate)}/hr`
-  if (g.budgetType === "fixed") return `${money(g.fixedBudget)} fixed`
-  return "—"
 }
 
 function statusBadge(status: string) {
@@ -31,18 +30,22 @@ function statusBadge(status: string) {
   return <Badge>{status}</Badge>
 }
 
-export default async function AdminGigsPage() {
-  const gigs: any = await getGigs()
+export default async function ClientGigsPage({ params }: { params: { uid: string } }) {
+  const { uid } = params
+  const gigs: any = await getClientGigs(uid)
+  const clientName = await getClientName(uid)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-900">All Gigs</h1>
-          <p className="text-gray-600 mt-2">Manage and oversee all gigs on the platform</p>
-        </div>
+        <Link href={`/admin/clients/${uid}`} className="text-blue-600 hover:underline mb-6 inline-block">
+          ← Back to {clientName}
+        </Link>
 
-        <div className="space-y-4">
+        <h1 className="text-3xl font-extrabold text-gray-900">Gigs by {clientName}</h1>
+        <p className="text-gray-600 mt-2">All gigs posted by this client</p>
+
+        <div className="mt-8 space-y-4">
           {gigs.length === 0 ? (
             <Card className="rounded-xl">
               <CardContent className="p-8 text-center text-gray-600">
@@ -64,18 +67,18 @@ export default async function AdminGigsPage() {
                       
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
                         <div>
-                          <span className="text-gray-500 font-semibold">Client</span>
-                          <Link href={`/admin/clients/${g.clientUid}`} className="text-blue-600 hover:underline block">
-                            {g.clientName || g.clientUid}
-                          </Link>
-                        </div>
-                        <div>
                           <span className="text-gray-500 font-semibold">Budget</span>
-                          <p className="text-gray-900 font-semibold">{gigBudgetLabel(g)}</p>
+                          <p className="text-gray-900 font-semibold">
+                            {g.budgetType === "fixed" ? `₦${money(g.fixedBudget)}` : `₦${money(g.hourlyRate)}/hr`}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500 font-semibold">Hires Needed</span>
                           <p className="text-gray-900 font-semibold">{g.hiresNeeded || 1}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-semibold">Duration</span>
+                          <p className="text-gray-900 font-semibold">{g.duration || "N/A"}</p>
                         </div>
                         <div>
                           <span className="text-gray-500 font-semibold">Created</span>

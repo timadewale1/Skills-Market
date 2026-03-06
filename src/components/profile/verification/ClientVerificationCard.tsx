@@ -20,10 +20,18 @@ export default function ClientVerificationCard() {
   const [saving, setSaving] = useState(false)
 
   const [status, setStatus] = useState<KycStatus>("not_submitted")
+  const [mode, setMode] = useState<"org"|"contact">("org")
+  // org fields
   const [cacNumber, setCacNumber] = useState("")
   const [cacDocUrl, setCacDocUrl] = useState("")
   const [repName, setRepName] = useState("")
   const [repRole, setRepRole] = useState("")
+  // contact person fields
+  const [contactName, setContactName] = useState("")
+  const [contactNin, setContactNin] = useState("")
+  const [contactIdUrl, setContactIdUrl] = useState("")
+  // admin note (visible when rejected)
+  const [adminNotes, setAdminNotes] = useState("")
 
   const locked = useMemo(() => status === "pending" || status === "verified", [status])
 
@@ -36,10 +44,17 @@ export default function ClientVerificationCard() {
       const kyc = data?.orgKyc || {}
 
       setStatus((kyc?.status || "not_submitted") as KycStatus)
+      setMode(kyc?.mode === "contact" ? "contact" : "org")
+      // org data
       setCacNumber(kyc?.cacNumber || "")
       setCacDocUrl(kyc?.cacDocUrl || "")
       setRepName(kyc?.repName || "")
       setRepRole(kyc?.repRole || "")
+      // contact data
+      setContactName(kyc?.contactName || "")
+      setContactNin(kyc?.contactNin || "")
+      setContactIdUrl(kyc?.contactIdUrl || "")
+      setAdminNotes(kyc?.adminNotes || "")
       setLoading(false)
     }
     run()
@@ -59,28 +74,37 @@ export default function ClientVerificationCard() {
 
   const submit = async () => {
     if (!user?.uid) return
-    if (!cacNumber.trim()) return toast.error("CAC number is required")
-    if (!cacDocUrl) return toast.error("Upload CAC proof document")
+    // validate based on mode
+    if (mode === "org") {
+      if (!cacNumber.trim()) return toast.error("CAC number is required")
+      if (!cacDocUrl) return toast.error("Upload CAC proof document")
+    } else {
+      if (!contactName.trim()) return toast.error("Contact name is required")
+      if (!contactNin.trim()) return toast.error("Contact person NIN is required")
+      if (!contactIdUrl) return toast.error("Upload ID document for contact")
+    }
 
     setSaving(true)
     try {
+      const payload: any = { mode, status: "pending", updatedAt: serverTimestamp() }
+      if (mode === "org") {
+        payload.cacNumber = cacNumber.trim()
+        payload.cacDocUrl = cacDocUrl
+        payload.repName = repName.trim()
+        payload.repRole = repRole.trim()
+      } else {
+        payload.contactName = contactName.trim()
+        payload.contactNin = contactNin.trim()
+        payload.contactIdUrl = contactIdUrl
+      }
+
       await setDoc(
         doc(db, "users", user.uid),
-        {
-          orgKyc: {
-            cacNumber: cacNumber.trim(),
-            cacDocUrl,
-            repName: repName.trim(),
-            repRole: repRole.trim(),
-            status: "pending",
-            updatedAt: serverTimestamp(),
-          },
-          updatedAt: serverTimestamp(),
-        },
+        { orgKyc: payload, updatedAt: serverTimestamp() },
         { merge: true }
       )
       setStatus("pending")
-      toast.success("Organization verification submitted. Awaiting review.")
+      toast.success("Verification submitted. Awaiting review.")
     } catch (e: any) {
       toast.error(e?.message || "Failed to submit verification")
     } finally {
@@ -102,7 +126,7 @@ export default function ClientVerificationCard() {
       : status === "pending"
       ? "Awaiting review"
       : status === "rejected"
-      ? "Rejected (edit allowed)"
+      ? "Rejected (see note, edit allowed)"
       : "Not submitted"
 
   return (
@@ -118,7 +142,7 @@ export default function ClientVerificationCard() {
             <div className="mt-2 rounded-2xl border bg-orange-50 px-4 py-3 text-sm text-gray-700 flex items-start gap-3">
               <ShieldAlert className="text-[var(--primary)] mt-0.5" size={18} />
               <div>
-                <div className="font-extrabold text-gray-900">Required to fully transact</div>
+                <div className="font-extrabold text-gray-900">Submit either organization CAC or contact person NIN</div>
                 <div className="mt-1">
                   After submission, verification is locked until reviewed by admin.
                 </div>
@@ -128,6 +152,12 @@ export default function ClientVerificationCard() {
 
           <div className="text-sm font-extrabold text-gray-900">{label}</div>
         </div>
+
+        {status === "rejected" && adminNotes && (
+          <div className="text-sm text-red-700">
+            <strong>Reason:</strong> {adminNotes}
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>

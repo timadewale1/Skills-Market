@@ -43,6 +43,17 @@ service firebase.storage {
       allow read, write: if signedIn() && request.auth.uid == userId;
     }
 
+    // === verification uploads (kyc/orgKyc) ===
+    // the client-side components write into `users/{uid}/kyc` and
+    // `users/{uid}/org-kyc`; allow the owning user to manage those files.
+    match /users/{userId}/kyc/{allPaths=**} {
+      // owner or admin may access verification files
+      allow read, write: if (signedIn() && request.auth.uid == userId) || isAdmin();
+    }
+    match /users/{userId}/org-kyc/{allPaths=**} {
+      allow read, write: if (signedIn() && request.auth.uid == userId) || isAdmin();
+    }
+
     // ===== AGREEMENTS =====
    // ===== AGREEMENTS =====
     // Simplified: just check if signed in. Firestore rules validate thread participation.

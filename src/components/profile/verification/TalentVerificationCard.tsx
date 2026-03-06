@@ -24,6 +24,7 @@ export default function TalentVerificationCard() {
   const [idType, setIdType] = useState("NIN Slip")
   const [idUrl, setIdUrl] = useState("")
   const [proofUrl, setProofUrl] = useState("")
+  const [adminNotes, setAdminNotes] = useState("")
 
   const [uploadingId, setUploadingId] = useState(false)
   const [uploadingProof, setUploadingProof] = useState(false)
@@ -41,6 +42,7 @@ export default function TalentVerificationCard() {
       setIdType(kyc?.idType || "NIN Slip")
       setIdUrl(kyc?.idUrl || "")
       setProofUrl(kyc?.proofOfAddressUrl || "")
+      setAdminNotes(kyc?.adminNotes || "")
       setLoading(false)
     }
     run()
@@ -54,7 +56,7 @@ export default function TalentVerificationCard() {
       : status === "pending"
       ? "Awaiting review"
       : status === "rejected"
-      ? "Rejected (edit allowed)"
+      ? "Rejected (see note, edit allowed)"
       : "Not submitted"
 
   const submit = async () => {
@@ -150,6 +152,12 @@ export default function TalentVerificationCard() {
 
           <div className="text-sm font-extrabold text-gray-900">{statusLabel}</div>
         </div>
+
+        {status === "rejected" && adminNotes && (
+          <div className="text-sm text-red-700">
+            <strong>Reason:</strong> {adminNotes}
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
