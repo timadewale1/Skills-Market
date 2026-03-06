@@ -84,6 +84,23 @@ export default function TalentVerificationCard() {
       )
       setStatus("pending")
       toast.success("Verification submitted. Awaiting review.")
+
+      // notify admins
+      try {
+        const token = await user.getIdToken()
+        if (token) {
+          await fetch("/api/admin/kyc-submitted", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ fullName: user.displayName || "", role: "talent" }),
+          })
+        }
+      } catch (err) {
+        console.error("admin kyc notify failed", err)
+      }
     } catch (e: any) {
       toast.error(e?.message || "Failed to submit verification")
     } finally {

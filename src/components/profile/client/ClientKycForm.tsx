@@ -69,6 +69,23 @@ export default function ClientKycForm() {
       )
       toast.success("Verification submitted (pending review)")
       setStatus("pending")
+
+      // notify admins
+      try {
+        const token = await user.getIdToken()
+        if (token) {
+          await fetch("/api/admin/kyc-submitted", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ fullName: user.displayName || "", role: "client" }),
+          })
+        }
+      } catch (err) {
+        console.error("admin kyc notify failed", err)
+      }
     } catch (e: any) {
       toast.error(e?.message || "Failed to submit verification")
     } finally {

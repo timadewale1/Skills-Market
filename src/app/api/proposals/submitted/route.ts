@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAdminAuth } from "@/lib/firebaseAdmin"
 import { getAdminDb } from "@/lib/firebaseAdmin"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,6 +96,14 @@ export async function POST(request: NextRequest) {
         </body>
         </html>
       `,
+    })
+    
+    // notify admins as well
+    await notifyAdmins({
+      type: "admin:proposal",
+      title: "New proposal submitted",
+      message: `${talentEmail} submitted a proposal for \"${gigTitle}\"`,
+      link: `/admin/gigs/${gigId}/proposals`,
     })
 
     return NextResponse.json({ success: true })

@@ -4,6 +4,7 @@ import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export const runtime = "nodejs"
 
@@ -128,6 +129,18 @@ export async function POST(req: Request) {
       message: `Your withdrawal of ₦${amountNaira.toLocaleString()} has been submitted and is being processed`,
       link: `/dashboard/wallet`,
     })
+
+    // also notify admins
+    try {
+      await notifyAdmins({
+        type: "admin:withdrawal",
+        title: "Withdrawal requested",
+        message: `Talent ${uid} requested ₦${amountNaira.toLocaleString()}`,
+        link: `/admin/wallets`,
+      })
+    } catch (err) {
+      console.error("admin notify withdrawal failed", err)
+    }
 
     return NextResponse.json({ ok: true, withdrawalId })
   } catch (e: any) {

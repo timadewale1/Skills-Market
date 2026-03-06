@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export async function POST(req: Request) {
   try {
@@ -48,6 +49,14 @@ export async function POST(req: Request) {
       title: "Final work submitted",
       message: "Talent has submitted the final work for your review",
       link: `/dashboard/workspaces/${workspaceId}`,
+    })
+
+    // notify admins
+    await notifyAdmins({
+      type: "admin:workspace",
+      title: "Final Work Submitted",
+      message: `Final work in workspace ${workspaceId} has been submitted.",
+      link: `/admin/workspaces/${workspaceId}`,
     })
 
     return NextResponse.json({ success: true })

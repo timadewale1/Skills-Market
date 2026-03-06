@@ -33,6 +33,15 @@ export async function POST(request: NextRequest) {
       emailSubject: `Your Proposal Was Accepted for \"${gigTitle}\"`,
       emailHtml: `
         <!DOCTYPE html>
+`});
+
+    // notify admins as well
+    await notifyAdmins({
+      type: "admin:proposal",
+      title: "Proposal Accepted",
+      message: `Client accepted a proposal for \"${gigTitle}\" (gig ${gigId}).`,
+      link: `/admin/gigs/${gigId}/proposals`,
+    });
         <html>
         <head>
           <meta charset="utf-8">

@@ -219,6 +219,23 @@ export default function OnboardingPage() {
         { merge: true }
       )
 
+      // notify admins about onboarding completion
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        if (token) {
+          await fetch("/api/admin/new-user", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ fullName, role }),
+          })
+        }
+      } catch (err) {
+        console.error("admin notify onboarding failed", err)
+      }
+
       toast.success("Onboarding complete!")
       router.push("/dashboard")
     } catch (err: any) {

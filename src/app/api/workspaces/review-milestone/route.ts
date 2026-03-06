@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export async function POST(req: Request) {
   try {
@@ -62,6 +63,14 @@ export async function POST(req: Request) {
       title: notificationTitle,
       message: notificationMessage,
       link: `/dashboard/workspaces/${workspaceId}`,
+    })
+
+    // admin notification
+    await notifyAdmins({
+      type: "admin:workspace",
+      title: `Milestone ${status}`,
+      message: `Milestone ${milestoneId} in workspace ${workspaceId} was ${status}.`,
+      link: `/admin/workspaces/${workspaceId}`,
     })
 
     return NextResponse.json({ success: true })

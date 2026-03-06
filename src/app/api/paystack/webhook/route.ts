@@ -4,6 +4,7 @@ import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export const runtime = "nodejs"
 
@@ -156,6 +157,18 @@ export async function POST(req: Request) {
         message: "The workspace has been funded and you can now start work",
         link: `/dashboard/workspaces/${wsId}`,
       })
+    }
+
+    // notify admins as well
+    try {
+      await notifyAdmins({
+        type: "admin:workspace",
+        title: "Workspace funded",
+        message: `Workspace ${wsId} has been funded`,
+        link: `/admin/workspaces/${wsId}`,
+      })
+    } catch (err) {
+      console.error("admin notify workspace funded failed", err)
     }
 
     // Client spend tally (wallet)

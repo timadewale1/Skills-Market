@@ -45,6 +45,23 @@ export default function SignupPage() {
         { merge: true }
       )
 
+      // notify admins about the new signup
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        if (token) {
+          await fetch("/api/admin/new-user", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ fullName: "", role: "unknown" }),
+          })
+        }
+      } catch (err) {
+        console.error("admin notification failed", err)
+      }
+
       toast.success("Signup complete! Please verify your email to continue.")
       router.push("/verify-email")
     } catch (err: any) {
@@ -72,6 +89,23 @@ export default function SignupPage() {
         },
         { merge: true }
       )
+
+      // notify admins
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        if (token) {
+          await fetch("/api/admin/new-user", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ fullName: res.user.displayName || "", role: "unknown" }),
+          })
+        }
+      } catch (err) {
+        console.error("admin notification failed", err)
+      }
 
       toast.success("Welcome!")
       router.push("/onboarding")

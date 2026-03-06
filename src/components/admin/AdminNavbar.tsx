@@ -23,6 +23,7 @@ import Button from "@/components/ui/Button"
 import { useAuth } from "@/context/AuthContext"
 import { doc, getDoc } from "firebase/firestore"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import AdminNotificationBell from "@/components/admin/AdminNotificationBell"
 
 export default function AdminNavbar() {
   const { user } = useAuth()
@@ -113,6 +114,8 @@ export default function AdminNavbar() {
 
         {/* RIGHT (DESKTOP) */}
         <div className="hidden md:flex items-center gap-4">
+          <AdminNotificationBell />
+          
           <Link href="/admin/profile" className="flex items-center gap-2">
             <Avatar className="h-9 w-9">
               {photoUrl ? (
@@ -179,6 +182,14 @@ export default function AdminNavbar() {
                 </Link>
               )
             })}
+            <Link
+              href="/admin/notifications"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold text-black hover:text-[var(--primary)] hover:bg-orange-50 transition"
+              onClick={() => setMobileOpen(false)}
+            >
+              <MessageSquare size={18} />
+              Notifications
+            </Link>
           </div>
 
           <div className="pt-2 w-full">

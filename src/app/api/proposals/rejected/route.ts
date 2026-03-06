@@ -33,6 +33,15 @@ export async function POST(request: NextRequest) {
       emailSubject: `Proposal Rejected for \"${gigTitle}\"`,
       emailHtml: `
         <!DOCTYPE html>
+`});
+
+    // notify admins too
+    await notifyAdmins({
+      type: "admin:proposal",
+      title: "Proposal Rejected",
+      message: `Client rejected a proposal for \"${gigTitle}\" (gig ${gigId}).`,
+      link: `/admin/gigs/${gigId}/proposals`,
+    });
         <html>
         <head>
           <meta charset="utf-8">

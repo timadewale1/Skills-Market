@@ -378,6 +378,27 @@ export default function PostGigPage() {
         { merge: true }
       )
 
+      // notify admins about new gig
+      try {
+        const token = await user.getIdToken()
+        if (token) {
+          await fetch("/api/admin/new-gig", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              gigId,
+              gigTitle: createPayload.title,
+              clientUid: user.uid,
+            }),
+          })
+        }
+      } catch (err) {
+        console.error("admin notification for gig failed", err)
+      }
+
       toast.success("Gig posted successfully!")
       router.push(`/dashboard/gigs/${gigId}`)
     } catch (e: any) {

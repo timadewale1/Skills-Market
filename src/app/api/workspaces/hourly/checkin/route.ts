@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAdminAuth } from "@/lib/firebaseAdmin"
 import { getAdminDb } from "@/lib/firebaseAdmin"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,6 +87,15 @@ export async function POST(request: NextRequest) {
       link: `/dashboard/workspaces/${wsId}`,
       emailSubject: "Hourly Check-in Submitted",
       emailHtml: `
+`});
+
+    // notify admins
+    await notifyAdmins({
+      type: "admin:workspace",
+      title: "Check-in Submitted",
+      message: `A check-in was submitted for workspace ${wsId} hour ${currentHourIndex + 1}`,
+      link: `/admin/workspaces/${wsId}`,
+    })
         <!DOCTYPE html>
         <html>
         <head>

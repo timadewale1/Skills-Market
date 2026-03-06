@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export async function POST(req: Request) {
   try {
@@ -91,6 +92,18 @@ export async function POST(req: Request) {
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       })
     })
+
+    // inform admins of workspace funding
+    try {
+      await notifyAdmins({
+        type: "admin:workspace",
+        title: "Workspace funded",
+        message: `Workspace ${wsId} funded (₦${amount.toLocaleString()})`,
+        link: `/admin/workspaces/${wsId}`,
+      })
+    } catch (err) {
+      console.error("admin notify workspace funded failed", err)
+    }
 
     return NextResponse.json({
       message: "Workspace marked as funded",
