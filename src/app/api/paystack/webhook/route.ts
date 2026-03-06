@@ -27,6 +27,7 @@ export async function POST(req: Request) {
 
   const event = JSON.parse(raw.toString("utf8"))
   console.log("[Paystack Webhook] Event received:", event.event, "Reference:", event?.data?.reference)
+  console.log("[Paystack Webhook] Full event data:", JSON.stringify(event, null, 2))
 
   try {
     const adminDb = getAdminDb()
