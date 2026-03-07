@@ -25,7 +25,7 @@ export default function FancyLoader({ label = "Loading your workspace..." }: { l
           {/* Brand */}
           <div className="relative">
             <div className="text-xl font-extrabold text-[var(--primary)]">
-              SkillsMarket
+              Changeworker
             </div>
             <div className="text-sm text-gray-600 mt-1">{label}</div>
 

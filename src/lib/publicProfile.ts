@@ -156,3 +156,39 @@ export async function fetchPublicTalentBySlug(slugOrUid: string): Promise<Public
 
   return null
 }
+
+export async function fetchPublicTalents(limitCount: number = 20): Promise<PublicTalentProfile[]> {
+  const q = query(
+    collection(db, "publicProfiles"),
+    where("role", "==", "talent"),
+    limit(limitCount)
+  )
+  const snap = await getDocs(q)
+  
+  return snap.docs.map(doc => {
+    const d: any = doc.data()
+    const p = d?.publicProfile || {}
+    const talent = d?.talent || {}
+
+    return {
+      uid: doc.id,
+      fullName: d?.fullName || "Unnamed Talent",
+      location: d?.location || "",
+      roleTitle: talent?.roleTitle || "",
+      photoURL: p?.photoURL || "",
+      hourlyRate: p?.hourlyRate ?? null,
+      bio: p?.bio || "",
+      skills: talent?.skills || [],
+      languages: p?.languages || [],
+      education: p?.education || [],
+      certifications: p?.certifications || [],
+      employment: p?.employment || [],
+      socials: p?.socials || {},
+      portfolio: p?.portfolio || [],
+      rating: d?.rating || { avg: 0, count: 0 },
+      verification: d?.verification || { status: "not_submitted" },
+      sdgTags: d?.sdgTags || [],
+      slug: d?.slug,
+    }
+  })
+}

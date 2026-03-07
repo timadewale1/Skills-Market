@@ -10,6 +10,7 @@ import {
   getCountFromServer,
   getDocs,
   getDoc,
+  doc,
   limit,
   orderBy,
   query,
@@ -39,7 +40,10 @@ import {
   ChevronDown,
   ChevronRight,
   Users,
+  Sparkles,
 } from "lucide-react"
+import { fetchPublicGigs } from "@/lib/publicGigs"
+import { matchGigsToTalent, Gig as MatchingGig } from "@/lib/matching"
 
 type Gig = {
   id: string
@@ -60,7 +64,36 @@ type Gig = {
   createdAt?: any // Firestore Timestamp
 }
 
+// simplified copy of UserDoc used elsewhere
+
+type Role = "talent" | "client"
+
+type UserDoc = {
+  role: Role
+  profileComplete?: boolean
+  fullName?: string
+  location?: string
+  sdgTags?: string[]
+  rating?: { avg?: number; count?: number }
+  talent?: { roleTitle?: string; skills?: string[]; workMode?: string }
+  client?: { orgName?: string }
+  wallet?: {
+    totalEarned?: number
+    totalDeposited?: number
+  }
+}
+
 const WORK_MODE = ["Remote", "Hybrid", "On-site"] as const
+
+// animation helpers
+const fadeUp = {
+  hidden: { opacity: 0, y: 10 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.05 * i, duration: 0.35 },
+  }),
+}
 const TIME_FILTERS = [
   { label: "Any time", value: "" as const },
   { label: "Last 1 hour", value: "1h" as const },
@@ -142,6 +175,11 @@ function matchApplicantsRange(count: number, range: "" | "0" | "1-5" | "6-20" | 
 
 export default function FindWorkPage() {
   const { user } = useAuth()
+
+  // profile of the logged-in user (used for matching)
+  const [profile, setProfile] = useState<UserDoc | null>(null)
+  const [suggestedGigs, setSuggestedGigs] = useState<MatchingGig[]>([])
+  const [suggestedGigsLoading, setSuggestedGigsLoading] = useState(false)
 
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<Gig[]>([])
@@ -254,6 +292,42 @@ return [g.id, snap.size] as const
     fetchPage("initial")
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // fetch the user's profile (for matching) and suggested gigs
+  useEffect(() => {
+    const run = async () => {
+      if (!user?.uid) return
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid))
+        const data = (snap.data() as any) || null
+        setProfile(data)
+        if (data?.role === "talent") {
+          setSuggestedGigsLoading(true)
+          try {
+            const all = await fetchPublicGigs(20)
+            const criteria = {
+              uid: user.uid,
+              fullName: data.fullName || "",
+              skills: data.talent?.skills || [],
+              categories: data.talent?.skills || [],
+              sdgTags: data.sdgTags || [],
+              workMode: data.talent?.workMode || "",
+              location: data.location || "",
+            }
+            const matched = matchGigsToTalent(all, criteria as any)
+            setSuggestedGigs(matched.slice(0, 8))
+          } catch (e) {
+            console.error("suggested gigs failed", e)
+          } finally {
+            setSuggestedGigsLoading(false)
+          }
+        }
+      } catch (e) {
+        console.error("failed to load profile for suggestions", e)
+      }
+    }
+    run()
+  }, [user?.uid])
 
   const sdgOptions = useMemo(() => {
     const set = new Set<string>()
@@ -585,6 +659,91 @@ return [g.id, snap.size] as const
           )}
 
           {/* Results */}
+
+          {/* Suggested gigs for talent (swipe carousel) */}
+          {profile?.role === "talent" && suggestedGigs.length > 0 && (
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={fadeUp}
+              custom={5}
+              className="mt-6"
+            >
+              <Card className="rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-base font-extrabold flex items-center gap-2">
+                    <Sparkles size={18} className="text-[var(--primary)]" />
+                    Suggested gigs
+                  </CardTitle>
+                  <div className="text-xs text-gray-500 font-semibold">
+                    Matches based on your skills and SDG focus
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {suggestedGigsLoading ? (
+                    <div className="text-sm text-gray-600">Loading suggestions...</div>
+                  ) : (
+                    <div className="overflow-x-auto pb-4">
+                      <div className="flex gap-4 min-w-max">
+                        {suggestedGigs.map((g, idx) => (
+                          <div key={g.id} className="w-80 flex-shrink-0">
+                            <Link href={`/dashboard/find-work/${g.id}`} className="block">
+                              <Card className="rounded-2xl hover:shadow-md transition bg-white">
+                                <CardContent className="p-5">
+                                  <div className="flex items-start gap-4">
+                                    <div className="h-12 w-12 rounded-full bg-orange-50 flex items-center justify-center font-extrabold text-[var(--primary)]">
+                                      <Briefcase size={20} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-extrabold text-gray-900 truncate">{g.title}</div>
+                                      <div className="text-sm text-gray-700 mt-1">
+                                        {g.category?.group} → {g.category?.item}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                                        <span className="inline-flex items-center gap-1">
+                                          <MapPin size={14} />
+                                          {g.workMode === "Remote" ? "Remote" : g.location || "—"}
+                                        </span>
+                                        <span className="mx-1">•</span>
+                                        <span>
+                                          {g.budgetType === "hourly"
+                                            ? `₦${g.hourlyRate?.toLocaleString()}/hr`
+                                            : `₦${g.fixedBudget?.toLocaleString()} fixed`}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1 mt-3">
+                                        {(g.requiredSkills || []).slice(0, 3).map((skill) => (
+                                          <span
+                                            key={skill}
+                                            className="text-xs font-semibold px-2 py-1 rounded-full border bg-gray-50"
+                                          >
+                                            {skill}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-4 text-center">
+                    <Link
+                      href="/dashboard/find-work"
+                      className="text-sm font-extrabold text-[var(--primary)] hover:underline"
+                    >
+                      View all gigs →
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 space-y-3">
               {loading && items.length === 0 ? (
@@ -732,7 +891,3 @@ return [g.id, snap.size] as const
     </RequireAuth>
   )
 }
-function doc(db: Firestore, arg1: string, id: string, arg3: string, uid: string): import("@firebase/firestore").DocumentReference<unknown, import("@firebase/firestore").DocumentData> {
-    throw new Error("Function not implemented.")
-}
-

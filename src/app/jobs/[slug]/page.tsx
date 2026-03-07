@@ -12,6 +12,9 @@ import { Briefcase, Target, Lightbulb, ArrowRight, Loader2 } from "lucide-react"
 import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { SlidersHorizontal, X } from "lucide-react"
+import toast from "react-hot-toast"
+import { useAuth } from "@/context/AuthContext"
+import { useUserRole } from "@/hooks/useUserRole"
 
 type GigRow = {
   id: string
@@ -35,6 +38,8 @@ export const dynamicParams = true
 
 export default function JobRolePage({ params }: { params: { slug: string } }) {
   const router = useRouter()
+  const { user } = useAuth()
+  const { role } = useUserRole()
   const [gigs, setGigs] = useState<GigRow[]>([])
   const [loading, setLoading] = useState(false)
   const [notFound, setNotFound] = useState(false)
@@ -346,13 +351,15 @@ export default function JobRolePage({ params }: { params: { slug: string } }) {
           {!loading && filtered.length > 0 && (
             <div className="space-y-3">
               {filtered.map((gig) => (
-                <Link
+                <div
                   key={gig.id}
-                  href={`/dashboard/find-work/${gig.id}`}
                   className="block rounded-2xl border bg-white p-5 hover:shadow-md hover:border-[var(--primary)] transition"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => router.push(`/dashboard/find-work/${gig.id}`)}
+                    >
                       <h3 className="font-extrabold text-gray-900 text-lg">{gig.title}</h3>
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">{gig.description}</p>
 
@@ -375,17 +382,36 @@ export default function JobRolePage({ params }: { params: { slug: string } }) {
                       </div>
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      {gig.budgetType === "hourly" && gig.hourlyRate && (
-                        <div className="text-lg font-extrabold text-[var(--primary)]">${gig.hourlyRate}/hr</div>
-                      )}
-                      {gig.budgetType === "fixed" && gig.fixedBudget && (
-                        <div className="text-lg font-extrabold text-[var(--primary)]">₦{gig.fixedBudget}</div>
-                      )}
-                      <div className="text-xs text-gray-500 mt-1">View details</div>
+                    <div className="text-right flex-shrink-0 space-y-2">
+                      <div>
+                        {gig.budgetType === "hourly" && gig.hourlyRate && (
+                          <div className="text-lg font-extrabold text-[var(--primary)]">${gig.hourlyRate}/hr</div>
+                        )}
+                        {gig.budgetType === "fixed" && gig.fixedBudget && (
+                          <div className="text-lg font-extrabold text-[var(--primary)]">₦{gig.fixedBudget}</div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (!user || role !== "talent") {
+                            router.push(`/login?next=${encodeURIComponent(`/dashboard/gigs/${gig.id}/proposals`)}`)
+                            return
+                          }
+                          router.push(`/dashboard/gigs/${gig.id}/proposals`)
+                        }}
+                        className="block w-full text-xs font-bold text-white bg-[var(--primary)] px-3 py-2 rounded-lg hover:opacity-90 transition"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        onClick={() => router.push(`/dashboard/find-work/${gig.id}`)}
+                        className="block w-full text-xs font-semibold text-gray-500 hover:text-gray-700 transition"
+                      >
+                        View details
+                      </button>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

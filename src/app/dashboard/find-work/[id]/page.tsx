@@ -40,6 +40,8 @@ import {
   ExternalLink,
 } from "lucide-react"
 
+
+
 type Gig = {
   id: string
   title: string
@@ -131,6 +133,7 @@ export default function TalentGigDetailsPage() {
   const [files, setFiles] = useState<File[]>([])
   const [uploaded, setUploaded] = useState<Proposal["attachments"]>([])
 
+
   const budget = useMemo(() => (gig ? budgetLabel(gig) : "—"), [gig])
 
   useEffect(() => {
@@ -165,6 +168,7 @@ export default function TalentGigDetailsPage() {
       const propSnap = await getDoc(doc(db, "gigs", id, "proposals", user.uid))
       setProposal(propSnap.exists() ? ((propSnap.data() as any) as Proposal) : null)
 
+
       setLoading(false)
       setProposalLoading(false)
     }
@@ -172,7 +176,7 @@ export default function TalentGigDetailsPage() {
     run()
   }, [id, user?.uid])
 
-  const canApply = !!gig && gig.status === "open" && !!user?.uid
+  const canApply = !!gig && gig.status === "open"
 
   const canEditProposal = useMemo(() => {
     if (!proposal) return false
@@ -475,8 +479,10 @@ export default function TalentGigDetailsPage() {
                     </motion.div>
                   )}
 
+
+
                   {proposal?.status === "submitted" && (
-                    <motion.div initial="hidden" animate="show" variants={fadeUp} custom={4}>
+                    <motion.div initial="hidden" animate="show" variants={fadeUp} custom={5}>
                       <Card className="rounded-2xl border-orange-200">
                         <CardHeader>
                           <CardTitle className="text-base font-extrabold flex items-center gap-2">
@@ -617,7 +623,14 @@ export default function TalentGigDetailsPage() {
                       <CardContent className="p-6 space-y-3">
                         <button
                           disabled={!canApply}
-                          onClick={() => openProposalModal(proposal ? "view" : "create")}
+                          onClick={() => {
+                            if (!user) {
+                              const next = encodeURIComponent(window.location.pathname + window.location.search)
+                              router.push(`/login?next=${next}`)
+                            } else {
+                              openProposalModal(proposal ? "view" : "create")
+                            }
+                          }}
                           className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                         >
                           <Send size={16} />

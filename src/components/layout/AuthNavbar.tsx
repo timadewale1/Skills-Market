@@ -86,6 +86,8 @@ export default function AuthNavbar() {
       return [
         { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
         { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+        { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
+        { href: "/dashboard/wallet", label: "Wallet", icon: Briefcase },
       ]
     }
 
@@ -95,16 +97,19 @@ export default function AuthNavbar() {
         { href: "/dashboard/find-work", label: "Find Work", icon: Briefcase },
         { href: "/dashboard/proposals", label: "Proposals", icon: PlusCircle },
         { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
-        { href: "/dashboard/notifications", label: "Notifications", icon: MessageSquare },
+        { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
+        { href: "/dashboard/wallet", label: "Wallet", icon: Briefcase },
       ]
     }
 
     return [
       { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-      { href: "/dashboard/hire", label: "Hire Talent", icon: Users },
+      { href: "/dashboard/find-talent", label: "Hire Talent", icon: Users },
       { href: "/dashboard/post-gig", label: "Post a Gig", icon: PlusCircle },
       { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
-      { href: "/dashboard/notifications", label: "Notifications", icon: MessageSquare },
+      { href: "/dashboard/gigs", label: "Gigs", icon: Briefcase },
+      { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
+      { href: "/dashboard/wallet", label: "Wallet", icon: Briefcase },
     ]
   }, [role, loadingRole])
 
@@ -133,9 +138,9 @@ export default function AuthNavbar() {
         <div className="flex items-center gap-6">
           <Link
             href="/dashboard"
-            className="text-xl font-extrabold text-[var(--primary)]"
+            className="flex items-center gap-2 text-xl font-extrabold text-[var(--primary)]"
           >
-            SkillsMarket
+            <img src="/logo.png" alt="Changeworker" className="h-13 w-13" />
           </Link>
 
           {/* DESKTOP NAV */}

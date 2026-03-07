@@ -15,6 +15,8 @@ export default function NotificationsPage() {
   const { user } = useAuth()
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
 
   useEffect(() => {
     if (!user) return
@@ -47,6 +49,9 @@ export default function NotificationsPage() {
       await markAsRead(n.id)
     }
   }
+
+  const totalPages = Math.ceil(notifications.length / itemsPerPage)
+  const paginatedNotifications = notifications.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   if (loading) {
     return (
@@ -83,7 +88,7 @@ export default function NotificationsPage() {
                 </CardContent>
               </Card>
             ) : (
-              notifications.map((notification) => (
+              paginatedNotifications.map((notification) => (
                 <Card key={notification.id} className={`cursor-pointer hover:shadow-md transition ${!notification.read ? 'border-l-4 border-l-blue-500' : ''}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
@@ -117,6 +122,28 @@ export default function NotificationsPage() {
               ))
             )}
           </div>
+
+          {notifications.length > itemsPerPage && (
+            <div className="flex justify-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="flex items-center px-4">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </RequireAuth>

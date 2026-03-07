@@ -22,13 +22,24 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
+  const nextUrl = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null
+
   const postLoginRedirect = async (uid: string) => {
     try {
       const snap = await getDoc(doc(db, "users", uid))
       const onboardingComplete = snap.exists() && Boolean(snap.data()?.onboardingComplete)
 
-      if (!onboardingComplete) router.push("/onboarding")
-      else router.push("/dashboard")
+      if (!onboardingComplete) {
+        router.push("/onboarding")
+        return
+      }
+
+      if (nextUrl) {
+        router.push(nextUrl)
+        return
+      }
+
+      router.push("/dashboard")
     } catch {
       // If Firestore fails for any reason, don't block user.
       router.push("/onboarding")

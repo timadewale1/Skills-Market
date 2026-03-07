@@ -7,7 +7,7 @@ import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Briefcase,
@@ -20,10 +20,17 @@ import {
   Search,
   ShieldCheck,
   Star,
+  MapPin,
+  FolderOpen,
 } from "lucide-react"
 import Link from "next/link"
 import { motion, animate } from "framer-motion"
 import { Wallet } from "lucide-react"
+import TalentCard, { TalentRow } from "@/components/talent/TalentCard"
+import { matchTalentsToClient } from "@/lib/matching"
+import { fetchPublicTalents } from "@/lib/publicProfile"
+import { matchGigsToTalent, Gig } from "@/lib/matching"
+import { fetchPublicGigs } from "@/lib/publicGigs"
 
 type Role = "talent" | "client"
 type UserDoc = {
@@ -81,6 +88,20 @@ export default function DashboardPage() {
   const [avgRating, setAvgRating] = useState(0)
   const [ratingCount, setRatingCount] = useState(0)
 
+  // Suggested talents for clients
+  const [suggestedTalents, setSuggestedTalents] = useState<TalentRow[]>([])
+  const [suggestedLoading, setSuggestedLoading] = useState(false)
+
+  // Suggested gigs for talents
+  const [suggestedGigs, setSuggestedGigs] = useState<Gig[]>([])
+  const [suggestedGigsLoading, setSuggestedGigsLoading] = useState(false)
+
+  // Workspaces count
+  const [workspacesCount, setWorkspacesCount] = useState(0)
+
+  // Recent activities
+  const [recentActivities, setRecentActivities] = useState<any[]>([])
+
   useEffect(() => {
     const run = async () => {
       if (!user?.uid) return
@@ -92,33 +113,197 @@ export default function DashboardPage() {
       setProfile(data)
       setLoading(false)
 
-      // set placeholders for MVP: later we’ll compute from reviews collection
       const role: Role = data?.role
-      const aTarget = 0
-      const bTarget = 0
-      const cTarget = 0
 
-      const earned = Number(data?.wallet?.totalEarned || 0)
-      const deposited = Number(data?.wallet?.totalDeposited || 0)
+      const rAvg = Number(data?.rating?.avg || 0)
+      const rCount = Number(data?.rating?.count || 0)
+
+      // Fetch counts for stats
+      let activeProposals = 0
+      let openGigs = 0
+      let messages = 0
+      let workspaces = 0
+
+      if (role === "talent") {
+        // For talent, active proposals count - since proposals are subcollections, set to 0 for now
+        activeProposals = 0
+      } else {
+        try {
+          const gigsQuery = query(collection(db, "gigs"), where("clientUid", "==", user.uid))
+          const gigsSnap = await getDocs(gigsQuery)
+          openGigs = gigsSnap.docs.filter((doc) => doc.data().status === "open").length
+        } catch (error) {
+          console.error('Error fetching gigs:', error)
+          openGigs = 0
+        }
+      }
+
+      // Fetch messages count - count threads where user is participant
+      try {
+        const threadsQuery = query(collection(db, "threads"), where("participants", "array-contains", user.uid))
+        const threadsSnap = await getDocs(threadsQuery)
+        messages = threadsSnap.size
+      } catch (error) {
+        console.error('Error fetching threads:', error)
+        messages = 0
+      }
+
+      // Fetch workspaces count
+      try {
+        let workspacesQuery
+        if (role === "talent") {
+          workspacesQuery = query(collection(db, "workspaces"), where("talentUid", "==", user.uid))
+        } else {
+          workspacesQuery = query(collection(db, "workspaces"), where("clientUid", "==", user.uid))
+        }
+        const workspacesSnap = await getDocs(workspacesQuery)
+        workspaces = workspacesSnap.size
+      } catch (error) {
+        console.error('Error fetching workspaces:', error)
+        workspaces = 0
+      }
+
+      // Fetch wallet total from wallets collection
+      let earned = 0
+      let deposited = 0
+      try {
+        const walletDoc = await getDoc(doc(db, "wallets", user.uid))
+        if (walletDoc.exists()) {
+          earned = Number(walletDoc.data()?.totalEarned || 0)
+          deposited = Number(walletDoc.data()?.totalDeposited || 0)
+          console.log('Wallet data fetched:', { earned, deposited })
+        }
+      } catch (error) {
+        console.error('Error fetching wallet:', error)
+        earned = Number(data?.wallet?.totalEarned || 0)
+        deposited = Number(data?.wallet?.totalDeposited || 0)
+      }
       const total = role === "client" ? deposited : earned
       animate(0, total, {
         duration: 0.9,
         onUpdate: (v) => setWalletTotal(Math.round(v)),
       })
 
-
-      // count-up animations
-      animate(0, aTarget, { duration: 0.8, onUpdate: (v) => setStatA(Math.round(v)) })
-      animate(0, bTarget, { duration: 0.9, onUpdate: (v) => setStatB(Math.round(v)) })
-      animate(0, cTarget, { duration: 1.0, onUpdate: (v) => setStatC(Math.round(v)) })
-
-      const rAvg = Number(data?.rating?.avg || 0)
-      const rCount = Number(data?.rating?.count || 0)
-
       animate(0, rAvg, {
         duration: 0.9,
         onUpdate: (v) => setAvgRating(Number(v.toFixed(1))),
       })
+
+      // Fetch suggested talents for clients
+      if (role === "client") {
+        setSuggestedLoading(true)
+        try {
+          const allTalents = await fetchPublicTalents(20)
+          const clientCriteria = {
+            uid: user?.uid || "",
+            fullName: data?.client?.orgName || data?.fullName || "",
+            skills: data?.orgProfile?.categories || data?.categories || [],
+            categories: data?.orgProfile?.categories || data?.categories || [],
+            sdgTags: data?.sdgTags || [],
+            workMode: data?.workMode || "",
+            location: data?.location || "",
+          }
+          const matched = matchTalentsToClient(allTalents, clientCriteria)
+          const talentRows: TalentRow[] = matched.slice(0, 8).map((t) => ({
+            uid: t.uid,
+            slug: t.slug,
+            fullName: t.fullName,
+            location: t.location,
+            roleTitle: t.roleTitle,
+            photoURL: t.photoURL,
+            hourlyRate: t.hourlyRate,
+            skills: t.skills,
+            rating: t.rating,
+            verification: t.verification,
+            workMode: t.workMode,
+          }))
+          setSuggestedTalents(talentRows)
+        } catch (error) {
+          console.error("Failed to fetch suggested talents:", error)
+        } finally {
+          setSuggestedLoading(false)
+        }
+      }
+
+      // Fetch suggested gigs for talents
+      if (role === "talent") {
+        setSuggestedGigsLoading(true)
+        try {
+          const allGigs = await fetchPublicGigs(20)
+          const talentCriteria = {
+            uid: user?.uid || "",
+            fullName: data?.fullName || "",
+            skills: data?.talent?.skills || [],
+            categories: data?.talent?.skills || [], // Use skills as categories fallback
+            sdgTags: data?.sdgTags || [],
+            workMode: data?.talent?.workMode || "",
+            location: data?.location || "",
+          }
+          const matched = matchGigsToTalent(allGigs, talentCriteria)
+          setSuggestedGigs(matched.slice(0, 8))
+        } catch (error) {
+          console.error("Failed to fetch suggested gigs:", error)
+        } finally {
+          setSuggestedGigsLoading(false)
+        }
+      }
+
+      // Set stat targets and animate - using setTimeout to ensure promised values are ready
+      setTimeout(() => {
+        let aTarget = 0
+        let bTarget = 0
+        let cTarget = 0
+
+        if (role === "talent") {
+          aTarget = suggestedGigs.length
+          bTarget = activeProposals
+          cTarget = messages
+          console.log('Talent stats:', { suggested: aTarget, proposals: bTarget, messages: cTarget })
+        } else {
+          aTarget = suggestedTalents.length
+          bTarget = openGigs
+          cTarget = messages
+          console.log('Client stats:', { suggested: aTarget, gigs: bTarget, messages: cTarget })
+        }
+
+        animate(0, aTarget, { duration: 0.8, onUpdate: (v) => setStatA(Math.round(v)) })
+        animate(0, bTarget, { duration: 0.9, onUpdate: (v) => setStatB(Math.round(v)) })
+        animate(0, cTarget, { duration: 1.0, onUpdate: (v) => setStatC(Math.round(v)) })
+      }, 500)
+
+      // Workspaces count
+      animate(0, workspaces, { duration: 0.8, onUpdate: (v) => setWorkspacesCount(Math.round(v)) })
+
+      // Fetch recent activities
+      try {
+        if (role === "talent") {
+          try {
+            const workspacesQuery = query(collection(db, "workspaces"), where("talentUid", "==", user.uid), orderBy("createdAt", "desc"), limit(5))
+            const snap = await getDocs(workspacesQuery)
+            const activities = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), type: "workspace" }))
+            console.log('Talent activities:', activities)
+            setRecentActivities(activities)
+          } catch (error) {
+            console.error('Error fetching workspaces for activities:', error)
+            setRecentActivities([])
+          }
+        } else {
+          try {
+            const gigsQuery = query(collection(db, "gigs"), where("clientUid", "==", user.uid), orderBy("createdAt", "desc"), limit(5))
+            const snap = await getDocs(gigsQuery)
+            const activities = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), type: "gig" }))
+            console.log('Client activities:', activities)
+            setRecentActivities(activities)
+          } catch (error) {
+            console.error('Error fetching gigs for activities:', error)
+            setRecentActivities([])
+          }
+        }
+      } catch (error) {
+        console.error('Error in recent activities:', error)
+        setRecentActivities([])
+      }
+
       animate(0, rCount, {
         duration: 0.9,
         onUpdate: (v) => setRatingCount(Math.round(v)),
@@ -165,6 +350,24 @@ export default function DashboardPage() {
           href: "/dashboard/saved-talents",
           icon: Users,
         },
+        {
+          title: "Workspaces",
+          desc: "Manage your active projects and collaborations.",
+          href: "/dashboard/workspaces",
+          icon: FolderOpen,
+        },
+        {
+          title: "Messages",
+          desc: "Communicate with talent and teams.",
+          href: "/dashboard/messages",
+          icon: MessageSquare,
+        },
+        {
+          title: "Gigs",
+          desc: "View and manage your posted gigs.",
+          href: "/dashboard/gigs",
+          icon: Briefcase,
+        },
       ]
     }
     return [
@@ -173,6 +376,24 @@ export default function DashboardPage() {
         desc: "Browse gigs aligned with your SDG focus.",
         href: "/dashboard/find-work",
         icon: Search,
+      },
+      {
+        title: "Workspaces",
+        desc: "Access your active project workspaces.",
+        href: "/dashboard/workspaces",
+        icon: FolderOpen,
+      },
+      {
+        title: "Messages",
+        desc: "Check communications from clients.",
+        href: "/dashboard/messages",
+        icon: MessageSquare,
+      },
+      {
+        title: "Proposals",
+        desc: "Track your submitted proposals.",
+        href: "/dashboard/proposals",
+        icon: TrendingUp,
       },
     ]
   }, [profile?.role])
@@ -242,11 +463,11 @@ export default function DashboardPage() {
 
           
 
-          {/* Stat cards + Ratings card */}
+          {/* Stat cards + Ratings card + Workspaces */}
           <motion.div
             initial="hidden"
             animate="show"
-            className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4"
+            className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4"
           >
             {role === "talent" ? (
               <>
@@ -304,6 +525,15 @@ export default function DashboardPage() {
               role={role}
               avg={avgRating}
               count={ratingCount}
+            />
+
+            {/* Workspaces card */}
+            <StatCard
+              i={4}
+              icon={<FolderOpen className="text-[var(--primary)]" size={18} />}
+              title="Workspaces"
+              value={workspacesCount}
+              hint="Active projects"
             />
           </motion.div>
 
@@ -432,6 +662,10 @@ export default function DashboardPage() {
 </motion.div>
 
 
+
+          </div> {/* end quick actions + wallet grid */}
+
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* SDG Focus (alive movement) */}
             <motion.div
               initial="hidden"
@@ -465,6 +699,139 @@ export default function DashboardPage() {
                 </Card>
               </motion.div>
             </motion.div>
+
+            {/* Suggested talents for clients */}
+            {profile?.role === "client" && suggestedTalents.length > 0 && (
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={fadeUp}
+                custom={4}
+              >
+                <Card className="rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-base font-extrabold flex items-center gap-2">
+                      <Sparkles size={18} className="text-[var(--primary)]" />
+                      Suggested talent
+                    </CardTitle>
+                    <div className="text-xs text-gray-500 font-semibold">
+                      Matches based on gig needs
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {suggestedLoading ? (
+                      <div className="text-sm text-gray-600">Loading suggestions...</div>
+                    ) : (
+                      <div className="overflow-x-auto pb-4">
+                        <div className="flex gap-4 min-w-max">
+                          {suggestedTalents.map((t, idx) => (
+                            <div key={t.uid} className="w-80 flex-shrink-0">
+                            <Card className="rounded-2xl hover:shadow-md transition bg-white">
+                              <CardContent className="p-5">
+                                <TalentCard t={t} idx={idx} />
+                              </CardContent>
+                            </Card>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-4 text-center">
+                      <Link
+                        href="/dashboard/find-talent"
+                        className="text-sm font-extrabold text-[var(--primary)] hover:underline"
+                      >
+                        Browse all categories →
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+          {/* Suggested gigs carousel for talents */}
+          {profile?.role === "talent" && suggestedGigs.length > 0 && (
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={fadeUp}
+              custom={4}
+              className="mt-6"
+            >
+              <Card className="rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-base font-extrabold flex items-center gap-2">
+                    <Sparkles size={18} className="text-[var(--primary)]" />
+                    Suggested gigs
+                  </CardTitle>
+                  <div className="text-xs text-gray-500 font-semibold">
+                    Matches based on your skills and SDG focus
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {suggestedGigsLoading ? (
+                    <div className="text-sm text-gray-600">Loading suggestions...</div>
+                  ) : (
+                    <div className="overflow-x-auto pb-4">
+                      <div className="flex gap-4 min-w-max">
+                        {suggestedGigs.map((gig, idx) => (
+                          <div key={gig.id} className="w-80 flex-shrink-0">
+                            <Link href={`/dashboard/find-work/${gig.id}`} className="block">
+                              <Card className="rounded-2xl hover:shadow-md transition bg-white">
+                                <CardContent className="p-5">
+                                  <div className="flex items-start gap-4">
+                                    <div className="h-12 w-12 rounded-full bg-orange-50 flex items-center justify-center font-extrabold text-[var(--primary)]">
+                                      <Briefcase size={20} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-extrabold text-gray-900 truncate">{gig.title}</div>
+                                      <div className="text-sm text-gray-700 mt-1">
+                                        {gig.category?.group} → {gig.category?.item}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                                        <span className="inline-flex items-center gap-1">
+                                          <MapPin size={14} />
+                                          {gig.workMode === "Remote" ? "Remote" : gig.location || "—"}
+                                        </span>
+                                        <span className="mx-1">•</span>
+                                        <span>
+                                          {gig.budgetType === "hourly" 
+                                            ? `₦${gig.hourlyRate?.toLocaleString()}/hr` 
+                                            : `₦${gig.fixedBudget?.toLocaleString()} fixed`}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1 mt-3">
+                                        {(gig.requiredSkills || []).slice(0, 3).map((skill) => (
+                                          <span
+                                            key={skill}
+                                            className="text-xs font-semibold px-2 py-1 rounded-full border bg-gray-50"
+                                          >
+                                            {skill}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-4 text-center">
+                    <Link
+                      href="/dashboard/find-work"
+                      className="text-sm font-extrabold text-[var(--primary)] hover:underline"
+                    >
+                      View all gigs →
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
           </div>
 
           {/* Recent activity placeholder */}
@@ -482,14 +849,51 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-600">
-                <div className="flex items-center justify-between">
-                  <div>
-                    No activity yet — once you apply to gigs / post gigs, you’ll see them here.
+                {recentActivities.length === 0 ? (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      No activity yet — once you apply to gigs / post gigs, you’ll see them here.
+                    </div>
+                    <span className="hidden md:inline text-xs font-semibold text-gray-500">
+                      Coming soon
+                    </span>
                   </div>
-                  <span className="hidden md:inline text-xs font-semibold text-gray-500">
-                    Coming soon
-                  </span>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentActivities.map((activity, index) => (
+                      <Link
+                        key={activity.id}
+                        href={
+                          activity.type === "workspace"
+                            ? `/dashboard/workspaces/${activity.id}`
+                            : `/dashboard/gigs/${activity.id}`
+                        }
+                        className="block"
+                      >
+                        <Card className="p-3 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            {activity.type === "workspace" ? (
+                              <FolderOpen size={20} className="text-[var(--primary)]" />
+                            ) : (
+                              <Briefcase size={20} className="text-[var(--primary)]" />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">
+                                {activity.type === "workspace"
+                                  ? `Joined workspace: ${activity.gigTitle || "Unknown"}`
+                                  : `Posted gig: ${activity.title || "Unknown"}`}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {activity.createdAt?.toDate?.()?.toLocaleDateString() || "Recent"}
+                              </p>
+                            </div>
+                            <ArrowRight size={16} className="text-gray-400" />
+                          </div>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>

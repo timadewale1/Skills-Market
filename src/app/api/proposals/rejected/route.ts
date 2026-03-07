@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAdminAuth } from "@/lib/firebaseAdmin"
 import { getAdminDb } from "@/lib/firebaseAdmin"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,15 +34,6 @@ export async function POST(request: NextRequest) {
       emailSubject: `Proposal Rejected for \"${gigTitle}\"`,
       emailHtml: `
         <!DOCTYPE html>
-`});
-
-    // notify admins too
-    await notifyAdmins({
-      type: "admin:proposal",
-      title: "Proposal Rejected",
-      message: `Client rejected a proposal for \"${gigTitle}\" (gig ${gigId}).`,
-      link: `/admin/gigs/${gigId}/proposals`,
-    });
         <html>
         <head>
           <meta charset="utf-8">
@@ -77,7 +69,7 @@ export async function POST(request: NextRequest) {
               </div>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://skills-market.vercel.app/dashboard/proposals/${gigId}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);">
+                <a href="https://changeworker.vercel.app/dashboard/proposals/${gigId}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);">
                   📄 View Proposal
                 </a>
               </div>
@@ -97,8 +89,8 @@ export async function POST(request: NextRequest) {
               <div style="border-top: 1px solid #334155; padding-top: 20px; margin-top: 20px;">
                 <p style="color: #64748b; margin: 0; font-size: 12px;">
                   © 2024 Skills Market. All rights reserved.<br>
-                  <a href="https://skills-market.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
-                  <a href="mailto:support@skills-market.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
+                  <a href="https://changeworker.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
+                  <a href="mailto:support@changeworker.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
                 </p>
               </div>
             </div>
@@ -106,7 +98,16 @@ export async function POST(request: NextRequest) {
         </body>
         </html>
       `,
+
     })
+
+    // notify admins too
+    await notifyAdmins({
+      type: "admin:proposal",
+      title: "Proposal Rejected",
+      message: `Client rejected a proposal for \"${gigTitle}\" (gig ${gigId}).`,
+      link: `/admin/gigs/${gigId}/proposals`,
+    });
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

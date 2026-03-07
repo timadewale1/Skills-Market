@@ -18,6 +18,10 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import toast from "react-hot-toast"
 
+import TalentCard, { TalentRow } from "@/components/talent/TalentCard"
+import { fetchPublicTalents } from "@/lib/publicProfile"
+import { matchTalentsToGig } from "@/lib/matching"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -99,13 +103,52 @@ export default function GigDetailsPage() {
   const [proposalCount, setProposalCount] = useState<number>(0)
   const [countLoading, setCountLoading] = useState(false)
 
+  const [suggestedTalents, setSuggestedTalents] = useState<TalentRow[]>([])
+  const [suggestedLoading, setSuggestedLoading] = useState(false)
+
   useEffect(() => {
     const run = async () => {
       if (!id) return
       setLoading(true)
       const snap = await getDoc(doc(db, "gigs", id))
-      setGig(snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as Gig) : null)
+      const gigData = snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as Gig) : null
+      setGig(gigData)
       setLoading(false)
+
+      // when gig loaded and client, compute suggested talents
+      if (gigData && user?.uid) {
+        // do not require ownership; suggestions useful to all clients
+        setSuggestedLoading(true)
+        try {
+          const allTalents = await fetchPublicTalents(20)
+          const criteria = {
+            skills: gigData.requiredSkills,
+            categories: gigData.category?.item ? [gigData.category.item] : [],
+            sdgTags: gigData.sdgTags,
+            workMode: gigData.workMode,
+            location: gigData.location,
+          }
+          const matched = matchTalentsToGig(allTalents, gigData as any)
+          const rows: TalentRow[] = matched.slice(0, 8).map((t) => ({
+            uid: t.uid,
+            slug: t.slug,
+            fullName: t.fullName,
+            location: t.location,
+            roleTitle: t.roleTitle,
+            photoURL: t.photoURL,
+            hourlyRate: t.hourlyRate,
+            skills: t.skills,
+            rating: t.rating,
+            verification: t.verification,
+            workMode: t.workMode,
+          }))
+          setSuggestedTalents(rows)
+        } catch (e) {
+          console.error("failed loading talent suggestions", e)
+        } finally {
+          setSuggestedLoading(false)
+        }
+      }
     }
     run()
   }, [id])
@@ -278,6 +321,42 @@ export default function GigDetailsPage() {
                       </CardContent>
                     </Card>
                   </motion.div>
+
+                  {/* Suggested talents for this gig */}
+                  {suggestedTalents.length > 0 && (
+                    <motion.div initial="hidden" animate="show" variants={fadeUp} custom={3}>
+                      <Card className="rounded-2xl">
+                        <CardHeader>
+                          <CardTitle className="text-base font-extrabold flex items-center gap-2">
+                            <Sparkles size={18} className="text-[var(--primary)]" />
+                            Suggested talent
+                          </CardTitle>
+                          <div className="text-xs text-gray-500 font-semibold">
+                            Matches based on gig requirements
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {suggestedLoading ? (
+                            <div className="text-sm text-gray-600">Loading suggestions...</div>
+                          ) : (
+                            <div className="overflow-x-auto pb-4">
+                              <div className="flex gap-4 min-w-max">
+                                {suggestedTalents.map((t, idx) => (
+                                  <div key={t.uid} className="w-full sm:w-80 flex-shrink-0">
+                                    <Card className="rounded-2xl hover:shadow-md transition bg-white">
+                                      <CardContent className="p-5">
+                                        <TalentCard t={t} idx={idx} />
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
 
                   {!!gig.attachments?.length && (
                     <motion.div initial="hidden" animate="show" variants={fadeUp} custom={3}>

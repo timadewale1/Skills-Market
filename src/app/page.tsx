@@ -134,64 +134,156 @@ const WORDS = ["Flexible","Reliable","Impactful","Affordable","Nigerian"]
 /* ═══ PRELOADER ══════════════════════════════════════════════ */
 function Preloader({ onDone }: { onDone: () => void }) {
   const [pct, setPct] = useState(0)
-  const [phase, setPhase] = useState<"counting"|"reveal"|"exit">("counting")
+  const [phase, setPhase] = useState<"counting" | "reveal" | "exit">("counting")
 
   useEffect(() => {
     let cur = 0
-    const speeds = [15,35,10,55]
-    const caps   = [40,70,90,100]
+    const speeds = [15, 35, 10, 55]
+    const caps = [40, 70, 90, 100]
+
     const tick = () => {
       cur = Math.min(cur + 1, 100)
       setPct(cur)
-      const seg = caps.findIndex(c => cur <= c)
-      if (cur < 100) setTimeout(tick, speeds[seg] || 15)
-      else {
+
+      const seg = caps.findIndex((c) => cur <= c)
+      if (cur < 100) {
+        setTimeout(tick, speeds[seg] || 15)
+      } else {
         setPhase("reveal")
-        setTimeout(() => { setPhase("exit"); setTimeout(onDone, 750) }, 900)
+        setTimeout(() => {
+          setPhase("exit")
+          setTimeout(onDone, 750)
+        }, 900)
       }
     }
+
     setTimeout(tick, 300)
   }, [onDone])
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#060912] overflow-hidden"
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#060912] overflow-hidden"
       style={{
-        transition: phase === "exit" ? "opacity .75s ease, transform .75s cubic-bezier(.76,0,.24,1)" : "none",
+        transition:
+          phase === "exit"
+            ? "opacity .75s ease, transform .75s cubic-bezier(.76,0,.24,1)"
+            : "none",
         opacity: phase === "exit" ? 0 : 1,
         transform: phase === "exit" ? "translateY(-100%)" : "translateY(0)",
-      }}>
-      <div className="absolute w-[700px] h-[700px] rounded-full bg-orange-500/8 blur-3xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{animation:"pulse 3s ease-in-out infinite"}} />
+      }}
+    >
+      <div
+        className="absolute w-[700px] h-[700px] rounded-full bg-orange-500/8 blur-3xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{ animation: "pulse 3s ease-in-out infinite" }}
+      />
 
-      <div className="mb-12 flex flex-col items-center gap-5"
+      <div
+        className="mb-12 flex flex-col items-center gap-5"
         style={{
-          transition: phase === "reveal" ? "transform .6s cubic-bezier(.34,1.56,.64,1)" : "none",
+          transition:
+            phase === "reveal"
+              ? "transform .6s cubic-bezier(.34,1.56,.64,1)"
+              : "none",
           transform: phase === "reveal" ? "scale(1.08)" : "scale(1)",
-        }}>
-        <div className="relative w-24 h-24">
-          <svg viewBox="0 0 80 80" className="w-full h-full" style={{filter:"drop-shadow(0 0 24px rgba(249,115,22,.55))"}}>
-            <circle cx="40" cy="40" r="37" fill="none" stroke="rgba(249,115,22,.15)" strokeWidth="1.5"/>
-            <circle cx="40" cy="40" r="37" fill="none" stroke="#F97316" strokeWidth="2"
-              strokeLinecap="round"
-              strokeDasharray="232"
-              strokeDashoffset={232 - (232 * pct / 100)}
-              style={{transition:"stroke-dashoffset .04s linear",transform:"rotate(-90deg)",transformOrigin:"50% 50%"}}/>
-            {pct > 20 && <circle cx="19" cy="53" r="5" fill="#EA580C" style={{animation:"fadeInScale .4s cubic-bezier(.34,1.56,.64,1) both"}}/>}
-            {pct > 50 && <circle cx="40" cy="37" r="5" fill="#EA580C" style={{animation:"fadeInScale .4s cubic-bezier(.34,1.56,.64,1) both"}}/>}
-            {pct > 80 && <circle cx="61" cy="53" r="5" fill="#EA580C" style={{animation:"fadeInScale .4s cubic-bezier(.34,1.56,.64,1) both"}}/>}
-            <polyline points="19,53 30,27 40,37 50,27 61,53" fill="none" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-              strokeDasharray="120"
-              strokeDashoffset={120 - (120 * Math.max(0, pct - 25) / 75)}
-              style={{transition:"stroke-dashoffset .04s linear"}}/>
-          </svg>
-        </div>
-        <p className="font-display font-black text-4xl text-white tracking-tight">changeworker</p>
-        <p className="font-display font-light text-white/30 text-xs tracking-[.25em] uppercase">Flexible talents. Meaningful work.</p>
+        }}
+      >
+        <div className="relative w-28 h-28 flex items-center justify-center">
+  <svg
+    viewBox="0 0 178 152"
+    className="w-full h-full"
+    style={{ filter: "drop-shadow(0 0 20px rgba(249,115,22,.28))" }}
+  >
+    <defs>
+      <linearGradient id="wingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#F8DF69" />
+        <stop offset="100%" stopColor="#EFD45C" />
+      </linearGradient>
+
+      <linearGradient id="dotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#F39A42" />
+        <stop offset="100%" stopColor="#EC8A2F" />
+      </linearGradient>
+
+      <clipPath id="leftReveal">
+        <rect x="0" y="0" width={(89 * Math.min(pct, 55)) / 55} height="152" />
+      </clipPath>
+
+      <clipPath id="rightReveal">
+        <rect
+          x={178 - (89 * Math.max(0, Math.min(pct - 18, 55))) / 55}
+          y="0"
+          width={(89 * Math.max(0, Math.min(pct - 18, 55))) / 55}
+          height="152"
+        />
+      </clipPath>
+    </defs>
+
+    <g clipPath="url(#leftReveal)">
+      <path
+        d="
+          M 10 48
+          C 22 48, 34 48, 44 53
+          C 55 58, 63 69, 72 83
+          C 79 95, 84 95, 88 92
+          C 90 90, 92 89, 95 92
+          L 83 104
+          C 77 112, 71 119, 63 121
+          C 53 123, 44 118, 36 109
+          C 29 100, 24 89, 19 79
+          C 14 69, 9 58, 4 51
+          Z
+        "
+        fill="url(#wingGrad)"
+      />
+    </g>
+
+    <g clipPath="url(#rightReveal)">
+      <path
+        d="
+          M 168 48
+          C 156 48, 144 48, 134 53
+          C 123 58, 115 69, 106 83
+          C 99 95, 94 95, 90 92
+          C 88 90, 86 89, 83 92
+          L 95 104
+          C 101 112, 107 119, 115 121
+          C 125 123, 134 118, 142 109
+          C 149 100, 154 89, 159 79
+          C 164 69, 169 58, 174 51
+          Z
+        "
+        fill="url(#wingGrad)"
+      />
+    </g>
+
+    {pct > 48 && (
+      <circle
+        cx="89"
+        cy="82"
+        r="14"
+        fill="url(#dotGrad)"
+        style={{
+          animation: "fadeInScale .35s cubic-bezier(.34,1.56,.64,1) both",
+        }}
+      />
+    )}
+  </svg>
+</div>
+
+        <p className="font-display font-black text-4xl text-white tracking-tight">
+          changeworker
+        </p>
+        <p className="font-display font-light text-white/30 text-xs tracking-[.25em] uppercase">
+          Flexible talents. Meaningful work.
+        </p>
       </div>
 
       <div className="w-80">
         <div className="h-px bg-white/8 rounded-full overflow-hidden mb-3">
-          <div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-75 ease-linear"
-            style={{width:`${pct}%`,boxShadow:"0 0 14px rgba(249,115,22,.9)"}}/>
+          <div
+            className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-75 ease-linear"
+            style={{ width: `${pct}%`, boxShadow: "0 0 14px rgba(249,115,22,.9)" }}
+          />
         </div>
         <div className="flex justify-between">
           <span className="font-mono text-white/20 text-[11px]">Initializing platform</span>
@@ -378,7 +470,7 @@ function TestCarousel({ inView }: { inView: boolean }) {
           <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black font-display"
             style={{background:`linear-gradient(135deg,${t.color},${t.color}88)`}}>{t.name[0]}</div>
           <div>
-            <p className="font-display font-bold text-gray-900">{t.name}</p>6
+            <p className="font-display font-bold text-gray-900">{t.name}</p>
             <p className="text-gray-400 text-sm">{t.role} · {t.org}</p>
           </div>
           <div className="ml-auto px-3 py-1.5 rounded-full text-xs font-bold font-mono"

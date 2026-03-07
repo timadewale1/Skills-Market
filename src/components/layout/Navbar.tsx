@@ -42,7 +42,7 @@ export default function Navbar() {
             href="/"
             className="text-xl font-extrabold text-[var(--primary)]"
           >
-            SkillsMarket
+            <img src="/logo.png" alt="Changeworker" className="h-20 w-20" />
           </Link>
 
           {/* DESKTOP NAV */}

@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     await notifyAdmins({
       type: "admin:agreement",
       title: "Agreement Completed",
-      message: `Agreement for gig \"${gigTitle}\" has been fully signed.",
+      message: `Agreement for gig \"${gigTitle}\" has been fully signed.`,
       link: `/admin/gigs/${threadId.split("__")[0]}/proposals`,
     })
 

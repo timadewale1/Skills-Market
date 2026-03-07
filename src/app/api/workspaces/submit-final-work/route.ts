@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     await notifyAdmins({
       type: "admin:workspace",
       title: "Final Work Submitted",
-      message: `Final work in workspace ${workspaceId} has been submitted.",
+      message: `Final work in workspace ${workspaceId} has been submitted.`,
       link: `/admin/workspaces/${workspaceId}`,
     })
 

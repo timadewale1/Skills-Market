@@ -64,8 +64,8 @@ function makeEmailTemplate(opts: {title:string;message:string;link?:string;linkT
           <div style="border-top: 1px solid #334155; padding-top: 20px; margin-top: 20px;">
             <p style="color: #64748b; margin: 0; font-size: 12px;">
               © 2024 Skills Market. All rights reserved.<br>
-              <a href="https://skills-market.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
-              <a href="mailto:support@skills-market.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
+              <a href="https://changeworker.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
+              <a href="mailto:support@changeworker.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
             </p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export async function notifyUser({
     const email = user.data()?.email
     if (email) {
       const htmlContent =
-        emailHtml || makeEmailTemplate({ title, message, link: link ? `https://skills-market.vercel.app${link}` : undefined })
+        emailHtml || makeEmailTemplate({ title, message, link: link ? `https://changeworker.vercel.app${link}` : undefined })
       try {
         await sendEmail({
           to: email,
