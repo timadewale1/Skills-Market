@@ -2,6 +2,9 @@
 
 import Navbar from "@/components/layout/Navbar"
 import { useEffect, useRef, useState, useCallback } from "react"
+import Link from "next/link"
+import toast, { Toaster } from "react-hot-toast"
+import { useAuth } from "@/context/AuthContext"
 import {
   FiBriefcase, FiUsers, FiShield, FiZap, FiRepeat, FiGlobe,
   FiArrowRight, FiCheck, FiStar, FiChevronDown, FiMail,
@@ -15,6 +18,7 @@ import { HiSparkles, HiLightningBolt, HiGlobeAlt, HiCurrencyDollar } from "react
 import { MdOutlineHandshake, MdWorkspacePremium } from "react-icons/md"
 import { RiLeafLine, RiTeamLine } from "react-icons/ri"
 import { TbRocket, TbTargetArrow, TbBuildingCommunity } from "react-icons/tb"
+import { getDoc, doc } from "firebase/firestore"
 
 /* ═══ HOOKS ═══════════════════════════════════════════════════ */
 function useInView(threshold = 0.1) {
@@ -406,21 +410,41 @@ function SpotCard({ children, className }: { children: React.ReactNode; classNam
 }
 
 /* ═══ PROFILE CARD ═══════════════════════════════════════════ */
-function ProfileCard({ p, idx, inView }: { p: typeof PROFILES[0]; idx: number; inView: boolean }) {
+function ProfileCard({ p, idx, inView }: { p: any; idx: number; inView: boolean }) {
   const [saved, setSaved] = useState(false)
+  
+  // Handle both placeholder and real data
+  const isRealData = p.id !== undefined
+  const name = isRealData ? (p.fullName || p.displayName || p.name || 'Anonymous') : p.name
+  const title = isRealData ? (p.talent?.roleTitle || p.title || p.headline || 'Freelancer') : p.title
+  const location = isRealData ? (p.location || 'Nigeria') : p.location
+  const skills = isRealData ? (p.talent?.skills || p.skills || []) : p.skills
+  const rate = isRealData
+    ? (p.publicProfile?.hourlyRate ? `₦${p.publicProfile.hourlyRate.toLocaleString()}/hr` : 'Rate not set')
+    : p.rate
+  const rating = isRealData ? (p.rating || 0) : p.rating
+  const reviews = isRealData ? (p.reviewCount || 0) : p.reviews
+  const color = isRealData ? '#F97316' : p.color // Default orange for real profiles
+  const available = isRealData ? (p.available !== false) : p.available
+  const photoUrl = isRealData ? p.publicProfile?.photoURL : null
+  
   return (
     <SpotCard className={`rounded-2xl border border-gray-100 bg-white p-6 shadow-sm card-lift ${inView?"reveal":"opacity-0"}`}>
       <div style={{"--d":`${.08+idx*.1}s`} as React.CSSProperties}>
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="relative w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg font-display"
-              style={{background:`linear-gradient(135deg,${p.color},${p.color}88)`}}>
-              {p.name[0]}
-              {p.available&&<span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-white"/>}
-            </div>
+            {photoUrl ? (
+              <img src={photoUrl} alt={name} className="w-12 h-12 rounded-full object-cover" />
+            ) : (
+              <div className="relative w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg font-display"
+                style={{background:`linear-gradient(135deg,${color},${color}88)`}}>
+                {name[0]?.toUpperCase() || 'U'}
+                {available&&<span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-white"/>}
+              </div>
+            )}
             <div>
-              <p className="font-display font-bold text-gray-900 text-sm">{p.name}</p>
-              <p className="text-gray-400 text-xs">{p.title}</p>
+              <p className="font-display font-bold text-gray-900 text-sm">{name}</p>
+              <p className="text-gray-400 text-xs">{title}</p>
             </div>
           </div>
           <button onClick={()=>setSaved(s=>!s)}
@@ -429,23 +453,27 @@ function ProfileCard({ p, idx, inView }: { p: typeof PROFILES[0]; idx: number; i
           </button>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">
-          <FiMapPin size={10}/><span>{p.location}</span>
-          <span className="mx-1">·</span>
-          <span className="text-amber-400"><FiStar size={10}/></span>
-          <span className="font-semibold text-gray-700">{p.rating}</span>
-          <span>({p.reviews})</span>
+          <FiMapPin size={10}/><span>{location}</span>
+          {rating > 0 && (
+            <>
+              <span className="mx-1">·</span>
+              <span className="text-amber-400"><FiStar size={10}/></span>
+              <span className="font-semibold text-gray-700">{rating.toFixed(1)}</span>
+              <span>({reviews})</span>
+            </>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5 mb-5">
-          {p.skills.map(s=>(
-            <span key={s} className="text-[10px] px-2.5 py-1 rounded-full bg-gray-50 border border-gray-100 text-gray-500">{s}</span>
+          {skills.slice(0, 3).map((s: string, i: number)=>(
+            <span key={i} className="text-[10px] px-2.5 py-1 rounded-full bg-gray-50 border border-gray-100 text-gray-500">{s}</span>
           ))}
         </div>
         <div className="flex items-center justify-between">
-          <span className="font-display font-bold text-sm" style={{color:p.color}}>{p.rate}</span>
-          <button className="flex items-center gap-1.5 text-xs font-display font-bold text-white px-4 py-2 rounded-lg transition-all duration-200"
-            style={{background:p.color,boxShadow:`0 4px 14px ${p.color}44`}}>
+          <span className="font-display font-bold text-sm" style={{color}}>{rate}</span>
+          <Link href={`/talent/${p.slug || p.id}`} className="flex items-center gap-1.5 text-xs font-display font-bold text-white px-4 py-2 rounded-lg transition-all duration-200 no-underline"
+            style={{background:color,boxShadow:`0 4px 14px ${color}44`}}>
             View Profile <FiArrowRight size={11}/>
-          </button>
+          </Link>
         </div>
       </div>
     </SpotCard>
@@ -453,36 +481,49 @@ function ProfileCard({ p, idx, inView }: { p: typeof PROFILES[0]; idx: number; i
 }
 
 /* ═══ TESTIMONIAL CAROUSEL ═══════════════════════════════════ */
-function TestCarousel({ inView }: { inView: boolean }) {
+function TestCarousel({ inView, testimonials }: { inView: boolean; testimonials: any[] }) {
+  // Only show testimonials if they exist, otherwise show nothing
+  if (testimonials.length === 0) return null
+  
   const [active, setActive] = useState(0)
-  const go = useCallback((d: number) => setActive(a=>(a+d+TESTIMONIALS.length)%TESTIMONIALS.length),[])
+  const go = useCallback((d: number) => setActive(a=>(a+d+testimonials.length)%testimonials.length), [testimonials.length])
   useEffect(()=>{ const t=setInterval(()=>go(1),5200); return()=>clearInterval(t) },[go])
-  const t = TESTIMONIALS[active]
+  const t = testimonials[active]
+  
+  // Handle different data structures
+  const isRealReview = t.id !== undefined
+  const quote = isRealReview ? t.comment : t.q
+  const name = isRealReview ? (t.reviewerName || 'Anonymous') : t.name
+  const role = isRealReview ? (t.reviewerRole || 'User') : t.role
+  const org = isRealReview ? (t.reviewerOrg || '') : t.org
+  const stars = isRealReview ? Math.floor((t.easeOfUse + t.support + t.value) / 3) : t.stars
+  const color = isRealReview ? '#F97316' : t.color
+  
   return (
     <div className={inView?"reveal":"opacity-0"} style={{"--d":".15s"} as React.CSSProperties}>
       <SpotCard className="rounded-3xl bg-white border border-gray-100 shadow-xl p-10 mb-6 relative overflow-hidden">
         <div className="absolute top-6 right-8 text-9xl font-serif text-gray-50 leading-none select-none" style={{fontFamily:"Georgia,serif"}}>"</div>
         <div className="flex gap-0.5 mb-6">
-          {[...Array(t.stars)].map((_,i)=><span key={i} style={{color:"#FBBF24"}}><FiStar size={15}/></span>)}
+          {[...Array(stars)].map((_,i)=><span key={i} style={{color:"#FBBF24"}}><FiStar size={15}/></span>)}
         </div>
-        <p className="font-display font-normal text-gray-700 text-lg leading-relaxed mb-8 max-w-xl">"{t.q}"</p>
+        <p className="font-display font-normal text-gray-700 text-lg leading-relaxed mb-8 max-w-xl">"{quote}"</p>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black font-display"
-            style={{background:`linear-gradient(135deg,${t.color},${t.color}88)`}}>{t.name[0]}</div>
+            style={{background:`linear-gradient(135deg,${color},${color}88)`}}>{name[0]?.toUpperCase() || 'U'}</div>
           <div>
-            <p className="font-display font-bold text-gray-900">{t.name}</p>
-            <p className="text-gray-400 text-sm">{t.role} · {t.org}</p>
+            <p className="font-display font-bold text-gray-900">{name}</p>
+            <p className="text-gray-400 text-sm">{role}{org ? ` · ${org}` : ''}</p>
           </div>
           <div className="ml-auto px-3 py-1.5 rounded-full text-xs font-bold font-mono"
-            style={{background:`${t.color}15`,color:t.color}}>Verified</div>
+            style={{background:`${color}15`,color}}>Verified</div>
         </div>
       </SpotCard>
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          {TESTIMONIALS.map((_,i)=>(
+          {testimonials.map((_,i)=>(
             <button key={i} onClick={()=>setActive(i)}
               className="rounded-full transition-all duration-300"
-              style={{width:i===active?"28px":"8px",height:"8px",background:i===active?t.color:"#E5E7EB"}}/>
+              style={{width:i===active?"28px":"8px",height:"8px",background:i===active?color:"#E5E7EB"}}/>
           ))}
         </div>
         <div className="flex gap-2">
@@ -584,6 +625,24 @@ export default function Home() {
   const [activeStep, setActiveStep] = useState(0)
   const [hoveredFeat, setHoveredFeat] = useState<number|null>(null)
 
+  // Platform stats
+  const [stats, setStats] = useState({
+    freelancers: 0,
+    clients: 0,
+    projects: 0,
+    satisfaction: 98
+  })
+
+  // Featured profiles
+  const [featuredProfiles, setFeaturedProfiles] = useState<any[]>([])
+
+  // SDG data with counts
+  const [sdgData, setSdgData] = useState<any[]>([])
+
+  // Real testimonials
+  const [testimonials, setTestimonials] = useState<any[]>([])
+
+  const { user } = useAuth()
   const scrollY = useScrollY()
 
   const heroRef        = useInView(0.05)
@@ -605,6 +664,131 @@ export default function Home() {
   }, [])
 
   const handleEmailSubmit = () => { if (!email) return; setSubmitted(true); fireConfetti() }
+
+  const handlePostProject = () => {
+    if (!user) {
+      window.location.href = '/login'
+    } else {
+      window.location.href = '/dashboard/post-gig'
+    }
+  }
+
+  const handleCreateProfile = () => {
+    if (!user) {
+      window.location.href = '/signup'
+    } else {
+      window.location.href = '/dashboard/profile'
+    }
+  }
+
+  // Fetch platform stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { collection, getDocs, query, where, limit, orderBy, getDoc, doc } = await import('firebase/firestore')
+        const { db } = await import('@/lib/firebase')
+        const { SDGS } = await import('@/data/sdgs')
+
+        // we wrap each Firestore call separately so we can log which one fails
+        let freelancersCount = 0
+        let clientsCount = 0
+        let projectsCount = 0
+        let profiles: any[] = []
+        let sdgDataArray: any[] = []
+
+        try {
+          // Get stats from public stats document first
+          const statsDoc = await getDoc(doc(db, 'publicStats', 'platform'))
+          if (statsDoc.exists()) {
+            const statsData = statsDoc.data() as any
+            freelancersCount = statsData.freelancers || 0
+            clientsCount = statsData.clients || 0
+            projectsCount = statsData.gigs || 0
+            console.log('Stats from publicStats:', { freelancersCount, clientsCount, projectsCount })
+          } else {
+            console.log('publicStats/platform document not found, counting from collections')
+            // Count from actual collections if publicStats doesn't exist
+            try {
+              const publicProfilesSnap = await getDocs(collection(db, 'publicProfiles'))
+              freelancersCount = publicProfilesSnap.docs.filter(doc => doc.data().role === 'talent').length
+            } catch (e) {
+              console.error('publicProfiles count failed', e)
+            }
+            
+            // Note: Client count requires permissions we don't have, so we'll leave it as 0
+          }
+        } catch (e) {
+          console.error('publicStats query failed', e)
+        }
+
+        try {
+          // count gigs instead of workspaces for project total
+          const gigsSnap = await getDocs(collection(db, 'gigs'))
+          projectsCount = gigsSnap.size
+        } catch (e) {
+          console.error('gigs query failed', e)
+        }
+
+        try {
+          // Get featured profiles from publicProfiles
+          const publicProfilesSnap = await getDocs(collection(db, 'publicProfiles'))
+          const publicProfiles = publicProfilesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[]
+          profiles = publicProfiles
+            .filter((u: any) => u.role === 'talent' && u.profileComplete === true)
+            .sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+            .slice(0, 4)
+
+          // prepare talents array for SDG count from public profiles
+          const allTalents = publicProfiles.filter((u: any) => u.role === 'talent')
+          const sdgCounts: { [key: string]: number } = {}
+          SDGS.forEach(sdg => sdgCounts[sdg] = 0)
+          allTalents.forEach((talent: any) => {
+            if (talent.sdgTags && Array.isArray(talent.sdgTags)) {
+              talent.sdgTags.forEach((sdg: string) => {
+                if (sdgCounts[sdg] !== undefined) {
+                  sdgCounts[sdg]++
+                }
+              })
+            }
+          })
+          sdgDataArray = SDGS.map((sdg, index) => ({
+            label: sdg,
+            count: sdgCounts[sdg] || 0,
+            color: `hsl(${(index * 137.5) % 360}, 70%, 50%)`
+          })).filter(sdg => sdg.count > 0).slice(0, 12)
+        } catch (e) {
+          console.error('publicProfiles query failed', e)
+        }
+
+        try {
+          const reviewsQuery = query(
+            collection(db, 'platform_reviews'),
+            where('isPublic', '==', true),
+            orderBy('createdAt', 'desc'),
+            limit(5)
+          )
+          const reviewsSnap = await getDocs(reviewsQuery)
+          const reviews = reviewsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+          setTestimonials(reviews)
+        } catch (e) {
+          console.error('reviews query failed', e)
+        }
+
+        setStats({
+          freelancers: freelancersCount,
+          clients: clientsCount,
+          projects: projectsCount,
+          satisfaction: 98
+        })
+        setSdgData(sdgDataArray)
+        setFeaturedProfiles(profiles)
+      } catch (error) {
+        console.error('Error fetching stats:', error)
+      }
+    }
+
+    fetchStats()
+  }, [])
 
   const STEPS_ORG = [
     { icon: FiEdit3,       label: "Post Brief",       desc: "Skills, budget & timeline — 5 minutes" },
@@ -763,15 +947,19 @@ export default function Home() {
               </p>
 
               <div className={`flex flex-wrap gap-4 ${heroRef.inView?"reveal":"opacity-0"}`} style={{"--d":".62s"} as React.CSSProperties}>
-                <MagBtn className="relative overflow-hidden font-display font-black text-base bg-orange-500 text-white rounded-xl glow-orange group"
-                  style={{padding:"1.1rem 2.4rem"}}>
-                  <span className="relative z-10 flex items-center gap-2">Hire Talent <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={16}/></span></span>
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
-                </MagBtn>
-                <MagBtn className="font-display font-black text-base border border-white/20 hover:border-orange-400 text-white/65 hover:text-white rounded-xl backdrop-blur-sm transition-all duration-300"
-                  style={{padding:"1.05rem 2.4rem"}}>
-                  Find Work
-                </MagBtn>
+                <Link href="/hire">
+                  <MagBtn className="relative overflow-hidden font-display font-black text-base bg-orange-500 text-white rounded-xl glow-orange group"
+                    style={{padding:"1.1rem 2.4rem"}}>
+                    <span className="relative z-10 flex items-center gap-2">Hire Talent <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={16}/></span></span>
+                    <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
+                  </MagBtn>
+                </Link>
+                <Link href="/jobs">
+                  <MagBtn className="font-display font-black text-base border border-white/20 hover:border-orange-400 text-white/65 hover:text-white rounded-xl backdrop-blur-sm transition-all duration-300"
+                    style={{padding:"1.05rem 2.4rem"}}>
+                    Find Work
+                  </MagBtn>
+                </Link>
               </div>
 
               <div className={`flex flex-wrap gap-6 ${heroRef.inView?"reveal":"opacity-0"}`} style={{"--d":".74s"} as React.CSSProperties}>
@@ -907,10 +1095,10 @@ export default function Home() {
             Nonprofits shouldn't choose between mission and capability. Skilled professionals shouldn't choose between purpose and income. We built changeworker so nobody has to choose.
           </p>
           <div className={`grid grid-cols-3 gap-8 mt-16 max-w-xl mx-auto ${missionRef.inView?"reveal":"opacity-0"}`} style={{"--d":".52s"} as React.CSSProperties}>
-            {[{I:TbBuildingCommunity,l:"Impact Orgs",v:"80+",c:"#F97316"},{I:RiTeamLine,l:"Freelancers",v:"200+",c:"#6366F1"},{I:FiTrendingUp,l:"Projects",v:"350+",c:"#10B981"}].map(({I,l,v,c})=>(
+            {[{I:TbBuildingCommunity,l:"Clients",v:stats.clients,c:"#F97316"},{I:RiTeamLine,l:"Talents",v:stats.freelancers,c:"#6366F1"},{I:FiTrendingUp,l:"Gigs",v:stats.projects,c:"#10B981"}].map(({I,l,v,c})=>(
               <div key={l} className="flex flex-col items-center gap-2">
                 <span style={{color:c}}><I size={22}/></span>
-                <span className="font-display font-black text-3xl text-white">{v}</span>
+                <span className="font-display font-black text-3xl text-white">{v > 0 ? `${v}+` : v}</span>
                 <span className="text-white/28 text-xs font-mono uppercase tracking-wider">{l}</span>
               </div>
             ))}
@@ -925,10 +1113,10 @@ export default function Home() {
         <div className="absolute right-0 top-0 w-80 h-80 opacity-35 dot-bg pointer-events-none"/>
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-10">
           {statsRef.inView && <>
-            <StatBox val={200} suf="+"  label="Vetted Freelancers" icon={FiUsers}           color="#F97316" delay=".1s" start/>
-            <StatBox val={80}  suf="+"  label="Impact Orgs Served" icon={TbBuildingCommunity}color="#6366F1" delay=".2s" start/>
-            <StatBox val={350} suf="+"  label="Projects Completed" icon={FiCheckCircle}      color="#10B981" delay=".3s" start/>
-            <StatBox val={98}  suf="%"  label="Satisfaction Rate"  icon={FiStar}             color="#EC4899" delay=".4s" start/>
+            <StatBox val={stats.freelancers} suf="+"  label="Vetted Freelancers" icon={FiUsers}           color="#F97316" delay=".1s" start/>
+            <StatBox val={stats.clients}  suf="+"  label="Impact Orgs Served" icon={TbBuildingCommunity}color="#6366F1" delay=".2s" start/>
+            <StatBox val={stats.projects} suf="+"  label="Projects Completed" icon={FiCheckCircle}      color="#10B981" delay=".3s" start/>
+            <StatBox val={stats.satisfaction}  suf="%"  label="Satisfaction Rate"  icon={FiStar}             color="#EC4899" delay=".4s" start/>
           </>}
         </div>
       </div>
@@ -1014,7 +1202,7 @@ export default function Home() {
           </div>
 
           <div className={`text-center mt-14 ${processRef.inView?"reveal":"opacity-0"}`} style={{"--d":".7s"} as React.CSSProperties}>
-            <button className="inline-flex items-center gap-2.5 bg-orange-500 hover:bg-orange-600 text-white font-display font-bold px-10 py-4 rounded-xl shadow-lg shadow-orange-100 transition-all duration-200 group">
+            <button onClick={tab === "org" ? handlePostProject : handleCreateProfile} className="inline-flex items-center gap-2.5 bg-orange-500 hover:bg-orange-600 text-white font-display font-bold px-10 py-4 rounded-xl shadow-lg shadow-orange-100 transition-all duration-200 group">
               {tab==="org"?"Post a Project":"Create Your Profile"}
               <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={16}/></span>
             </button>
@@ -1034,12 +1222,14 @@ export default function Home() {
               <h2 className="font-display text-4xl font-black text-gray-900">Meet the community</h2>
               <p className="text-gray-400 mt-2 text-sm font-display font-normal max-w-sm">Pre-vetted, sector-smart, and ready for your next project.</p>
             </div>
-            <button className="inline-flex items-center gap-2 text-orange-500 hover:text-orange-600 font-display font-bold text-sm transition-colors group">
-              Browse all talent <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={14}/></span>
-            </button>
+            <Link href="/hire">
+              <button className="inline-flex items-center gap-2 text-orange-500 hover:text-orange-600 font-display font-bold text-sm transition-colors group">
+                Browse all talent <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={14}/></span>
+              </button>
+            </Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {PROFILES.map((p,i)=><ProfileCard key={i} p={p} idx={i} inView={profilesRef.inView}/>)}
+            {featuredProfiles.length > 0 ? featuredProfiles.slice(0, 4).map((p,i)=><ProfileCard key={p.id || i} p={p} idx={i} inView={profilesRef.inView}/>) : PROFILES.map((p,i)=><ProfileCard key={i} p={p} idx={i} inView={profilesRef.inView}/>)}
           </div>
         </div>
       </section>
@@ -1053,12 +1243,19 @@ export default function Home() {
         <Orb cls="anim-o2 w-80 h-80 bg-indigo-500/8 -left-20 bottom-0"/>
 
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center py-8">
-          <p className={`font-mono text-xs text-orange-400 uppercase tracking-[.3em] mb-6 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".0s"} as React.CSSProperties}>Skills on the platform</p>
+          <p className={`font-mono text-xs text-orange-400 uppercase tracking-[.3em] mb-6 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".0s"} as React.CSSProperties}>SDGs on the platform</p>
           <h2 className={`font-display text-5xl font-black text-white mb-14 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".1s"} as React.CSSProperties}>
-            200+ professionals across<br/><span className="shimmer">12 impact disciplines</span>
+            {stats.freelancers > 0 ? `${stats.freelancers}+ professionals` : '200+ professionals'} across<br/><span className="shimmer">{sdgData.length > 0 ? `${sdgData.length} impact areas` : '12 impact disciplines'}</span>
           </h2>
           <div className={`flex flex-wrap justify-center gap-3 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".25s"} as React.CSSProperties}>
-            {SKILLS_DATA.map((s,i)=>(
+            {sdgData.length > 0 ? sdgData.map((s,i)=>(
+              <div key={i} className="group inline-flex items-center gap-3 px-5 py-3 rounded-2xl border cursor-default transition-all duration-300 hover:scale-105"
+                style={{background:`${s.color}10`,borderColor:`${s.color}22`,animationDelay:`${i*.04}s`}}>
+                <span className="w-2 h-2 rounded-full" style={{background:s.color}}/>
+                <span className="text-white/65 font-display font-semibold text-sm group-hover:text-white transition-colors">{s.label}</span>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-full" style={{background:`${s.color}20`,color:s.color}}>{s.count}</span>
+              </div>
+            )) : SKILLS_DATA.map((s,i)=>(
               <div key={i} className="group inline-flex items-center gap-3 px-5 py-3 rounded-2xl border cursor-default transition-all duration-300 hover:scale-105"
                 style={{background:`${s.color}10`,borderColor:`${s.color}22`,animationDelay:`${i*.04}s`}}>
                 <span className="w-2 h-2 rounded-full" style={{background:s.color}}/>
@@ -1068,9 +1265,9 @@ export default function Home() {
             ))}
           </div>
           <div className={`mt-14 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".55s"} as React.CSSProperties}>
-            <button className="inline-flex items-center gap-2 border border-white/12 hover:border-orange-400 text-white/45 hover:text-white font-display font-bold text-sm px-8 py-3.5 rounded-xl transition-all duration-300">
-              <FiSearch size={14}/> Browse all skills
-            </button>
+            <Link href="/hire" className="inline-flex items-center gap-2 border border-white/12 hover:border-orange-400 text-white/45 hover:text-white font-display font-bold text-sm px-8 py-3.5 rounded-xl transition-all duration-300 no-underline">
+              <FiSearch size={14}/> Browse all categories
+            </Link>
           </div>
         </div>
       </section>
@@ -1085,7 +1282,7 @@ export default function Home() {
             <span className="font-mono text-xs text-orange-500 uppercase tracking-[.25em] mb-4 block">What they say</span>
             <h2 className="font-display text-4xl font-black text-gray-900">People who get it,<br/><span className="shimmer">love it.</span></h2>
           </div>
-          <TestCarousel inView={testiRef.inView}/>
+          <TestCarousel inView={testiRef.inView} testimonials={testimonials} />
         </div>
       </section>
 
@@ -1115,7 +1312,7 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <button className="inline-flex items-center gap-2.5 bg-orange-500 hover:bg-orange-600 text-white font-display font-bold px-8 py-4 rounded-xl shadow-lg shadow-orange-200 transition-all duration-200 group">
+              <button onClick={handlePostProject} className="inline-flex items-center gap-2.5 bg-orange-500 hover:bg-orange-600 text-white font-display font-bold px-8 py-4 rounded-xl shadow-lg shadow-orange-200 transition-all duration-200 group">
                 Post a Project <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={14}/></span>
               </button>
             </div>
@@ -1141,7 +1338,7 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <button className="inline-flex items-center gap-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-display font-bold px-8 py-4 rounded-xl glow-indigo transition-all duration-200 group">
+              <button onClick={handleCreateProfile} className="inline-flex items-center gap-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-display font-bold px-8 py-4 rounded-xl glow-indigo transition-all duration-200 group">
                 Create Profile <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={14}/></span>
               </button>
             </div>
@@ -1228,12 +1425,16 @@ export default function Home() {
           </div>
 
           <div className={`flex flex-col sm:flex-row gap-4 justify-center mb-16 ${ctaRef.inView?"reveal":"opacity-0"}`} style={{"--d":".3s"} as React.CSSProperties}>
-            <MagBtn className="font-display font-black text-lg bg-orange-500 hover:bg-orange-600 text-white px-12 py-5 rounded-2xl shadow-[0_0_60px_rgba(249,115,22,.35)] transition-all duration-200 flex items-center gap-2.5 group">
-              Hire Talent <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={18}/></span>
-            </MagBtn>
-            <MagBtn className="font-display font-black text-lg border-2 border-white/12 hover:border-orange-400 text-white/60 hover:text-white px-12 py-5 rounded-2xl backdrop-blur-sm transition-all duration-200">
-              Find Work
-            </MagBtn>
+            <Link href="/hire">
+              <MagBtn className="font-display font-black text-lg bg-orange-500 hover:bg-orange-600 text-white px-12 py-5 rounded-2xl shadow-[0_0_60px_rgba(249,115,22,.35)] transition-all duration-200 flex items-center gap-2.5 group">
+                Hire Talent <span className="group-hover:translate-x-1 transition-transform"><FiArrowRight size={18}/></span>
+              </MagBtn>
+            </Link>
+            <Link href="/jobs">
+              <MagBtn className="font-display font-black text-lg border-2 border-white/12 hover:border-orange-400 text-white/60 hover:text-white px-12 py-5 rounded-2xl backdrop-blur-sm transition-all duration-200">
+                Find Work
+              </MagBtn>
+            </Link>
           </div>
 
           {/* email form */}
@@ -1319,6 +1520,7 @@ export default function Home() {
       </footer>
 
     </div>
+    <Toaster position="top-right" />
     </>
   )
 }

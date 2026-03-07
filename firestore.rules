@@ -68,6 +68,13 @@ service cloud.firestore {
       }
     }
 
+    // ===== PUBLIC STATS =====
+    // Public statistics for homepage
+    match /publicStats/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ===== PUBLIC PROFILES =====
     match /publicProfiles/{uid} {
       allow read: if true;
@@ -76,8 +83,9 @@ service cloud.firestore {
     }
 
     // ===== GIGS =====
+    // Public counts and listings rely on being able to read gig documents.
     match /gigs/{gigId} {
-      allow read: if isAdmin() || signedIn() || resource.data.status == "open";
+      allow read: if true;  // completely open for stats/catalgues
 
       allow create: if signedIn()
         && request.resource.data.clientUid == request.auth.uid;
@@ -240,6 +248,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+     // ===== PLATFORM REVIEWS =====
+    match /platform_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+
     // ===== WORKSPACES =====
     match /workspaces/{workspaceId} {
       allow read: if isAdmin() || (
@@ -275,6 +290,18 @@ service cloud.firestore {
       match /payoutRequests/{payoutId} {
         allow read: if isAdmin() || signedIn();
         allow create, update: if signedIn();
+        allow delete: if false;
+      }
+
+      match /hourly/{document=**} {
+        allow read: if isAdmin() || signedIn();
+        allow create, update: if isAdmin() || signedIn();
+        allow delete: if false;
+      }
+
+      match /finalWork/{document=**} {
+        allow read: if isAdmin() || signedIn();
+        allow create, update: if isAdmin() || signedIn();
         allow delete: if false;
       }
     }

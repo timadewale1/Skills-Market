@@ -15,25 +15,38 @@ export default function NotificationBell() {
 
   useEffect(() => {
 
-    if (!user) return
+    if (!user?.uid) {
+      setNotifications([])
+      return
+    }
 
-    const q = query(
-      collection(db, "notifications"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    )
+    try {
+      const q = query(
+        collection(db, "notifications"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      )
 
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
-      setNotifications(data)
-    })
+      const unsub = onSnapshot(q, (snap) => {
+        const data = snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        setNotifications(data)
+      }, (error: any) => {
+        // Silently fail if permission denied - don't crash the page
+        console.warn("Notifications unavailable:", error?.message)
+        setNotifications([])
+      })
 
-    return () => unsub()
+      return () => unsub()
+    } catch (error) {
+      console.error("Error setting up notifications listener:", error)
+      setNotifications([])
+      return undefined
+    }
 
-  }, [user])
+  }, [user?.uid])
 
   const unread = notifications.filter(n => !n.read).length
 

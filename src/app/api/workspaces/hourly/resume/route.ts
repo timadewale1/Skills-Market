@@ -44,7 +44,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Work is not paused" }, { status: 400 })
     }
 
-    // Resume work
+    const sessionData = sessionSnap.data()
+
+    // Resume work - preserve totalSeconds and update lastResumedAt
     await sessionRef.update({
       status: "running",
       lastResumedAt: new Date(),

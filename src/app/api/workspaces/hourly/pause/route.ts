@@ -44,9 +44,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Work is not running" }, { status: 400 })
     }
 
+    const sessionData = sessionSnap.data()
+    
+    // Calculate elapsed time since last resume
+    const lastResumedAt = sessionData.lastResumedAt?.toDate?.()
+      ? sessionData.lastResumedAt.toDate().getTime()
+      : sessionData.lastResumedAt instanceof Date
+      ? sessionData.lastResumedAt.getTime()
+      : new Date(sessionData.lastResumedAt).getTime()
+    
+    const now = new Date().getTime()
+    const elapsedSeconds = Math.floor((now - lastResumedAt) / 1000)
+    const newTotalSeconds = (sessionData.totalSeconds || 0) + elapsedSeconds
+
     // Pause work
     await sessionRef.update({
       status: "paused",
+      totalSeconds: newTotalSeconds,
       pausedAt: new Date(),
       updatedAt: new Date(),
     })

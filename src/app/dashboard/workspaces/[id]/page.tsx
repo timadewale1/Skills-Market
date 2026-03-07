@@ -58,9 +58,11 @@ import {
   File,
   X,
   Star,
+  Clock,
 } from "lucide-react"
 
 import ReviewModal from "@/components/reviews/ReviewModal"
+import PlatformReviewModal from "@/components/reviews/PlatformReviewModal"
 
 type MilestoneAttachment = {
   kind: "raw" | "preview"
@@ -604,10 +606,16 @@ export default function WorkspaceDetailsPage() {
   const [disputingHour, setDisputingHour] = useState<HourlyCheckin | null>(null)
   const [defenseNote, setDefenseNote] = useState("")
   const [defendingHour, setDefendingHour] = useState<HourlyCheckin | null>(null)
+  const [hourlyCountdown, setHourlyCountdown] = useState("")
+  const [notificationSent50Min, setNotificationSent50Min] = useState<Set<number>>(new Set()) // track which hours had 50-min notification
+  const [hourComplete, setHourComplete] = useState(false) // track if current hour hit 60 mins
+  const [fiftyMinNotificationSent, setFiftyMinNotificationSent] = useState(false) // prevent multiple sends for current hour
 
   // ✅ Review system
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
   const [hasAlreadyReviewed, setHasAlreadyReviewed] = useState(false)
+  const [platformReviewModalOpen, setPlatformReviewModalOpen] = useState(false)
+  const [hasAlreadyReviewedPlatform, setHasAlreadyReviewedPlatform] = useState(false)
 
   // Dispute system
   const [raiseDisputeOpen, setRaiseDisputeOpen] = useState(false)
@@ -702,16 +710,27 @@ export default function WorkspaceDetailsPage() {
       setFinalWork(snap.exists() ? ({ id: "submission", ...(snap.data() as any) }) : null)
     })
 
-    const unsubSession = onSnapshot(doc(db, "workspaces", id, "hourly", "session"), (snap) => {
-  setHourlySession(snap.exists() ? (snap.data() as any) : null)
-})
+const unsubSession = onSnapshot(
+      doc(db, "workspaces", id, "hourly", "session"),
+      (snap) => {
+        setHourlySession(snap.exists() ? (snap.data() as any) : null)
+      },
+      (error) => {
+        console.error("Error listening to hourly session:", error)
+        setHourlySession(null)
+      }
+    )
 
-const unsubCheckins = onSnapshot(
-  query(
-    collection(db, "workspaces", id, "hourly", "session", "checkins"),
-    orderBy("submittedAt", "desc")
-  ),
-  (snap) => setHourlyCheckins(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })))
+    const unsubCheckins = onSnapshot(
+      query(
+        collection(db, "workspaces", id, "hourly", "session", "checkins"),
+        orderBy("submittedAt", "desc")
+      ),
+      (snap) => setHourlyCheckins(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))),
+      (error) => {
+        console.error("Error listening to hourly checkins:", error)
+        setHourlyCheckins([])
+      }
 )
 
 
@@ -730,19 +749,111 @@ const unsubCheckins = onSnapshot(
     const checkReviewStatus = async () => {
       if (!id || !user?.uid || !ws) return
       try {
-        const q = query(
+        // Check workspace review
+        const wsReviewQuery = query(
           collection(db, "reviews"),
           where("workspaceId", "==", id),
           where("fromUserId", "==", user.uid)
         )
-        const snap = await getDocs(q)
-        setHasAlreadyReviewed(!snap.empty)
+        const wsReviewSnap = await getDocs(wsReviewQuery)
+        setHasAlreadyReviewed(!wsReviewSnap.empty)
+
+        // Check platform review
+        const platformReviewQuery = query(
+          collection(db, "platform_reviews"),
+          where("workspaceId", "==", id),
+          where("fromUserId", "==", user.uid)
+        )
+        const platformReviewSnap = await getDocs(platformReviewQuery)
+        setHasAlreadyReviewedPlatform(!platformReviewSnap.empty)
       } catch (err) {
         console.error("Failed to check review status:", err)
       }
     }
     checkReviewStatus()
   }, [id, user?.uid, ws])
+
+  // ✅ Hourly session countdown timer
+  useEffect(() => {
+    if (!hourlySession?.lastResumedAt) {
+      setHourlyCountdown("")
+      return
+    }
+
+    const updateTimer = () => {
+      if (!hourlySession?.lastResumedAt) return
+
+      // Get the last resumed time
+      const resumedAt = hourlySession.lastResumedAt?.toDate?.()
+        ? hourlySession.lastResumedAt.toDate().getTime()
+        : hourlySession.lastResumedAt instanceof Date
+        ? hourlySession.lastResumedAt.getTime()
+        : new Date(hourlySession.lastResumedAt).getTime()
+
+      let elapsedSeconds = 0
+
+      if (sessionStatus === "running") {
+        // If running: add accumulated seconds + time since last resume
+        const now = Date.now()
+        const elapsedSinceResume = Math.floor((now - resumedAt) / 1000)
+        elapsedSeconds = (hourlySession.totalSeconds || 0) + elapsedSinceResume
+
+        // Check if we've hit 60 minutes (3600 seconds)
+        if (elapsedSeconds >= 3600 && !hourComplete) {
+          setHourComplete(true)
+          // Auto-pause at 60 minutes
+          hourlyPauseWork()
+          return
+        }
+
+        // Check if we've hit 50 minutes (3000 seconds) - send notification
+        const currentHourIdx = hourlySession.currentHourIndex || 0
+        if (elapsedSeconds >= 3000 && !fiftyMinNotificationSent) {
+          // Send 50-minute notification
+          sendHourAlmostUpNotification(currentHourIdx).catch(console.error)
+          setFiftyMinNotificationSent(true)
+        }
+      } else if (sessionStatus === "paused") {
+        // If paused: just show accumulated seconds (don't add new time)
+        elapsedSeconds = hourlySession.totalSeconds || 0
+      }
+
+      // Calculate hours, minutes, seconds
+      const hours = Math.floor(elapsedSeconds / 3600)
+      const minutes = Math.floor((elapsedSeconds % 3600) / 60)
+      const seconds = elapsedSeconds % 60
+
+      // Format as HH:MM:SS
+      const formatted = [hours, minutes, seconds]
+        .map((n) => String(n).padStart(2, "0"))
+        .join(":")
+
+      setHourlyCountdown(formatted)
+    }
+
+    updateTimer()
+    const interval = setInterval(updateTimer, 1000)
+
+    return () => clearInterval(interval)
+  }, [sessionStatus, hourlySession?.lastResumedAt, hourlySession?.totalSeconds, hourlySession?.currentHourIndex])
+
+  // Send email notification at 50 minutes
+  const sendHourAlmostUpNotification = async (hourIndex: number) => {
+    if (!id || !user?.uid) return
+    try {
+      const token = await user.getIdToken()
+      await fetch("/api/workspaces/hourly/notify-50min", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ wsId: id, hourIndex }),
+      })
+    } catch (err) {
+      console.error("Failed to send 50-min notification:", err)
+    }
+  }
 
   const meta = badgeForStatus(ws?.status)
   const Icon = meta.icon
@@ -1089,6 +1200,23 @@ const unsubCheckins = onSnapshot(
       }
 
       toast.success("Work started")
+      
+      // Reset flags for new hour
+      setFiftyMinNotificationSent(false)
+      setHourComplete(false)
+      
+      // Refresh session data immediately after API call succeeds
+      setTimeout(async () => {
+        try {
+          const sessionSnap = await getDoc(doc(db, "workspaces", id, "hourly", "session"))
+          if (sessionSnap.exists()) {
+            setHourlySession(sessionSnap.data() as any)
+            console.log("Session refreshed:", sessionSnap.data())
+          }
+        } catch (err) {
+          console.error("Error refreshing session:", err)
+        }
+      }, 500)
     } catch (e: any) {
       console.error(e)
       toast.error(e?.message || "Failed to start work")
@@ -1577,37 +1705,79 @@ const unsubCheckins = onSnapshot(
                             <Badge className="rounded-full bg-gray-100 border text-gray-700">{sessionStatus}</Badge>
                           </div>
 
+                          {(sessionStatus === "running" || sessionStatus === "paused") && hourlyCountdown && (
+                            <div className="mt-2 flex items-center gap-2 pb-2 border-b">
+                              <Clock size={16} className="text-[var(--primary)]" />
+                              <span className="font-mono font-extrabold text-lg text-[var(--primary)]">{hourlyCountdown}</span>
+                              <span className="text-xs text-gray-500">{sessionStatus === "paused" ? "paused" : "elapsed time"}</span>
+                            </div>
+                          )}
+
+                          {hourComplete && sessionStatus === "paused" && (
+                            <div className="mt-2 rounded-2xl bg-blue-50 border border-blue-200 p-3">
+                              <div className="text-xs font-extrabold text-blue-900">
+                                ✅ Hour {(hourlySession?.currentHourIndex || 0) + 1} complete
+                              </div>
+                              <div className="text-xs text-blue-800 mt-1">
+                                Complete the check-in below, then start the next hour to continue.
+                              </div>
+                            </div>
+                          )}
+
+                          {hourlyCheckins.length > 0 && (
+                            <div className="mt-2 text-xs font-semibold text-green-700">
+                              ✅ Hour {hourlyCheckins[0]?.hourIndex !== undefined ? hourlyCheckins[0].hourIndex + 1 : 1} checked in
+                            </div>
+                          )}
+
                           <div className="mt-2 text-xs text-gray-500 font-semibold">
                             Disclaimer: Client reviews each hour. They can dispute unclear screenshots/notes; talent can defend.
                           </div>
 
                           {isTalent ? (
                             <div className="mt-3 flex gap-2">
-                              <button
-                                onClick={hourlyStartWork}
-                                disabled={!canWork || sessionStatus !== "not_started"}
-                                className="flex-1 rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-                              >
-                                <Play size={16} />
-                                Start work
-                              </button>
+                              {!hourComplete ? (
+                                <>
+                                  <button
+                                    onClick={hourlyStartWork}
+                                    disabled={!canWork || sessionStatus !== "not_started"}
+                                    className="flex-1 rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                                  >
+                                    <Play size={16} />
+                                    Start work
+                                  </button>
 
-                              {sessionStatus === "running" ? (
-                                <button
-                                  onClick={hourlyPauseWork}
-                                  className="flex-1 rounded-2xl border bg-white font-extrabold py-2 inline-flex items-center justify-center gap-2"
-                                >
-                                  <Pause size={16} className="text-[var(--primary)]" />
-                                  Pause
-                                </button>
+                                  {sessionStatus === "running" ? (
+                                    <button
+                                      onClick={hourlyPauseWork}
+                                      className="flex-1 rounded-2xl border bg-white font-extrabold py-2 inline-flex items-center justify-center gap-2"
+                                    >
+                                      <Pause size={16} className="text-[var(--primary)]" />
+                                      Pause
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={hourlyResumeWork}
+                                      disabled={sessionStatus !== "paused"}
+                                      className="flex-1 rounded-2xl border bg-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                                    >
+                                      <Play size={16} className="text-[var(--primary)]" />
+                                      Resume
+                                    </button>
+                                  )}
+                                </>
                               ) : (
                                 <button
-                                  onClick={hourlyResumeWork}
-                                  disabled={sessionStatus !== "paused"}
-                                  className="flex-1 rounded-2xl border bg-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                                  onClick={async () => {
+                                    // Reset hour complete flag and start next hour
+                                    setHourComplete(false)
+                                    setNotificationSent50Min((prev) => new Set(prev))
+                                    await hourlyStartWork()
+                                  }}
+                                  className="flex-1 rounded-2xl bg-green-600 text-white font-extrabold py-2 inline-flex items-center justify-center gap-2 hover:bg-green-700"
                                 >
-                                  <Play size={16} className="text-[var(--primary)]" />
-                                  Resume
+                                  <Play size={16} />
+                                  Start Next Hour
                                 </button>
                               )}
                             </div>
@@ -2420,7 +2590,20 @@ const unsubCheckins = onSnapshot(
                 workspaceId={id || ""}
                 role={isClient ? "client" : "talent"}
                 open={reviewModalOpen}
-                onOpenChange={setReviewModalOpen}
+                onOpenChange={(open) => {
+                  setReviewModalOpen(open)
+                  // When closing workspace review, show platform review if not already done
+                  if (!open && !hasAlreadyReviewedPlatform) {
+                    setTimeout(() => setPlatformReviewModalOpen(true), 500)
+                  }
+                }}
+              />
+
+              {/* ✅ Platform Review Modal */}
+              <PlatformReviewModal
+                workspaceId={id || ""}
+                open={platformReviewModalOpen}
+                onOpenChange={setPlatformReviewModalOpen}
               />
             </>
           )}

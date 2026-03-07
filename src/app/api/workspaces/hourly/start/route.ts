@@ -36,29 +36,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Access denied - only talent can start work" }, { status: 403 })
     }
 
-    // Check payment status
-    if (wsData?.paymentStatus !== "initiated" && wsData?.paymentStatus !== "funded") {
-      return NextResponse.json({ error: "Client must complete payment step first" }, { status: 400 })
+    // Check payment status - allow if funded or paid
+    console.log("Workspace payment status:", wsData?.payment?.status)
+    if (!wsData?.payment?.status || (wsData.payment.status !== "funded" && wsData.payment.status !== "paid" && wsData.payment.status !== "completed")) {
+      return NextResponse.json({ error: `Client must complete payment step first. Current status: ${wsData?.payment?.status || 'undefined'}` }, { status: 400 })
     }
 
     // Get or create session
     const sessionRef = wsRef.collection("hourly").doc("session")
     const sessionSnap = await sessionRef.get()
 
+    let nextHourIndex = 0
+    
     if (sessionSnap.exists) {
       const sessionData = sessionSnap.data()
       if (sessionData?.status === "running") {
         return NextResponse.json({ error: "Work is already running" }, { status: 400 })
+      }
+      // If resuming after completing an hour, increment the hour index
+      if (sessionData?.status === "paused" && sessionData?.totalSeconds >= 3600) {
+        nextHourIndex = (sessionData.currentHourIndex || 0) + 1
       }
     }
 
     // Start work
     await sessionRef.set({
       status: "running",
-      startedAt: new Date(),
+      startedAt: sessionSnap.exists ? sessionSnap.data()?.startedAt : new Date(),
       lastResumedAt: new Date(),
-      currentHourIndex: 0,
+      currentHourIndex: nextHourIndex,
       currentHourStartedAt: new Date(),
+      totalSeconds: 0, // Reset totalSeconds for new hour
       updatedAt: new Date(),
     }, { merge: true })
 
