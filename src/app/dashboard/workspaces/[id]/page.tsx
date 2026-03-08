@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
@@ -607,9 +607,12 @@ export default function WorkspaceDetailsPage() {
   const [defenseNote, setDefenseNote] = useState("")
   const [defendingHour, setDefendingHour] = useState<HourlyCheckin | null>(null)
   const [hourlyCountdown, setHourlyCountdown] = useState("")
-  const [notificationSent50Min, setNotificationSent50Min] = useState<Set<number>>(new Set()) // track which hours had 50-min notification
+  const [graceCountdown, setGraceCountdown] = useState("") // 10-minute countdown after hour completes
+  const notificationSent50MinRef = useRef<Set<number>>(new Set()) // track which hours had 50-min notification
+  const notificationSentHourCompleteRef = useRef<Set<number>>(new Set()) // track which hours had hour-complete notification
   const [hourComplete, setHourComplete] = useState(false) // track if current hour hit 60 mins
-  const [fiftyMinNotificationSent, setFiftyMinNotificationSent] = useState(false) // prevent multiple sends for current hour
+  const [graceWindowActive, setGraceWindowActive] = useState(false) // 10-minute grace period is active
+  const graceWindowStartRef = useRef<number | null>(null) // timestamp when grace period started
 
   // ✅ Review system
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
@@ -775,15 +778,38 @@ const unsubSession = onSnapshot(
 
   // ✅ Hourly session countdown timer
   useEffect(() => {
-    if (!hourlySession?.lastResumedAt) {
+    if (!hourlySession?.lastResumedAt && !graceWindowActive) {
       setHourlyCountdown("")
+      setGraceCountdown("")
       return
     }
 
     const updateTimer = () => {
+      // Handle grace window (10 minutes after hour completes)
+      if (graceWindowActive && graceWindowStartRef.current) {
+        const now = Date.now()
+        const graceElapsed = Math.floor((now - graceWindowStartRef.current) / 1000)
+        const graceRemaining = Math.max(0, 600 - graceElapsed) // 600 seconds = 10 minutes
+
+        if (graceRemaining === 0) {
+          // 10 minutes exceeded - cancel hour
+          cancelHourIfNoCheckin()
+          setGraceWindowActive(false)
+          graceWindowStartRef.current = null
+          setGraceCountdown("")
+          return
+        }
+
+        const graceMinutes = Math.floor(graceRemaining / 60)
+        const graceSeconds = graceRemaining % 60
+        const graceFormatted = `${graceMinutes}:${String(graceSeconds).padStart(2, "0")}`
+        setGraceCountdown(graceFormatted)
+        return
+      }
+
       if (!hourlySession?.lastResumedAt) return
 
-      // Get the last resumed time
+      // Handle main hour countdown
       const resumedAt = hourlySession.lastResumedAt?.toDate?.()
         ? hourlySession.lastResumedAt.toDate().getTime()
         : hourlySession.lastResumedAt instanceof Date
@@ -801,17 +827,24 @@ const unsubSession = onSnapshot(
         // Check if we've hit 60 minutes (3600 seconds)
         if (elapsedSeconds >= 3600 && !hourComplete) {
           setHourComplete(true)
+          // Start grace period
+          graceWindowStartRef.current = Date.now()
+          setGraceWindowActive(true)
           // Auto-pause at 60 minutes
           hourlyPauseWork()
+          // Send hour complete notification
+          const currentHourIdx = hourlySession.currentHourIndex || 0
+          sendHourCompleteNotification(currentHourIdx).catch(console.error)
+          notificationSentHourCompleteRef.current.add(currentHourIdx)
           return
         }
 
         // Check if we've hit 50 minutes (3000 seconds) - send notification
         const currentHourIdx = hourlySession.currentHourIndex || 0
-        if (elapsedSeconds >= 3000 && !notificationSent50Min.has(currentHourIdx)) {
+        if (elapsedSeconds >= 3000 && !notificationSent50MinRef.current.has(currentHourIdx)) {
           // Send 50-minute notification only for this specific hour
           sendHourAlmostUpNotification(currentHourIdx).catch(console.error)
-          setNotificationSent50Min(prev => new Set(prev).add(currentHourIdx))
+          notificationSent50MinRef.current.add(currentHourIdx)
         }
       } else if (sessionStatus === "paused") {
         // If paused: just show accumulated seconds (don't add new time)
@@ -835,7 +868,7 @@ const unsubSession = onSnapshot(
     const interval = setInterval(updateTimer, 1000)
 
     return () => clearInterval(interval)
-  }, [sessionStatus, hourlySession?.lastResumedAt, hourlySession?.totalSeconds, hourlySession?.currentHourIndex])
+  }, [sessionStatus, hourlySession?.lastResumedAt, hourlySession?.totalSeconds, hourlySession?.currentHourIndex, graceWindowActive])
 
   // Send email notification at 50 minutes
   const sendHourAlmostUpNotification = async (hourIndex: number) => {
@@ -852,6 +885,46 @@ const unsubSession = onSnapshot(
       })
     } catch (err) {
       console.error("Failed to send 50-min notification:", err)
+    }
+  }
+
+  // Send notification when hour is complete - talent has 10 minutes to check in
+  const sendHourCompleteNotification = async (hourIndex: number) => {
+    if (!id || !user?.uid) return
+    try {
+      const token = await user.getIdToken()
+      await fetch("/api/workspaces/hourly/notify-hour-complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ wsId: id, hourIndex }),
+      })
+    } catch (err) {
+      console.error("Failed to send hour-complete notification:", err)
+    }
+  }
+
+  // Cancel the hour if talent didn't check in within 10 minutes
+  const cancelHourIfNoCheckin = async () => {
+    if (!id || !user?.uid) return
+    try {
+      const token = await user.getIdToken()
+      const response = await fetch("/api/workspaces/hourly/cancel-hour", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ wsId: id }),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        console.error("Failed to cancel hour:", error.error)
+      }
+    } catch (err) {
+      console.error("Failed to cancel hour:", err)
     }
   }
 
@@ -1327,6 +1400,10 @@ const unsubSession = onSnapshot(
       }
 
       toast.success("Hour check-in submitted")
+      // Clear grace period if it was active
+      setGraceWindowActive(false)
+      graceWindowStartRef.current = null
+      setGraceCountdown("")
       setHourlyNote("")
       setHourlyShot(null)
     } catch (e: any) {
@@ -1713,13 +1790,29 @@ const unsubSession = onSnapshot(
                           )}
 
                           {hourComplete && sessionStatus === "paused" && (
-                            <div className="mt-2 rounded-2xl bg-blue-50 border border-blue-200 p-3">
-                              <div className="text-xs font-extrabold text-blue-900">
-                                ✅ Hour {(hourlySession?.currentHourIndex || 0) + 1} complete
-                              </div>
-                              <div className="text-xs text-blue-800 mt-1">
-                                Complete the check-in below, then start the next hour to continue.
-                              </div>
+                            <div>
+                              {graceWindowActive ? (
+                                <div className="mt-2 rounded-2xl bg-red-50 border-2 border-red-500 p-4">
+                                  <div className="text-sm font-extrabold text-red-900 mb-2">
+                                    ⏰ SUBMIT CHECK-IN NOW - {graceCountdown}
+                                  </div>
+                                  <div className="text-xs text-red-800 mb-3">
+                                    Your hour is complete! You have 10 minutes to submit a check-in. If you don't submit within 10 minutes, this hour won't count for pay.
+                                  </div>
+                                  <div className="text-2xl font-extrabold text-red-600 text-center py-2">
+                                    {graceCountdown}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-2 rounded-2xl bg-blue-50 border border-blue-200 p-3">
+                                  <div className="text-xs font-extrabold text-blue-900">
+                                    ✅ Hour {(hourlySession?.currentHourIndex || 0) + 1} complete
+                                  </div>
+                                  <div className="text-xs text-blue-800 mt-1">
+                                    Complete the check-in below, then start the next hour to continue.
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -1770,7 +1863,6 @@ const unsubSession = onSnapshot(
                                   onClick={async () => {
                                     // Reset hour complete flag and start next hour
                                     setHourComplete(false)
-                                    setNotificationSent50Min((prev) => new Set(prev))
                                     await hourlyStartWork()
                                   }}
                                   className="flex-1 rounded-2xl bg-green-600 text-white font-extrabold py-2 inline-flex items-center justify-center gap-2 hover:bg-green-700"
