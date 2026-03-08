@@ -808,10 +808,10 @@ const unsubSession = onSnapshot(
 
         // Check if we've hit 50 minutes (3000 seconds) - send notification
         const currentHourIdx = hourlySession.currentHourIndex || 0
-        if (elapsedSeconds >= 3000 && !fiftyMinNotificationSent) {
-          // Send 50-minute notification
+        if (elapsedSeconds >= 3000 && !notificationSent50Min.has(currentHourIdx)) {
+          // Send 50-minute notification only for this specific hour
           sendHourAlmostUpNotification(currentHourIdx).catch(console.error)
-          setFiftyMinNotificationSent(true)
+          setNotificationSent50Min(prev => new Set(prev).add(currentHourIdx))
         }
       } else if (sessionStatus === "paused") {
         // If paused: just show accumulated seconds (don't add new time)
@@ -1201,8 +1201,7 @@ const unsubSession = onSnapshot(
 
       toast.success("Work started")
       
-      // Reset flags for new hour
-      setFiftyMinNotificationSent(false)
+      // Reset flags for new hour (notificationSent50Min persists across hours to track history)
       setHourComplete(false)
       
       // Refresh session data immediately after API call succeeds

@@ -107,14 +107,14 @@ const PROFILES = [
   { name: "Tunde B.",   title: "Project Manager",          location: "Ibadan",         skills: ["Project Mgmt","PMO","Capacity Building"],       rate: "₦150k/project", rating: 4.9, reviews: 15, color: "#EC4899", available: true  },
 ]
 
-const ACTIVITY = [
-  { action: "hired",     who: "Chioma O.",          hired: "Adaeze N.",  role: "Grant Writer",     time: "2m ago",  color: "#10B981" },
-  { action: "matched",   who: "GreenAfrica NGO",    hired: "Emeka T.",   role: "M&E Specialist",   time: "8m ago",  color: "#F97316" },
-  { action: "completed", who: "STEM4Girls NG",      hired: "Kemi A.",    role: "Comms Lead",       time: "15m ago", color: "#6366F1" },
-  { action: "hired",     who: "HealthFirst",        hired: "Tunde B.",   role: "Project Manager",  time: "32m ago", color: "#EC4899" },
-  { action: "matched",   who: "LagosArts",          hired: "Seun A.",    role: "Researcher",       time: "1h ago",  color: "#F59E0B" },
-  { action: "completed", who: "EduBridge Org",      hired: "Funmi A.",   role: "Fundraiser",       time: "2h ago",  color: "#14B8A6" },
-]
+// const ACTIVITY = [
+//   { action: "hired",     who: "Chioma O.",          hired: "Adaeze N.",  role: "Grant Writer",     time: "2m ago",  color: "#10B981" },
+//   { action: "matched",   who: "GreenAfrica NGO",    hired: "Emeka T.",   role: "M&E Specialist",   time: "8m ago",  color: "#F97316" },
+//   { action: "completed", who: "STEM4Girls NG",      hired: "Kemi A.",    role: "Comms Lead",       time: "15m ago", color: "#6366F1" },
+//   { action: "hired",     who: "HealthFirst",        hired: "Tunde B.",   role: "Project Manager",  time: "32m ago", color: "#EC4899" },
+//   { action: "matched",   who: "LagosArts",          hired: "Seun A.",    role: "Researcher",       time: "1h ago",  color: "#F59E0B" },
+//   { action: "completed", who: "EduBridge Org",      hired: "Funmi A.",   role: "Fundraiser",       time: "2h ago",  color: "#14B8A6" },
+// ]
 
 const FAQS = [
   { q: "How are freelancers vetted?",           a: "Every applicant goes through profile review, skills assessment, and reference checks. We verify nonprofit sector experience and evaluate work samples personally before approving anyone onto the platform." },
@@ -322,42 +322,42 @@ function CursorGlow() {
 }
 
 /* ═══ ACTIVITY FEED ══════════════════════════════════════════ */
-function ActivityFeed() {
-  const [items, setItems] = useState<number[]>([])
-  const [gen, setGen] = useState(0)
-  useEffect(() => {
-    const show = () => { setItems(v=>[...v.slice(-3), gen % ACTIVITY.length]); setGen(g=>g+1) }
-    show()
-    const t = setInterval(show, 3400)
-    return () => clearInterval(t)
-  }, [])
-  return (
-    <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-2 pointer-events-none">
-      {items.map((idx, i) => {
-        const a = ACTIVITY[idx]
-        return (
-          <div key={`${idx}-${i}-${gen}`}
-            className="flex items-center gap-3 bg-[#0A0D14]/95 backdrop-blur-xl border border-white/8 rounded-xl px-4 py-3 max-w-xs"
-            style={{
-              animation:"toastIn .5s cubic-bezier(.34,1.56,.64,1) both",
-              opacity: i===items.length-1?1:i===items.length-2?.65:.35,
-              transform:`scale(${i===items.length-1?1:i===items.length-2?.96:.92})`,
-              transformOrigin:"bottom left",
-              boxShadow:"0 8px 32px rgba(0,0,0,.5)",
-            }}>
-            <span className="w-2 h-2 rounded-full shrink-0 flex-none" style={{background:a.color,boxShadow:`0 0 6px ${a.color}`}}/>
-            <span className="text-white/55 text-xs font-display leading-tight">
-              <span className="text-white font-semibold">{a.who}</span>
-              {a.action==="hired"?" hired ":" matched with "}
-              <span className="font-semibold" style={{color:a.color}}>{a.hired}</span>
-              <span className="text-white/25"> · {a.time}</span>
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
+// function ActivityFeed() {
+//   const [items, setItems] = useState<number[]>([])
+//   const [gen, setGen] = useState(0)
+//   useEffect(() => {
+//     const show = () => { setItems(v=>[...v.slice(-3), gen % ACTIVITY.length]); setGen(g=>g+1) }
+//     show()
+//     const t = setInterval(show, 3400)
+//     return () => clearInterval(t)
+//   }, [])
+//   return (
+//     <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-2 pointer-events-none">
+//       {items.map((idx, i) => {
+//         const a = ACTIVITY[idx]
+//         return (
+//           <div key={`${idx}-${i}-${gen}`}
+//             className="flex items-center gap-3 bg-[#0A0D14]/95 backdrop-blur-xl border border-white/8 rounded-xl px-4 py-3 max-w-xs"
+//             style={{
+//               animation:"toastIn .5s cubic-bezier(.34,1.56,.64,1) both",
+//               opacity: i===items.length-1?1:i===items.length-2?.65:.35,
+//               transform:`scale(${i===items.length-1?1:i===items.length-2?.96:.92})`,
+//               transformOrigin:"bottom left",
+//               boxShadow:"0 8px 32px rgba(0,0,0,.5)",
+//             }}>
+//             <span className="w-2 h-2 rounded-full shrink-0 flex-none" style={{background:a.color,boxShadow:`0 0 6px ${a.color}`}}/>
+//             <span className="text-white/55 text-xs font-display leading-tight">
+//               <span className="text-white font-semibold">{a.who}</span>
+//               {a.action==="hired"?" hired ":" matched with "}
+//               <span className="font-semibold" style={{color:a.color}}>{a.hired}</span>
+//               <span className="text-white/25"> · {a.time}</span>
+//             </span>
+//           </div>
+//         )
+//       })}
+//     </div>
+//   )
+// }
 
 /* ═══ FLIP CARD ══════════════════════════════════════════════ */
 function FlipCard({ feat, idx, inView }: { feat: typeof FEATURES[0]; idx: number; inView: boolean }) {
@@ -711,11 +711,10 @@ export default function Home() {
             try {
               const publicProfilesSnap = await getDocs(collection(db, 'publicProfiles'))
               freelancersCount = publicProfilesSnap.docs.filter(doc => doc.data().role === 'talent').length
+              clientsCount = publicProfilesSnap.docs.filter(doc => doc.data().role === 'client').length
             } catch (e) {
               console.error('publicProfiles count failed', e)
             }
-            
-            // Note: Client count requires permissions we don't have, so we'll leave it as 0
           }
         } catch (e) {
           console.error('publicStats query failed', e)
@@ -888,7 +887,7 @@ export default function Home() {
 
     {!loaded && <Preloader onDone={()=>setLoaded(true)}/>}
     {loaded  && <CursorGlow/>}
-    {loaded  && <ActivityFeed/>}
+    {/* {loaded  && <ActivityFeed/>} */}
 
     <div className="font-display bg-white text-gray-900 overflow-x-hidden selection:bg-orange-100 selection:text-orange-900"
       style={{opacity:loaded?1:0,transition:"opacity .5s ease .15s"}}>
@@ -1480,9 +1479,7 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-12 mb-16">
             <div className="col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center">
-                  <span className="text-white font-black text-lg font-display">c</span>
-                </div>
+            <img src="/logo.png" alt="Changeworker" className="h-20 w-20" />
                 <p className="font-display font-black text-2xl text-white">changeworker</p>
               </div>
               <p className="text-white/22 text-sm font-display font-light leading-relaxed mb-6 max-w-xs">
@@ -1498,15 +1495,23 @@ export default function Home() {
               </div>
             </div>
             {[
-              {title:"Platform",links:["For Organizations","For Freelancers","How It Works","Pricing","FAQ"]},
-              {title:"Company", links:["About Us","Blog","Careers","Press","Contact"]},
-              {title:"Legal",   links:["Terms of Service","Privacy Policy","Cookie Policy"]},
+              {title:"Platform",links:["How It Works","FAQ"]},
+              {title:"Company", links:["About Us","Blog","Contact"]},
+              {title:"Legal",   links:["Terms of Service","Privacy Policy"]},
             ].map(col=>(
               <div key={col.title}>
                 <p className="font-mono text-[10px] uppercase tracking-[.2em] text-white/22 mb-5">{col.title}</p>
                 <ul className="space-y-3">
                   {col.links.map(l=>(
-                    <li key={l}><a href="#" className="text-white/32 hover:text-orange-400 text-sm font-display font-normal transition-colors duration-200">{l}</a></li>
+                    <li key={l}><Link href={
+                      l === "Terms of Service" ? "/terms" :
+                      l === "Privacy Policy" ? "/privacy" :
+                      l === "Contact" ? "/contact" :
+                      l === "FAQ" ? "/faq" :
+                      l === "About Us" ? "/about" :
+                      l === "How It Works" ? "/how" :
+                      l === "Blog" ? "/blog" : "#"
+                    } className="text-white/32 hover:text-orange-400 text-sm font-display font-normal transition-colors duration-200 no-underline">{l}</Link></li>
                   ))}
                 </ul>
               </div>
