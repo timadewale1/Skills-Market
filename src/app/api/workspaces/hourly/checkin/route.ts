@@ -38,21 +38,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Access denied - only talent can submit checkins" }, { status: 403 })
     }
 
-    // Check if workspace is hourly
-    const threadRef = db.collection("threads").doc(wsData.threadId)
-    const threadSnap = await threadRef.get()
-    const agreement = threadSnap.exists ? threadSnap.data() : null
+    // Check if workspace is hourly - agreement is at threads/{threadId}/agreement/current
+    const agreementRef = db.doc(`threads/${wsData.threadId}/agreement/current`)
+    const agreementSnap = await agreementRef.get()
+    const agreement = agreementSnap.exists ? agreementSnap.data() : null
 
     if (agreement?.terms?.payType !== "hourly") {
       return NextResponse.json({ error: "This workspace is not hourly-based" }, { status: 400 })
     }
 
-    // Get current session
+    // Get current session (must exist, but can be running, paused, or in grace period)
     const sessionRef = wsRef.collection("hourly").doc("session")
     const sessionSnap = await sessionRef.get()
 
-    if (!sessionSnap.exists || sessionSnap.data()?.status !== "running") {
-      return NextResponse.json({ error: "Hourly session is not running" }, { status: 400 })
+    if (!sessionSnap.exists) {
+      return NextResponse.json({ error: "No hourly session found" }, { status: 400 })
     }
 
     const sessionData = sessionSnap.data()

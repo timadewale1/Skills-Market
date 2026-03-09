@@ -238,6 +238,10 @@ export default function AuthNavbar() {
             />
           </form>
 
+          <div className="flex justify-between items-center">
+            <NotificationBell />
+          </div>
+
           <Link
             href="/dashboard/profile"
             className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold text-black hover:text-[var(--primary)] hover:bg-orange-50 transition"

@@ -607,6 +607,7 @@ export default function WorkspaceDetailsPage() {
   const [defenseNote, setDefenseNote] = useState("")
   const [defendingHour, setDefendingHour] = useState<HourlyCheckin | null>(null)
   const [hourlyCountdown, setHourlyCountdown] = useState("")
+  const [elapsedSeconds, setElapsedSeconds] = useState(0) // track elapsed time for check-in gating
   const [graceCountdown, setGraceCountdown] = useState("") // 10-minute countdown after hour completes
   const notificationSent50MinRef = useRef<Set<number>>(new Set()) // track which hours had 50-min notification
   const notificationSentHourCompleteRef = useRef<Set<number>>(new Set()) // track which hours had hour-complete notification
@@ -667,6 +668,9 @@ export default function WorkspaceDetailsPage() {
   const sessionStatus = hourlySession?.status || "not_started"
   const hourlyGateLocked = payType === "hourly" && !(sessionStatus === "running" || sessionStatus === "paused")
   const blockWorkActions = payType === "hourly" ? hourlyGateLocked : false
+  
+  // Check-in is enabled during 50-min window and grace period (not dependent on session status)
+  const canSubmitCheckin = payType === "hourly" && (elapsedSeconds >= 3000 || graceWindowActive)
 
   // --- Live subscriptions ---
   useEffect(() => {
@@ -781,11 +785,12 @@ const unsubSession = onSnapshot(
     if (!hourlySession?.lastResumedAt && !graceWindowActive) {
       setHourlyCountdown("")
       setGraceCountdown("")
+      setElapsedSeconds(0)
       return
     }
 
     const updateTimer = () => {
-      // Handle grace window (10 minutes after hour completes)
+      // Handle grace window (10 minutes after hour completes) - ALWAYS update regardless of session status
       if (graceWindowActive && graceWindowStartRef.current) {
         const now = Date.now()
         const graceElapsed = Math.floor((now - graceWindowStartRef.current) / 1000)
@@ -816,18 +821,18 @@ const unsubSession = onSnapshot(
         ? hourlySession.lastResumedAt.getTime()
         : new Date(hourlySession.lastResumedAt).getTime()
 
-      let elapsedSeconds = 0
+      let currentElapsedSeconds = 0
 
       if (sessionStatus === "running") {
         // If running: add accumulated seconds + time since last resume
         const now = Date.now()
         const elapsedSinceResume = Math.floor((now - resumedAt) / 1000)
-        elapsedSeconds = (hourlySession.totalSeconds || 0) + elapsedSinceResume
+        currentElapsedSeconds = (hourlySession.totalSeconds || 0) + elapsedSinceResume
 
         // Check if we've hit 60 minutes (3600 seconds)
-        if (elapsedSeconds >= 3600 && !hourComplete) {
+        if (currentElapsedSeconds >= 3600 && !hourComplete) {
           setHourComplete(true)
-          // Start grace period
+          // Start grace period IMMEDIATELY
           graceWindowStartRef.current = Date.now()
           setGraceWindowActive(true)
           // Auto-pause at 60 minutes
@@ -836,25 +841,30 @@ const unsubSession = onSnapshot(
           const currentHourIdx = hourlySession.currentHourIndex || 0
           sendHourCompleteNotification(currentHourIdx).catch(console.error)
           notificationSentHourCompleteRef.current.add(currentHourIdx)
+          // Set elapsed seconds to 3600 so check-in is enabled during grace period
+          setElapsedSeconds(3600)
           return
         }
 
         // Check if we've hit 50 minutes (3000 seconds) - send notification
         const currentHourIdx = hourlySession.currentHourIndex || 0
-        if (elapsedSeconds >= 3000 && !notificationSent50MinRef.current.has(currentHourIdx)) {
+        if (currentElapsedSeconds >= 3000 && !notificationSent50MinRef.current.has(currentHourIdx)) {
           // Send 50-minute notification only for this specific hour
           sendHourAlmostUpNotification(currentHourIdx).catch(console.error)
           notificationSent50MinRef.current.add(currentHourIdx)
         }
       } else if (sessionStatus === "paused") {
         // If paused: just show accumulated seconds (don't add new time)
-        elapsedSeconds = hourlySession.totalSeconds || 0
+        currentElapsedSeconds = hourlySession.totalSeconds || 0
       }
 
+      // Update elapsed seconds for check-in gating
+      setElapsedSeconds(currentElapsedSeconds)
+
       // Calculate hours, minutes, seconds
-      const hours = Math.floor(elapsedSeconds / 3600)
-      const minutes = Math.floor((elapsedSeconds % 3600) / 60)
-      const seconds = elapsedSeconds % 60
+      const hours = Math.floor(currentElapsedSeconds / 3600)
+      const minutes = Math.floor((currentElapsedSeconds % 3600) / 60)
+      const seconds = currentElapsedSeconds % 60
 
       // Format as HH:MM:SS
       const formatted = [hours, minutes, seconds]
@@ -964,8 +974,9 @@ const unsubSession = onSnapshot(
   // ---------- Milestones ----------
   const submitMilestone = async () => {
     if (!id || !user?.uid || !ws || !isTalent) return
-    if (blockWorkActions) {
-      toast.error("Start hourly work first before submitting milestones.")
+    // For fixed workspaces, check payment status. Milestones can be submitted anytime for hourly.
+    if (payType === "fixed" && blockWorkActions) {
+      toast.error("Cannot submit milestones at this time.")
       return
     }
 
@@ -1348,7 +1359,7 @@ const unsubSession = onSnapshot(
   const submitHourlyCheckin = async () => {
     if (!id || !user?.uid || !isTalent) return
     if (payType !== "hourly") return
-    if (sessionStatus !== "running") return toast.error("Start work (hourly) before checking in.")
+    if (!canSubmitCheckin) return toast.error("Check-in is only available after 50 minutes of work (or during the 10-minute grace period after hour completion).")
     if (!hourlyShot) return toast.error("Attach a screenshot.")
     if (hourlyNote.trim().length < 6) return toast.error("Add a short note about what you did (min 6 chars).")
 
@@ -1911,7 +1922,7 @@ const unsubSession = onSnapshot(
                             </div>
 
                             <button
-                              disabled={submittingCheckin || sessionStatus !== "running"}
+                              disabled={submittingCheckin || !canSubmitCheckin}
                               onClick={submitHourlyCheckin}
                               className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
                             >
