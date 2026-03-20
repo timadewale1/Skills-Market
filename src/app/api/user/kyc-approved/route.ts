@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 30px; text-align: center;">
             <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">
-              ✅ Skills Market
+              ✅ changeworker
             </h1>
             <p style="color: #fed7aa; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">
               Verification Approved!
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
             <div style="background: #fef3c7; border-left: 4px solid #f97316; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <p style="margin: 0; color: #92400e; font-size: 14px;">
-                🚀 <strong>Next Steps:</strong> Start ${role === "talent" ? "applying to gigs" : "posting opportunities"} and grow your business on Skills Market!
+                🚀 <strong>Next Steps:</strong> Start ${role === "talent" ? "applying to gigs" : "posting opportunities"} and grow your business on changeworker!
               </p>
             </div>
           </div>
@@ -78,11 +78,11 @@ export async function POST(request: NextRequest) {
           <!-- Footer -->
           <div style="background: #1e293b; padding: 30px; text-align: center;">
             <p style="color: #94a3b8; margin: 0 0 15px 0; font-size: 14px;">
-              This notification was sent by Skills Market
+              This notification was sent by changeworker
             </p>
             <div style="border-top: 1px solid #334155; padding-top: 20px; margin-top: 20px;">
               <p style="color: #64748b; margin: 0; font-size: 12px;">
-                © 2024 Skills Market. All rights reserved.<br>
+                © 2024 changeworker. All rights reserved.<br>
                 <a href="https://changeworker.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
                 <a href="mailto:support@changeworker.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
               </p>

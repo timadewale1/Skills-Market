@@ -25,15 +25,20 @@ export async function POST(req: Request) {
     }
 
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId)
-    const workspace = (await workspaceRef.get()).data()
+    const workspace = (await workspaceRef.get()).data() as any
 
     if (!workspace) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 })
     }
 
     // Check if user is part of this workspace
-    if (workspace.clientId !== userId && workspace.talentId !== userId) {
+    if (workspace.clientUid !== userId && workspace.talentUid !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    // Workspace must be completed to raise a dispute
+    if (workspace.status !== "completed") {
+      return NextResponse.json({ error: "Workspace must be completed before raising a dispute" }, { status: 400 })
     }
 
     // Check if dispute already exists
@@ -45,8 +50,8 @@ export async function POST(req: Request) {
 
     await disputeRef.set({
       workspaceId,
-      clientId: workspace.clientId,
-      talentId: workspace.talentId,
+      clientUid: workspace.clientUid,
+      talentUid: workspace.talentUid,
       raisedBy,
       reason,
       description,
@@ -62,7 +67,7 @@ export async function POST(req: Request) {
     })
 
     // Notify the other party
-    const otherUserId = raisedBy === workspace.clientId ? workspace.talentId : workspace.clientId
+    const otherUserId = raisedBy === workspace.clientUid ? workspace.talentUid : workspace.clientUid
     await notifyUser({
       userId: otherUserId,
       type: "dispute",

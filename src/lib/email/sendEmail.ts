@@ -42,7 +42,7 @@ export async function sendEmail({
 
   try {
     await transporter.sendMail({
-      from: `"Skills Market" <${process.env.EMAIL_USER}>`,
+      from: `"changeworker" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,

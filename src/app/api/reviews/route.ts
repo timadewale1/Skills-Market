@@ -37,8 +37,15 @@ export async function POST(req: Request) {
 
     const workspace = workspaceSnap.data() as any
     
-    if (workspace.status !== "completed" || workspace.finalWorkApproved !== true) {
-      return Response.json({ error: "Workspace not completed or work not approved" }, { status: 400 })
+    // Check workspace is completed
+    if (workspace.status !== "completed") {
+      return Response.json({ error: "Workspace not completed" }, { status: 400 })
+    }
+
+    // Check final work is approved
+    const finalWorkSnap = await adminDb.collection("workspaces").doc(workspaceId).collection("finalWork").doc("submission").get()
+    if (!finalWorkSnap.exists || finalWorkSnap.data()?.status !== "approved") {
+      return Response.json({ error: "Final work not approved" }, { status: 400 })
     }
 
     const isParticipant = workspace.clientUid === userId || workspace.talentUid === userId
@@ -60,8 +67,8 @@ export async function POST(req: Request) {
     const toUserId = userId === workspace.clientUid ? workspace.talentUid : workspace.clientUid
     const toRole = fromRole === "client" ? "talent" : "client"
 
-    // ✅ Create review document
-    const reviewRef = await adminDb.collection("reviews").add({
+    // ✅ Create review document - only include fields with values (Firestore doesn't allow undefined)
+    const reviewData: any = {
       workspaceId,
       fromUserId: userId,
       toUserId,
@@ -73,13 +80,17 @@ export async function POST(req: Request) {
       communicationRating,
       professionalismRating,
       timelinessRating,
-      skillRating: fromRole === "client" ? skillRating : undefined,
-      clarityRating: fromRole === "talent" ? clarityRating : undefined,
-      paymentReliabilityRating: fromRole === "talent" ? paymentReliabilityRating : undefined,
-      privateFeedback: fromRole === "client" ? privateFeedback : undefined,
       isPublic,
       createdAt: FieldValue.serverTimestamp(),
-    })
+    }
+
+    // Add role-specific fields if they have values
+    if (fromRole === "client" && skillRating) reviewData.skillRating = skillRating
+    if (fromRole === "talent" && clarityRating) reviewData.clarityRating = clarityRating
+    if (fromRole === "talent" && paymentReliabilityRating) reviewData.paymentReliabilityRating = paymentReliabilityRating
+    if (fromRole === "client" && privateFeedback) reviewData.privateFeedback = privateFeedback
+
+    const reviewRef = await adminDb.collection("reviews").add(reviewData)
 
     // Notify the reviewed user
     await notifyUser({

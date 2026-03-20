@@ -142,7 +142,7 @@ function downloadAgreementPdf(thread: Thread, agreement: Agreement) {
   pdf.setFontSize(22)
   pdf.setFont("helvetica", "bold")
   pdf.setTextColor(255, 255, 255)
-  pdf.text("SKILLS MARKET", margin, 20)
+  pdf.text("changeworker", margin, 20)
   pdf.setFontSize(10)
   pdf.text("Hiring Agreement", margin, 28)
   yPos = 42
@@ -268,7 +268,7 @@ function downloadAgreementPdf(thread: Thread, agreement: Agreement) {
   // Footer
   pdf.setFontSize(8)
   pdf.setTextColor(150, 150, 150)
-  pdf.text(`Generated on ${new Date().toLocaleDateString()} • Skills Market Platform`, margin, pageHeight - 8)
+  pdf.text(`Generated on ${new Date().toLocaleDateString()} • changeworker Platform`, margin, pageHeight - 8)
 
   pdf.save(`agreement_${thread.gigId}_${thread.talentSlug || thread.talentUid}.pdf`)
 }
@@ -309,7 +309,7 @@ async function generateAgreementPdfBlob(thread: Thread, agreement: Agreement) {
   pdf.setFontSize(22)
   pdf.setFont("helvetica", "bold")
   pdf.setTextColor(255, 255, 255)
-  pdf.text("SKILLS MARKET", margin, 20)
+  pdf.text("changeworker", margin, 20)
   pdf.setFontSize(10)
   pdf.text("Hiring Agreement", margin, 28)
   yPos = 42

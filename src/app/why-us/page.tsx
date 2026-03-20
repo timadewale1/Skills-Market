@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import Navbar from "@/components/layout/Navbar"
+import Footer from "@/components/layout/Footer"
 import { useEffect, useRef, useState } from "react"
 import { whyUsLinks } from "@/data/navCategories"
 import { slugify } from "@/lib/navSlug"
@@ -382,21 +383,8 @@ export default function WhyUsLanding() {
           </div>
         </section>
 
-        {/* footer strip */}
-        <div className="border-t border-gray-100 bg-white py-6">
-          <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center"><span className="text-white font-black text-sm fd">c</span></div>
-              <span className="font-bold text-gray-700 text-sm">changeworker</span>
-            </div>
-            <div className="flex gap-5">
-              {[["/terms","Terms"],["/privacy","Privacy"],["/faq","FAQ"],["/about","About"],["/" ,"Home"]].map(([h,l])=>(
-                <a key={h} href={h} className="fm text-xs text-gray-400 hover:text-orange-500 transition-colors">{l}</a>
-              ))}
-            </div>
-            <p className="fm text-xs text-gray-400">© {new Date().getFullYear()} Impactpal Africa</p>
-          </div>
-        </div>
+        {/* Footer */}
+        <Footer />
       </div>
     </>
   )

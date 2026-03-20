@@ -104,7 +104,7 @@ Already integrated with admin notifications:
 - Banner gradient: `linear-gradient(135deg, #fed7aa 0%, #fdba74 50%, #f97316 100%)`
 - Button styling: Orange with shadow
 - Tip box: Yellow-orange background
-- All include footer with Skills Market branding
+- All include footer with changeworker branding
 
 **Email Structure**:
 1. Orange gradient header with icon + subtitle

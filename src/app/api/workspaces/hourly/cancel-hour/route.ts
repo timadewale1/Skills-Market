@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
                   <li>Submit before the countdown reaches 0:00</li>
                   <li>Your check-in must include a screenshot and at least 6 characters of text</li>
                 </ul>
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://skillsmarket.xyz"}/dashboard/workspaces/${wsId}" class="button">Go to Workspace</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://changeworker.xyz"}/dashboard/workspaces/${wsId}" class="button">Go to Workspace</a>
               </div>
               <div class="footer">
                 <p>If you believe this is an error, please contact support.</p>
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
                   <li>No payment will be made for this hour</li>
                   <li>The talent will be notified about this</li>
                 </ul>
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://skillsmarket.xyz"}/dashboard/workspaces/${wsId}" class="button">View Workspace</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://changeworker.xyz"}/dashboard/workspaces/${wsId}" class="button">View Workspace</a>
               </div>
               <div class="footer">
                 <p>If you have questions, please contact support.</p>

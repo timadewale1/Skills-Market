@@ -81,7 +81,7 @@ export async function POST(req: Request) {
         source: "balance",
         amount: Math.round(amountNaira * 100),
         recipient: w2.bank.recipientCode,
-        reason: "Skills Market withdrawal",
+        reason: "changeworker withdrawal",
         reference: withdrawalId,
       }),
     })

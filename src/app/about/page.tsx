@@ -1,6 +1,7 @@
 "use client"
 
 import Navbar from "@/components/layout/Navbar"
+import Footer from "@/components/layout/Footer"
 import { useEffect, useRef, useState, useCallback } from "react"
 import {
   FiArrowRight, FiUsers, FiHeart, FiTarget, FiGlobe,
@@ -777,25 +778,8 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* footer strip */}
-        <div className="border-t border-gray-100 bg-white py-6">
-          <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
-                <span className="text-white font-black text-sm font-display">c</span>
-              </div>
-              <span className="font-display font-bold text-gray-700 text-sm">changeworker</span>
-              <span className="text-gray-300 text-xs mx-1">·</span>
-              <span className="font-mono text-xs text-gray-400">Impactpal Africa</span>
-            </div>
-            <div className="flex items-center gap-5">
-              {[["/terms","Terms"],["/privacy","Privacy"],["/blog","Blog"],["/contact","Contact"],["/" ,"Home"]].map(([h,l]) => (
-                <a key={h} href={h} className="font-mono text-xs text-gray-400 hover:text-orange-500 transition-colors">{l}</a>
-              ))}
-            </div>
-            <p className="font-mono text-xs text-gray-400">© {new Date().getFullYear()}</p>
-          </div>
-        </div>
+         {/* Footer */}
+                <Footer />
 
       </div>
     </>

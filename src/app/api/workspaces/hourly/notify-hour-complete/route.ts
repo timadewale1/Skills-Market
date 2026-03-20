@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
                 <p>Your ${hourNum}${ordinalSuffix} hour on <strong>"${wsData?.gigTitle || "your gig"}"</strong> has reached 60 minutes and is now complete.</p>
                 <p><strong style="color: #dc2626;">IMPORTANT:</strong> You have <strong>10 minutes</strong> to submit a check-in with a screenshot and work note. If you don't submit within 10 minutes, this hour won't count for pay.</p>
                 <p>Please go to your workspace immediately and submit your check-in:</p>
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://skillsmarket.xyz"}/dashboard/workspaces/${wsId}" class="button">Submit Check-In Now</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://changeworker.xyz"}/dashboard/workspaces/${wsId}" class="button">Submit Check-In Now</a>
                 <p><strong>What you need to do:</strong></p>
                 <ul>
                   <li>Take a screenshot of your work</li>

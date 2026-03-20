@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
               <!-- Header -->
               <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 30px; text-align: center;">
                 <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">
-                  Skills Market
+                  changeworker
                 </h1>
                 <p style="color: #fed7aa; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">
                   New Message Received
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
                 </div>
 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://skills-market.vercel.app/dashboard/messages/${threadId}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4); transition: all 0.3s ease;">
+                  <a href="https://changeworker.vercel.app/dashboard/messages/${threadId}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4); transition: all 0.3s ease;">
                     💬 View Message
                   </a>
                 </div>
@@ -118,13 +118,13 @@ export async function POST(request: NextRequest) {
               <!-- Footer -->
               <div style="background: #1e293b; padding: 30px; text-align: center;">
                 <p style="color: #94a3b8; margin: 0 0 15px 0; font-size: 14px;">
-                  This message notification was sent by Skills Market
+                  This message notification was sent by changeworker
                 </p>
                 <div style="border-top: 1px solid #334155; padding-top: 20px; margin-top: 20px;">
                   <p style="color: #64748b; margin: 0; font-size: 12px;">
-                    © 2024 Skills Market. All rights reserved.<br>
-                    <a href="https://skills-market.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
-                    <a href="mailto:support@skills-market.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
+                    © 2024 changeworker. All rights reserved.<br>
+                    <a href="https://changeworker.vercel.app" style="color: #f97316; text-decoration: none;">Visit our platform</a> |
+                    <a href="mailto:support@changeworker.com" style="color: #f97316; text-decoration: none;">Contact Support</a>
                   </p>
                 </div>
               </div>

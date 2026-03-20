@@ -59,6 +59,9 @@ import {
   X,
   Star,
   Clock,
+  RotateCw,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 
 import ReviewModal from "@/components/reviews/ReviewModal"
@@ -70,7 +73,10 @@ type MilestoneAttachment = {
   contentType: string
   size: number
   storagePath: string
-  url?: string // preview uses signed url from server; raw usually no url saved
+  url?: string // signed URL for preview (can be used directly by client)
+  rawPath?: string // for previews, points to the raw file
+  rawUrl?: string // signed URL for raw file access (PDFs/videos)
+  fileType?: "image" | "video" | "pdf" | "document" | "file" // actual file type (for rendering)
 }
 
 type MilestoneItem = {
@@ -132,6 +138,13 @@ type FinalWork = {
   review?: { decision: "approved" | "declined"; reason: string; at: any; byUid: string }
   downloadableAfter?: "submitted" | "approved"
   updatedAt?: any
+  submissions?: Array<{
+    submittedAt: any
+    status: "submitted" | "approved" | "declined"
+    notes: string
+    attachments: MilestoneAttachment[]
+    review?: { decision: "approved" | "declined"; reason: string; at: any; byUid: string }
+  }>
 }
 
 type Workspace = {
@@ -293,6 +306,42 @@ async function uploadMilestoneRawFiles(wsId: string, milestoneId: string, rawFil
   return out
 }
 
+/** Upload final work RAW files (talent-only readable). Watermark previews are generated server-side. */
+async function uploadFinalWorkRawFiles(wsId: string, rawFiles: File[]) {
+  const out: MilestoneAttachment[] = []
+
+  for (const f of rawFiles) {
+    const MAX_SIZE_MB = 25
+    if (f.size > MAX_SIZE_MB * 1024 * 1024) throw new Error(`"${f.name}" is too large. Max ${MAX_SIZE_MB}MB`)
+
+    const fileToUpload = await compressImageIfNeeded(f)
+    const safeName = fileToUpload.name.replace(/[^\w.\-]+/g, "_")
+    const path = `workspaces/${wsId}/finalWork/raw/${Date.now()}_${safeName}`
+
+    // Debug: log upload target path and file info
+    try {
+      console.log("[uploadFinalWorkRawFiles] uploading to:", path, { name: fileToUpload.name, size: fileToUpload.size, contentType: fileToUpload.type })
+    } catch (err) {
+      /* ignore logging errors */
+    }
+
+    await uploadBytes(storageRef(storage, path), fileToUpload, {
+      contentType: fileToUpload.type || "application/octet-stream",
+    })
+
+    // Don't store raw download URLs on doc (client must never access raw).
+    out.push({
+      kind: "raw",
+      name: fileToUpload.name,
+      contentType: fileToUpload.type || "application/octet-stream",
+      size: fileToUpload.size,
+      storagePath: path,
+    })
+  }
+
+  return out
+}
+
 /** Upload hourly screenshot RAW (talent-only). Function will generate preview + signed url. */
 async function uploadHourlyCheckinRawImage(wsId: string, checkinId: string, file: File) {
   const f = await compressImageIfNeeded(file)
@@ -368,55 +417,73 @@ function PreviewItem({
   className = "",
   uid,
   disableDownload = false,
+  rawPath,
+  url,
+  rawUrl,
+  actualFileType,
 }: {
   storagePath: string
   alt?: string
   className?: string
   uid?: string | null
   disableDownload?: boolean
+  rawPath?: string
+  url?: string
+  rawUrl?: string
+  actualFileType?: "image" | "video" | "pdf" | "document" | "file"
 }) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null)
+  const [resolvedRawUrl, setResolvedRawUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isZoomOpen, setIsZoomOpen] = useState(false)
 
-  const fileType = getFileType(storagePath)
-  const fileExtension = getFileExtension(storagePath)
+  // Use provided fileType if available (from attachment data), otherwise derive from storagePath
+  const fileType = actualFileType || getFileType(storagePath)
+  const fileExtension = getFileExtension(rawPath || storagePath)
 
   useEffect(() => {
     if (!uid) {
       setLoading(true)
       setError(null)
       setSignedUrl(null)
+      setResolvedRawUrl(null)
       return
     }
 
     let cancelled = false
 
-    const fetchUrl = async () => {
+    const fetchUrls = async () => {
       try {
         setLoading(true)
-        const url = await resolvePreviewUrl(storagePath)
+        // Use provided signed URL if available, otherwise fetch it
+        const previewUrl = url || await resolvePreviewUrl(storagePath)
+        let rawFileUrl: string | null = rawUrl || null // Use provided rawUrl if available
+        if (!rawFileUrl && rawPath && (fileType === "pdf" || fileType === "video")) {
+          rawFileUrl = await resolvePreviewUrl(rawPath)
+        }
         if (!cancelled) {
-          setSignedUrl(url)
+          setSignedUrl(previewUrl)
+          setResolvedRawUrl(rawFileUrl)
           setError(null)
         }
       } catch (err) {
-        console.error("Failed to resolve preview URL:", err)
+        console.error("Failed to resolve URLs:", err)
         if (!cancelled) {
           setError("Failed to load")
           setSignedUrl(null)
+          setResolvedRawUrl(null)
         }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
 
-    fetchUrl()
+    fetchUrls()
     return () => {
       cancelled = true
     }
-  }, [storagePath, uid])
+  }, [storagePath, rawPath, uid, fileType, url, rawUrl, actualFileType])
 
   if (!uid) return <div className={`bg-gray-200 rounded-xl border animate-pulse ${className}`} />
   if (loading) return <div className={`bg-gray-200 rounded-xl border animate-pulse ${className}`} />
@@ -457,44 +524,172 @@ function PreviewItem({
   // ===== VIDEOS =====
   if (fileType === "video") {
     return (
-      <div className={`relative rounded-xl border overflow-hidden bg-black ${className}`}>
-        <video
-          src={signedUrl}
-          controls
-          className="w-full h-full"
-          style={{ maxHeight: "400px" }}
+      <>
+        <div
+          className={`relative group cursor-pointer rounded-xl border overflow-hidden bg-black ${className}`}
+          onClick={() => setIsZoomOpen(true)}
         >
-          Your browser does not support the video tag.
-        </video>
-      </div>
+          <video
+            src={signedUrl}
+            className="w-full h-full object-cover"
+            style={{ maxHeight: "400px" }}
+            muted
+            controlsList="nodownload"
+            onMouseEnter={(e) => e.currentTarget.play()}
+            onMouseLeave={(e) => e.currentTarget.pause()}
+          >
+            Your browser does not support the video tag.
+          </video>
+          {/* Watermark Overlay */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div
+              className="text-white/30 text-xl font-bold select-none"
+              style={{
+                transform: 'rotate(-20deg)',
+                textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                fontFamily: 'Arial, sans-serif'
+              }}
+            >
+              changeworker • PREVIEW
+            </div>
+          </div>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+            <Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
+
+        {/* Video Modal */}
+        <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
+          <DialogContent className="max-w-4xl w-full max-h-[90vh] p-2">
+            <DialogTitle className="sr-only">Preview {alt}</DialogTitle>
+            <button
+              onClick={() => setIsZoomOpen(false)}
+              className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="relative">
+              <video
+                src={resolvedRawUrl || signedUrl}
+                controls
+                controlsList="nodownload"
+                className="w-full h-auto max-h-[80vh] rounded-lg"
+                autoPlay
+              >
+                Your browser does not support the video tag.
+              </video>
+              {/* Watermark Overlay */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div
+                  className="text-white/40 text-4xl font-bold select-none"
+                  style={{
+                    transform: 'rotate(-20deg)',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                    fontFamily: 'Arial, sans-serif'
+                  }}
+                >
+                  changeworker • PREVIEW
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
 
   // ===== PDFs =====
   if (fileType === "pdf") {
     return (
-      <div className={`rounded-xl border overflow-hidden bg-gray-100 ${className}`}>
-        <iframe
-          src={`${signedUrl}#toolbar=1`}
-          className="w-full h-96 rounded-lg"
-          title={alt}
-        />
-        {!disableDownload && (
-          <a
-            href={signedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block p-3 bg-blue-50 hover:bg-blue-100 text-center text-blue-600 text-sm font-medium"
-          >
-            Open full PDF →
-          </a>
-        )}
-        {disableDownload && (
-          <div className="block p-3 bg-gray-100 text-center text-gray-600 text-sm font-medium">
-            View only (download after approval)
+      <>
+        <div
+          className={`relative group cursor-pointer rounded-xl border overflow-hidden bg-gray-100 ${className}`}
+          onClick={() => setIsZoomOpen(true)}
+        >
+          {/* PDF Thumbnail Preview - could be generated or placeholder */}
+          <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+            <div className="text-center">
+              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+              <div className="text-sm text-gray-600 font-medium">PDF Document</div>
+              <div className="text-xs text-gray-500">{fileExtension.toUpperCase()}</div>
+            </div>
           </div>
-        )}
-      </div>
+          {/* Watermark Overlay */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div
+              className="text-gray-600/40 text-xl font-bold select-none"
+              style={{
+                transform: 'rotate(-20deg)',
+                textShadow: '2px 2px 4px rgba(255,255,255,0.8)',
+                fontFamily: 'Arial, sans-serif'
+              }}
+            >
+              changeworker • PREVIEW
+            </div>
+          </div>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+            <ZoomIn className="w-6 h-6 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
+
+        {/* PDF Modal */}
+        <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
+          <DialogContent className="max-w-6xl w-full max-h-[90vh] p-2">
+            <DialogTitle className="sr-only">Preview {alt}</DialogTitle>
+            <button
+              onClick={() => setIsZoomOpen(false)}
+              className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="relative">
+              <iframe
+                src={`${resolvedRawUrl || signedUrl}#toolbar=1&view=FitV`}
+                className="w-full h-[80vh] rounded-lg"
+                title={alt}
+                onLoad={(e) => {
+                  // Try to hide the download button from the PDF toolbar
+                  const iframeDoc = e.currentTarget.contentDocument || e.currentTarget.contentWindow?.document
+                  if (iframeDoc) {
+                    try {
+                      // Hide download button if accessible
+                      const downloadBtn = iframeDoc.querySelector('[id*="download"], button[title*="Download"], a[title*="Download"]')
+                      if (downloadBtn) (downloadBtn as HTMLElement).style.display = 'none'
+                    } catch (err) {
+                      console.log('Could not modify PDF toolbar - cross-origin iframe', err)
+                    }
+                  }
+                }}
+              />
+              {/* Watermark Overlay */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div
+                  className="text-gray-600/30 text-5xl font-bold select-none"
+                  style={{
+                    transform: 'rotate(-20deg)',
+                    textShadow: '2px 2px 4px rgba(255,255,255,0.9)',
+                    fontFamily: 'Arial, sans-serif'
+                  }}
+                >
+                  changeworker • PREVIEW
+                </div>
+              </div>
+            </div>
+            {!disableDownload && (
+              <div className="mt-4 text-center">
+                <a
+                  href={resolvedRawUrl || signedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
+                >
+                  Open full PDF →
+                </a>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
 
@@ -590,6 +785,8 @@ export default function WorkspaceDetailsPage() {
   const [finalWorkNotes, setFinalWorkNotes] = useState("")
   const [finalWorkFiles, setFinalWorkFiles] = useState<File[]>([])
   const [savingFinalWork, setSavingFinalWork] = useState(false)
+  const [showFinalWorkForm, setShowFinalWorkForm] = useState(false)
+  const [isResubmittingFinalWork, setIsResubmittingFinalWork] = useState(false)
 
   // payout UI
   const [declineReason, setDeclineReason] = useState("")
@@ -618,6 +815,7 @@ export default function WorkspaceDetailsPage() {
   // ✅ Review system
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
   const [hasAlreadyReviewed, setHasAlreadyReviewed] = useState(false)
+  const [viewingReview, setViewingReview] = useState<any>(null)
   const [platformReviewModalOpen, setPlatformReviewModalOpen] = useState(false)
   const [hasAlreadyReviewedPlatform, setHasAlreadyReviewedPlatform] = useState(false)
 
@@ -629,6 +827,10 @@ export default function WorkspaceDetailsPage() {
 
   // fallback preview paths (when Firestore metadata is missing)
   const [fallbackPreviewPaths, setFallbackPreviewPaths] = useState<Record<string, string[]>>({})
+
+  // Collapsible sections
+  const [expandedSubmissions, setExpandedSubmissions] = useState<Set<number>>(new Set())
+  const [expandedPayouts, setExpandedPayouts] = useState<Set<string>>(new Set())
 
   const isClient = useMemo(() => !!user?.uid && user.uid === ws?.clientUid, [user?.uid, ws?.clientUid])
   const isTalent = useMemo(() => !!user?.uid && user.uid === ws?.talentUid, [user?.uid, ws?.talentUid])
@@ -1113,29 +1315,53 @@ const unsubSession = onSnapshot(
 
     setSavingFinalWork(true)
     try {
-      const docRef = doc(db, "workspaces", id, "finalWork", "submission")
       const wsId = id
-      const rawMeta = await uploadMilestoneRawFiles(wsId, "finalWork", finalWorkFiles)
+      const rawMeta = await uploadFinalWorkRawFiles(wsId, finalWorkFiles)
 
-      await setDoc(
-        docRef,
-        {
-          status: "submitted",
-          submittedBy: user.uid,
-          submittedAt: serverTimestamp(),
+      // ensure all files uploaded successfully
+      if (rawMeta.length !== finalWorkFiles.length) {
+        throw new Error("Some files failed to upload. Please try again.")
+      }
+
+      console.log("[submitFinalWork] Uploading with:", {
+        isResubmit: isResubmittingFinalWork,
+        numFiles: rawMeta.length,
+        attachments: rawMeta,
+      })
+
+      // Send notifications via API (creates the doc or updates if resubmitting)
+      const token = await user.getIdToken()
+      const response = await fetch("/api/workspaces/final-work/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          wsId: id,
           notes,
           attachments: rawMeta,
-          downloadableAfter: "approved",
-          updatedAt: serverTimestamp(),
-        },
-        { merge: false }
-      )
-      toast.success("Final work submitted")
+          isResubmit: isResubmittingFinalWork,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to submit final work")
+      }
+
+      const result = await response.json()
+      console.log("[submitFinalWork] Success:", result)
+
+      toast.success(isResubmittingFinalWork ? "Final work resubmitted" : "Final work submitted")
       setFinalWorkNotes("")
       setFinalWorkFiles([])
+      setShowFinalWorkForm(false)
+      setIsResubmittingFinalWork(false)
     } catch (e: any) {
       console.error(e)
       toast.error(e?.message || "Failed to submit final work")
+      setIsResubmittingFinalWork(false)
     } finally {
       setSavingFinalWork(false)
     }
@@ -1144,6 +1370,7 @@ const unsubSession = onSnapshot(
   const clientApproveFinalWork = async () => {
     if (!id || !user?.uid || !isClient || !finalWork) return
     try {
+      // Approve final work
       await updateDoc(doc(db, "workspaces", id, "finalWork", "submission"), {
         status: "approved",
         review: {
@@ -1155,7 +1382,14 @@ const unsubSession = onSnapshot(
         downloadableAfter: "approved",
         updatedAt: serverTimestamp(),
       })
-      toast.success("Final work approved")
+      
+      // Mark workspace as completed
+      await updateDoc(doc(db, "workspaces", id), {
+        status: "completed",
+        updatedAt: serverTimestamp(),
+      })
+      
+      toast.success("Final work approved - workspace completed")
       setReviewingFinalWork(false)
     } catch (e: any) {
       console.error(e)
@@ -1195,11 +1429,16 @@ const unsubSession = onSnapshot(
   // Use finalWork status instead of milestone for payout gating
   const canRequestPayout = finalWork && ["submitted", "approved"].includes(finalWork.status)
   const latestPayout = payouts[0] || null
+  const payoutAlreadyPaid = latestPayout?.status === "paid"
 
   const requestPayout = async () => {
     if (!id || !user?.uid || !ws || !isTalent) return
     if (blockWorkActions) {
       toast.error("Start hourly work first before requesting payout.")
+      return
+    }
+    if (payoutAlreadyPaid) {
+      toast.error("Payout has already been released.")
       return
     }
     if (!canRequestPayout) {
@@ -1225,11 +1464,17 @@ const unsubSession = onSnapshot(
   const clientApprovePayout = async (pr: PayoutRequest) => {
     if (!id || !user?.uid || !isClient) return
     try {
+      console.log("[clientApprovePayout] Approving payout:", { wsId: id, payoutId: pr.id })
       const fn = httpsCallable(functions, "releasePayout")
-      await fn({ wsId: id, payoutId: pr.id })
+      const result = await fn({ wsId: id, payoutId: pr.id })
+      console.log("[clientApprovePayout] Success:", result)
       toast.success("Payout released")
     } catch (e: any) {
-      console.error(e)
+      console.error("[clientApprovePayout] Failed:", {
+        code: e.code,
+        message: e.message,
+        details: e.details,
+      })
       toast.error(e?.message || "Failed to release payout")
     }
   }
@@ -1422,6 +1667,24 @@ const unsubSession = onSnapshot(
       toast.error(e?.message || "Failed to submit check-in")
     } finally {
       setSubmittingCheckin(false)
+    }
+  }
+
+  const loadExistingReview = async () => {
+    if (!id || !user?.uid) return
+    try {
+      const reviewsSnap = await getDocs(
+        query(
+          collection(db, "reviews"),
+          where("workspaceId", "==", id),
+          where("fromUserId", "==", user.uid)
+        )
+      )
+      if (!reviewsSnap.empty) {
+        setViewingReview(reviewsSnap.docs[0].data())
+      }
+    } catch (err) {
+      console.error("Failed to load review:", err)
     }
   }
 
@@ -1645,10 +1908,13 @@ const unsubSession = onSnapshot(
                   )}
 
                   {hasAlreadyReviewed && ws?.status === "completed" && (
-                    <div className="rounded-2xl bg-gray-100 border px-4 py-2 text-sm font-semibold text-gray-600 inline-flex items-center gap-2">
-                      <Star size={16} className="fill-gray-300 text-gray-300" />
-                      Reviewed
-                    </div>
+                    <button
+                      onClick={loadExistingReview}
+                      className="rounded-2xl bg-blue-50 border border-blue-200 px-4 py-2 text-sm font-extrabold text-blue-700 hover:bg-blue-100 transition inline-flex items-center gap-2"
+                    >
+                      <Star size={16} className="fill-blue-300 text-blue-300" />
+                      View Review
+                    </button>
                   )}
                 </div>
               </div>
@@ -1954,11 +2220,13 @@ const unsubSession = onSnapshot(
                                   <Badge className="rounded-full bg-gray-100 border text-gray-700">{c.status}</Badge>
                                 </div>
 
-                                {c.screenshotPreviewUrl && (
-                                  <img
-                                    src={c.screenshotPreviewUrl}
+                                {c.screenshotPreviewPath && (
+                                  <PreviewItem
+                                    storagePath={c.screenshotPreviewPath}
                                     alt={`Hour ${c.hourIndex} preview`}
                                     className="w-full rounded-xl border"
+                                    uid={user?.uid}
+                                    disableDownload={false}
                                   />
                                 )}
 
@@ -2050,7 +2318,7 @@ const unsubSession = onSnapshot(
                           </div>
 
                           <button
-                            disabled={savingMilestone || (payType === "hourly" && sessionStatus !== "running")}
+                            disabled={savingMilestone}
                             onClick={submitMilestone}
                             className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
                           >
@@ -2096,7 +2364,7 @@ const unsubSession = onSnapshot(
                                 {previewItems.length > 0 ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {previewItems.map((p, idx) => (
-                                      <PreviewImage key={idx} storagePath={p.storagePath!} alt="Preview" uid={user?.uid} disableDownload={isClient} />
+                                      <PreviewImage key={idx} storagePath={p.storagePath!} alt="Preview" uid={user?.uid} disableDownload={isClient} rawPath={p.rawPath} url={p.url} rawUrl={p.rawUrl} actualFileType={p.fileType} />
                                     ))}
                                   </div>
                                 ) : fallback.length > 0 ? (
@@ -2190,62 +2458,227 @@ const unsubSession = onSnapshot(
                           </div>
 
                           <button
-                            disabled={savingFinalWork || !finalWorkNotes.trim() || !finalWorkFiles.length || (payType === "hourly" && sessionStatus !== "running")}
+                            disabled={savingFinalWork || !finalWorkNotes.trim() || !finalWorkFiles.length}
                             onClick={submitFinalWork}
                             className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
                           >
                             <UploadCloud size={16} />
                             {savingFinalWork ? "Uploading…" : "Submit final work"}
                           </button>
-
-                          {payType === "hourly" && sessionStatus !== "running" && (
-                            <div className="text-xs text-gray-500 font-semibold">
-                              Hourly gigs require you to start work before submissions.
+                        </div>
+                      ) : finalWork && isTalent && !showFinalWorkForm ? (
+                        <div className="space-y-3">
+                          {/* REVISED SUBMISSION SECTION (shown when status is declined or form is open) */}
+                          {finalWork.status === "declined" && (
+                            <div className="rounded-2xl border bg-blue-50 p-4 space-y-2">
+                              <div className="font-extrabold text-blue-900 inline-flex items-center gap-2">
+                                <UploadCloud size={16} className="text-[var(--primary)]" />
+                                Revised Submission
+                              </div>
+                              <p className="text-sm text-blue-900">Ready to resubmit? Upload your revised deliverables below.</p>
+                              <button
+                                onClick={() => {
+                                  setShowFinalWorkForm(true)
+                                  setIsResubmittingFinalWork(true)
+                                }}
+                                className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 inline-flex items-center justify-center gap-2 hover:opacity-90 transition"
+                              >
+                                <RotateCw size={16} />
+                                Start Resubmission
+                              </button>
                             </div>
                           )}
-                        </div>
-                      ) : finalWork && isTalent ? (
-                        <div className="rounded-2xl border bg-blue-50 p-4 space-y-2">
-                          <div className="font-extrabold text-blue-900">Final work submitted</div>
-                          <div className="text-sm text-blue-900">
-                            Status: <span className="font-extrabold uppercase">{finalWork.status}</span>
-                          </div>
-                          <div className="text-sm text-blue-900 whitespace-pre-wrap">{finalWork.notes}</div>
-                          {finalWork.review && (
-                            <div className={`rounded-xl p-3 text-xs font-semibold ${finalWork.review.decision === "approved" ? "bg-green-100 text-green-900" : "bg-orange-100 text-orange-900"}`}>
-                              {finalWork.review.decision.toUpperCase()}: {finalWork.review.reason}
+
+                          {/* LATEST SUBMISSION SECTION */}
+                          <div className="space-y-2">
+                            {/* CURRENT SUBMISSION */}
+                            <div className={`rounded-2xl border p-4 space-y-2 ${
+                              finalWork.status === "declined" ? "bg-red-50" :
+                              finalWork.status === "approved" ? "bg-green-50" : "bg-blue-50"
+                            }`}>
+                              <div className={`font-extrabold ${
+                                finalWork.status === "declined" ? "text-red-900" :
+                                finalWork.status === "approved" ? "text-green-900" : "text-blue-900"
+                              }`}>
+                                Your Submission
+                              </div>
+                              <div className={`text-sm ${
+                                finalWork.status === "declined" ? "text-red-900" :
+                                finalWork.status === "approved" ? "text-green-900" : "text-blue-900"
+                              }`}>
+                                Status: <span className="font-extrabold uppercase">{finalWork.status || "unknown"}</span>
+                              </div>
+                              <div className={`text-sm whitespace-pre-wrap ${
+                                finalWork.status === "declined" ? "text-red-900" :
+                                finalWork.status === "approved" ? "text-green-900" : "text-blue-900"
+                              }`}>{finalWork.notes}</div>
+                              {finalWork.review && finalWork.status === "declined" && (
+                                <div className="rounded-xl p-3 text-xs font-semibold bg-red-100 text-red-900">
+                                  DECLINED: {finalWork.review.reason}
+                                </div>
+                              )}
                             </div>
+
+                            {/* DELIVERABLES */}
+                            {finalWork.attachments && finalWork.attachments.filter((a) => a.kind === "preview").length > 0 && (
+                              <div className="rounded-2xl border bg-white p-4">
+                                <div className="font-extrabold mb-3">Submitted Deliverables</div>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {finalWork.attachments
+                                    .filter((a) => a.kind === "preview" && a.storagePath)
+                                    .map((p, idx) => (
+                                      <PreviewItem
+                                        key={idx}
+                                        storagePath={p.storagePath!}
+                                        alt={p.name || "Deliverable"}
+                                        uid={user?.uid}
+                                        disableDownload={false}
+                                        rawPath={p.rawPath}
+                                        url={p.url}
+                                        rawUrl={p.rawUrl}
+                                        actualFileType={p.fileType}
+                                      />
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : finalWork && isTalent && showFinalWorkForm ? (
+                        <div className="space-y-3">
+                          {/* REVISED SUBMISSION FORM */}
+                          <div className="rounded-2xl border bg-white p-4 space-y-2">
+                            <div className="font-extrabold inline-flex items-center gap-2">
+                              <UploadCloud size={16} className="text-[var(--primary)]" />
+                              Revised Submission
+                            </div>
+
+                            <textarea
+                              value={finalWorkNotes}
+                              onChange={(e) => setFinalWorkNotes(e.target.value)}
+                              placeholder="Describe your revised deliverables and what has changed..."
+                              className="w-full min-h-[90px] rounded-2xl border p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                            />
+
+                            <div>
+                              <label className="text-sm font-extrabold text-gray-700">
+                                Attachments (images, videos, PDFs, documents)
+                              </label>
+                              <input
+                                type="file"
+                                multiple
+                                onChange={(e) => setFinalWorkFiles(Array.from(e.target.files || []))}
+                                className="block w-full text-sm mt-2"
+                              />
+                              {finalWorkFiles.length > 0 && (
+                                <div className="text-xs text-gray-600 font-semibold mt-2">
+                                  {finalWorkFiles.length} file(s) selected
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <button
+                                disabled={savingFinalWork || !finalWorkNotes.trim() || !finalWorkFiles.length}
+                                onClick={submitFinalWork}
+                                className="flex-1 rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                              >
+                                <UploadCloud size={16} />
+                                {savingFinalWork ? "Uploading…" : "Submit Revision"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowFinalWorkForm(false)
+                                  setFinalWorkNotes("")
+                                  setFinalWorkFiles([])
+                                  setIsResubmittingFinalWork(false)
+                                }}
+                                className="flex-1 rounded-2xl border bg-white font-extrabold py-2 hover:bg-gray-50 transition"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* PREVIOUS SUBMISSION SECTION */}
+                          {finalWork.status === "declined" && (
+                            <>
+                              <div className="rounded-2xl border bg-red-50 p-4 space-y-2">
+                                <div className="font-extrabold text-red-900">Previous Submission</div>
+                                <div className="text-sm text-red-900">
+                                  Status: <span className="font-extrabold uppercase">Declined</span>
+                                </div>
+                                <div className="text-sm whitespace-pre-wrap text-red-900">{finalWork.notes}</div>
+                                {finalWork.review && (
+                                  <div className="rounded-xl p-3 text-xs font-semibold bg-red-100 text-red-900">
+                                    Reason: {finalWork.review.reason}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* PREVIOUS DELIVERABLES */}
+                              {finalWork.attachments && finalWork.attachments.filter((a) => a.kind === "preview").length > 0 && (
+                                <div className="rounded-2xl border bg-white p-4">
+                                  <div className="font-extrabold mb-3">Previous Deliverables</div>
+                                  <div className="grid grid-cols-1 gap-2">
+                                    {finalWork.attachments
+                                      .filter((a) => a.kind === "preview" && a.storagePath)
+                                      .map((p, idx) => (
+                                        <PreviewItem
+                                          key={idx}
+                                          storagePath={p.storagePath!}
+                                          alt={p.name || "Deliverable"}
+                                          uid={user?.uid}
+                                          disableDownload={false}
+                                          rawPath={p.rawPath}
+                                          url={p.url}
+                                          rawUrl={p.rawUrl}
+                                          actualFileType={p.fileType}
+                                        />
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       ) : finalWork && isClient && finalWork?.status ? (
                         <div className="space-y-3">
-                          <div className="rounded-2xl border bg-white p-4">
-                            <div className="font-extrabold mb-2">Final work submission</div>
-                            <div className="text-sm text-gray-700 whitespace-pre-wrap mb-3">{finalWork.notes}</div>
-                            <Badge className={`rounded-full ${finalWork.status === "submitted" ? "bg-yellow-100 text-yellow-900" : finalWork.status === "approved" ? "bg-green-100 text-green-900" : "bg-red-100 text-red-900"}`}>
-                              {finalWork.status}
-                            </Badge>
-                          </div>
-
-                          {/* Final Work Previews (view-only) */}
-                          {finalWork.attachments && finalWork.attachments.filter((a) => a.kind === "preview").length > 0 && (
+                          {/* SUBMISSION SECTION */}
+                          <div className="space-y-2">
+                            {/* SUBMISSION */}
                             <div className="rounded-2xl border bg-white p-4">
-                              <div className="font-extrabold mb-3">Deliverables</div>
-                              <div className="grid grid-cols-1 gap-2">
-                                {finalWork.attachments
-                                  .filter((a) => a.kind === "preview" && a.storagePath)
-                                  .map((p, idx) => (
-                                    <PreviewItem
-                                      key={idx}
-                                      storagePath={p.storagePath!}
-                                      alt={p.name || "Deliverable"}
-                                      uid={user?.uid}
-                                      disableDownload={finalWork.status !== "approved"}
-                                    />
-                                  ))}
-                              </div>
+                              <div className="font-extrabold mb-2">Final Work Submitted</div>
+                              <div className="text-sm text-gray-700 whitespace-pre-wrap mb-3">{finalWork.notes}</div>
+                              <Badge className={`rounded-full ${finalWork.status === "submitted" ? "bg-yellow-100 text-yellow-900" : finalWork.status === "approved" ? "bg-green-100 text-green-900" : "bg-red-100 text-red-900"}`}>
+                                {finalWork.status}
+                              </Badge>
                             </div>
-                          )}
+
+                            {/* Deliverables */}
+                            {finalWork.attachments && finalWork.attachments.filter((a) => a.kind === "preview").length > 0 && (
+                              <div className="rounded-2xl border bg-white p-4">
+                                <div className="font-extrabold mb-3">Deliverables</div>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {finalWork.attachments
+                                    .filter((a) => a.kind === "preview" && a.storagePath)
+                                    .map((p, idx) => (
+                                      <PreviewItem
+                                        key={idx}
+                                        storagePath={p.storagePath!}
+                                        alt={p.name || "Deliverable"}
+                                        uid={user?.uid}
+                                        disableDownload={finalWork.status !== "approved"}
+                                        rawPath={p.rawPath}
+                                        url={p.url}
+                                        rawUrl={p.rawUrl}
+                                        actualFileType={p.fileType}
+                                      />
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
 
                           {/* Review Actions */}
                           {finalWork.status === "submitted" && !reviewingFinalWork && (
@@ -2314,7 +2747,9 @@ const unsubSession = onSnapshot(
                           </div>
 
                           <div className="mt-2 text-sm text-gray-600">
-                            Request payout after submitting final work. Client has 24h to review, else auto-approve.
+                            {latestPayout?.status === "paid" 
+                              ? "Payout has been released to your wallet." 
+                              : "Request payout after submitting final work. Client has 24h to review, else auto-approve."}
                           </div>
 
                           <div className="mt-3 flex items-center justify-between text-sm">
@@ -2322,18 +2757,75 @@ const unsubSession = onSnapshot(
                             <div className="font-extrabold">{latestPayout?.status || "—"}</div>
                           </div>
 
-                          <button
-                            onClick={requestPayout}
-                            disabled={!canRequestPayout || (payType === "hourly" && sessionStatus !== "running")}
-                            className="mt-3 w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-                          >
-                            <Wallet size={16} />
-                            Request payout
-                          </button>
+                          {latestPayout?.status === "paid" ? (
+                            <div className="mt-3 w-full rounded-2xl bg-green-100 text-green-900 font-extrabold py-2 inline-flex items-center justify-center gap-2">
+                              <CheckCircle2 size={16} />
+                              Payout Released
+                            </div>
+                          ) : (
+                            <button
+                              onClick={requestPayout}
+                              disabled={!canRequestPayout || (payType === "hourly" && sessionStatus !== "running")}
+                              className="mt-3 w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                            >
+                              <Wallet size={16} />
+                              Request payout
+                            </button>
+                          )}
 
-                          {!canRequestPayout && (
+                          {!canRequestPayout && latestPayout?.status !== "paid" && (
                             <div className="text-xs text-gray-500 font-semibold mt-2">
                               Submit final work before requesting payout.
+                            </div>
+                          )}
+
+                          {/* Display declined payouts */}
+                          {payouts.filter((p) => p.status === "declined").length > 0 && (
+                            <div className="mt-4 pt-4 border-t space-y-2">
+                              <div className="font-extrabold text-sm text-gray-800">Payout History</div>
+                              {payouts
+                                .filter((p) => p.status === "declined")
+                                .map((p, idx) => {
+                                  const isExpanded = expandedPayouts.has(p.id)
+                                  return (
+                                    <div key={p.id} className="rounded-2xl border bg-red-50">
+                                      <button
+                                        onClick={() => {
+                                          const newExpanded = new Set(expandedPayouts)
+                                          if (newExpanded.has(p.id)) {
+                                            newExpanded.delete(p.id)
+                                          } else {
+                                            newExpanded.add(p.id)
+                                          }
+                                          setExpandedPayouts(newExpanded)
+                                        }}
+                                        className="w-full flex items-center justify-between p-3 text-left hover:bg-red-100/50 transition"
+                                      >
+                                        <div className="font-extrabold text-red-900 text-sm">
+                                          Declined
+                                        </div>
+                                        <div className="inline-flex items-center gap-2">
+                                          <span className="text-xs font-semibold text-red-700">
+                                            {tsToText(p.decision?.at)}
+                                          </span>
+                                          {isExpanded ? (
+                                            <ChevronUp size={16} className="text-red-900" />
+                                          ) : (
+                                            <ChevronDown size={16} className="text-red-900" />
+                                          )}
+                                        </div>
+                                      </button>
+
+                                      {isExpanded && p.decision && (
+                                        <div className="p-3 pt-0 space-y-2 border-t border-red-200">
+                                          <div className="text-xs text-red-900 whitespace-pre-wrap">
+                                            {p.decision.reason}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
                             </div>
                           )}
                         </div>
@@ -2341,43 +2833,92 @@ const unsubSession = onSnapshot(
                     </Card>
                   )}
 
-                  {/* Client payout review */}
-                  {isClient && latestPayout && latestPayout.status === "requested" && (
+                  {/* Client payout review + declined history */}
+                  {isClient && latestPayout && (
                     <Card className="rounded-2xl">
                       <CardContent className="pt-6">
-                        <div className="rounded-2xl border bg-white p-4 space-y-2">
-                          <div className="font-extrabold">Payout requested</div>
-                          <div className="text-sm text-gray-700">
-                            Talent requested payout for final work:{" "}
-                            <span className="font-extrabold">{latestPayout.finalWorkId}</span>
-                          </div>
-                          <div className="text-xs text-gray-500 font-semibold">
-                            Auto-approve at: {tsToText(latestPayout.autoApproveAt)}
-                          </div>
+                        {latestPayout.status === "requested" ? (
+                          <div className="rounded-2xl border bg-white p-4 space-y-2">
+                            <div className="font-extrabold">Payout requested</div>
+                            <div className="text-sm text-gray-700">
+                              Talent requested payout for final work:{" "}
+                              <span className="font-extrabold">{latestPayout.finalWorkId}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 font-semibold">
+                              Auto-approve at: {tsToText(latestPayout.autoApproveAt)}
+                            </div>
 
-                          <button
-                            onClick={() => clientApprovePayout(latestPayout)}
-                            className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition"
-                          >
-                            Approve payout
-                          </button>
-
-                          <div className="rounded-2xl border bg-white p-3">
-                            <div className="text-sm font-extrabold">Decline with strong reason</div>
-                            <textarea
-                              value={declineReason}
-                              onChange={(e) => setDeclineReason(e.target.value)}
-                              placeholder="Be specific: what is missing, what to correct, what to resubmit..."
-                              className="mt-2 w-full min-h-[90px] rounded-2xl border p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                            />
                             <button
-                              onClick={() => clientDeclinePayout(latestPayout, declineReason)}
-                              className="mt-2 w-full rounded-2xl border bg-white font-extrabold py-2"
+                              onClick={() => clientApprovePayout(latestPayout)}
+                              className="w-full rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2 hover:opacity-90 transition"
                             >
-                              Decline payout
+                              Approve payout
                             </button>
+
+                            <div className="rounded-2xl border bg-white p-3">
+                              <div className="text-sm font-extrabold">Decline with strong reason</div>
+                              <textarea
+                                value={declineReason}
+                                onChange={(e) => setDeclineReason(e.target.value)}
+                                placeholder="Be specific: what is missing, what to correct, what to resubmit..."
+                                className="mt-2 w-full min-h-[90px] rounded-2xl border p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                              />
+                              <button
+                                onClick={() => clientDeclinePayout(latestPayout, declineReason)}
+                                className="mt-2 w-full rounded-2xl border bg-white font-extrabold py-2"
+                              >
+                                Decline payout
+                              </button>
+                            </div>
                           </div>
-                        </div>
+                        ) : payouts.filter((p) => p.status === "declined").length > 0 ? (
+                          <div className="space-y-2">
+                            <div className="font-extrabold text-sm">Payout Decline History</div>
+                            {payouts
+                              .filter((p) => p.status === "declined")
+                              .map((p, idx) => {
+                                const isExpanded = expandedPayouts.has(p.id!)
+                                return (
+                                  <div key={p.id} className="rounded-2xl border bg-red-50">
+                                    <button
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedPayouts)
+                                        if (newExpanded.has(p.id!)) {
+                                          newExpanded.delete(p.id!)
+                                        } else {
+                                          newExpanded.add(p.id!)
+                                        }
+                                        setExpandedPayouts(newExpanded)
+                                      }}
+                                      className="w-full flex items-center justify-between p-3 text-left hover:bg-red-100/50 transition"
+                                    >
+                                      <div className="font-extrabold text-red-900 text-sm">
+                                        Payout Declined
+                                      </div>
+                                      <div className="inline-flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-red-700">
+                                          {tsToText(p.decision?.at)}
+                                        </span>
+                                        {isExpanded ? (
+                                          <ChevronUp size={16} className="text-red-900" />
+                                        ) : (
+                                          <ChevronDown size={16} className="text-red-900" />
+                                        )}
+                                      </div>
+                                    </button>
+
+                                    {isExpanded && p.decision && (
+                                      <div className="p-3 pt-0 space-y-2 border-t border-red-200">
+                                        <div className="text-xs text-red-900 whitespace-pre-wrap">
+                                          {p.decision.reason}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                          </div>
+                        ) : null}
                       </CardContent>
                     </Card>
                   )}
@@ -2707,6 +3248,121 @@ const unsubSession = onSnapshot(
                 open={platformReviewModalOpen}
                 onOpenChange={setPlatformReviewModalOpen}
               />
+
+              {/* ✅ View Review Modal */}
+              {viewingReview && (
+                <Dialog open={!!viewingReview} onOpenChange={() => setViewingReview(null)}>
+                  <DialogContent className="sm:max-w-lg rounded-2xl p-6">
+                    <DialogTitle className="text-xl font-extrabold">Review</DialogTitle>
+                    <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+                      {/* Overall Rating */}
+                      <div>
+                        <div className="font-semibold text-sm text-gray-600 mb-2">Overall Rating</div>
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <span key={i} className={`text-xl ${i < viewingReview.rating ? "text-yellow-400" : "text-gray-300"}`}>★</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <div>
+                        <div className="font-semibold text-sm text-gray-600 mb-1">Title</div>
+                        <div className="text-sm">{viewingReview.title}</div>
+                      </div>
+
+                      {/* Public Comment */}
+                      <div>
+                        <div className="font-semibold text-sm text-gray-600 mb-1">Review</div>
+                        <div className="text-sm whitespace-pre-wrap text-gray-700">{viewingReview.publicComment}</div>
+                      </div>
+
+                      {/* Sub-ratings */}
+                      {viewingReview.communicationRating && (
+                        <div>
+                          <div className="font-semibold text-sm text-gray-600 mb-2">Communication: {viewingReview.communicationRating}/5</div>
+                          <div className="flex gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`text-lg ${i < viewingReview.communicationRating ? "text-blue-400" : "text-gray-300"}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {viewingReview.professionalismRating && (
+                        <div>
+                          <div className="font-semibold text-sm text-gray-600 mb-2">Professionalism: {viewingReview.professionalismRating}/5</div>
+                          <div className="flex gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`text-lg ${i < viewingReview.professionalismRating ? "text-blue-400" : "text-gray-300"}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {viewingReview.timelinessRating && (
+                        <div>
+                          <div className="font-semibold text-sm text-gray-600 mb-2">Timeliness: {viewingReview.timelinessRating}/5</div>
+                          <div className="flex gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`text-lg ${i < viewingReview.timelinessRating ? "text-blue-400" : "text-gray-300"}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {viewingReview.skillRating && (
+                        <div>
+                          <div className="font-semibold text-sm text-gray-600 mb-2">Skill Level: {viewingReview.skillRating}/5</div>
+                          <div className="flex gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`text-lg ${i < viewingReview.skillRating ? "text-blue-400" : "text-gray-300"}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {viewingReview.clarityRating && (
+                        <div>
+                          <div className="font-semibold text-sm text-gray-600 mb-2">Clarity of Requirements: {viewingReview.clarityRating}/5</div>
+                          <div className="flex gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`text-lg ${i < viewingReview.clarityRating ? "text-blue-400" : "text-gray-300"}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {viewingReview.paymentReliabilityRating && (
+                        <div>
+                          <div className="font-semibold text-sm text-gray-600 mb-2">Payment Reliability: {viewingReview.paymentReliabilityRating}/5</div>
+                          <div className="flex gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`text-lg ${i < viewingReview.paymentReliabilityRating ? "text-blue-400" : "text-gray-300"}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {viewingReview.privateFeedback && (
+                        <div>
+                          <div className="font-semibold text-sm text-gray-600 mb-1">Private Feedback (only visible to recipient)</div>
+                          <div className="text-sm whitespace-pre-wrap text-gray-700 bg-gray-50 p-3 rounded-lg">{viewingReview.privateFeedback}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-3 mt-6 pt-4 border-t">
+                      <button
+                        onClick={() => setViewingReview(null)}
+                        className="flex-1 rounded-2xl bg-[var(--primary)] text-white font-extrabold py-2"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </>
           )}
         </div>

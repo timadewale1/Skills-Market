@@ -30,7 +30,7 @@ The Final Work submission feature with comprehensive watermarking support for al
 
 1. **Images** (jpg, jpeg, png, gif, webp, bmp)
    - Processing: Apply SVG watermark overlay with Sharp
-   - Output: Watermarked JPEG with text "SKILLS MARKET • PREVIEW"
+   - Output: Watermarked JPEG with text "changeworker • PREVIEW"
    - Resolution: 1600px wide, quality 78%
 
 2. **Videos** (mp4, webm, ogg, mov, avi, mkv)
@@ -209,7 +209,7 @@ Test the workflow:
 
 ## Watermark Details
 
-**Text:** "SKILLS MARKET • PREVIEW"
+**Text:** "changeworker • PREVIEW"
 **Styling:** 
 - SVG text overlay using pattern with 45° rotation
 - White text (rgba(255,255,255,0.22)) for opacity

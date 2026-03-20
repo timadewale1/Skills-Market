@@ -1,6 +1,7 @@
 "use client"
 
 import Navbar from "@/components/layout/Navbar"
+import Footer from "@/components/layout/Footer"
 import { useEffect, useRef, useState, useCallback } from "react"
 import {
   FiArrowUp, FiShield, FiUsers, FiDollarSign, FiAlertTriangle,
@@ -691,17 +692,8 @@ export default function TermsPage() {
         {/* ── BACK TO TOP ── */}
         <BackToTop visible={scrollY > 400} />
 
-        {/* ── FOOTER STRIP ── */}
-        <div className="border-t border-gray-100 bg-gray-50 py-6">
-          <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="font-mono text-xs text-gray-400">© {new Date().getFullYear()} changeworker · Impactpal Africa · Version 1.2</p>
-            <div className="flex items-center gap-4">
-              <a href="/privacy" className="font-mono text-xs text-gray-400 hover:text-orange-500 transition-colors">Privacy Policy</a>
-              <a href="/cookies" className="font-mono text-xs text-gray-400 hover:text-orange-500 transition-colors">Cookie Policy</a>
-              <a href="/contact" className="font-mono text-xs text-gray-400 hover:text-orange-500 transition-colors">Contact</a>
-            </div>
-          </div>
-        </div>
+        {/* Footer */}
+        <Footer />
 
       </div>
     </>

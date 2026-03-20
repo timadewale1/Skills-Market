@@ -7,7 +7,7 @@
 
 ## Overview
 
-This document covers 4 major enhancements to the Skills Market preview and watermarking system:
+This document covers 4 major enhancements to the changeworker preview and watermarking system:
 
 1. **Video Thumbnail Generation** (FFmpeg)
 2. **PDF Preview Generation with Watermarking** (pdf-lib + Canvas)
@@ -83,7 +83,7 @@ async function generatePdfPreview(tmpIn: string, tmpOut: string): Promise<void> 
     const { width, height } = firstPage.getSize()
 
     // Add watermark text to PDF
-    firstPage.drawText("SKILLS MARKET • PREVIEW", {
+    firstPage.drawText("changeworker • PREVIEW", {
       x: 50,
       y: height - 50,
       size: 30,
@@ -108,7 +108,7 @@ async function generatePdfPreview(tmpIn: string, tmpOut: string): Promise<void> 
     ctx.globalAlpha = 0.15
     ctx.font = "bold 40px Arial"
     ctx.rotate(-Math.PI / 4)
-    ctx.fillText("SKILLS MARKET • PREVIEW", -200, 250)
+    ctx.fillText("changeworker • PREVIEW", -200, 250)
     ctx.restore()
     
     const buffer = c.toBuffer("image/jpeg")
@@ -122,7 +122,7 @@ async function generatePdfPreview(tmpIn: string, tmpOut: string): Promise<void> 
 
 ### Features
 - Generates preview image of PDF first page
-- Adds "SKILLS MARKET • PREVIEW" watermark to image
+- Adds "changeworker • PREVIEW" watermark to image
 - Creates visual thumbnail (800x450) for quick preview
 - Fallback mechanism if pdf-lib fails
 - Safe to store/transform without exposing full PDF

@@ -97,28 +97,18 @@ function getFileType(filename) {
     return "file";
 }
 async function watermarkToPreviewJpeg(tmpIn, tmpOut) {
-    const base = (0, sharp_1.default)(tmpIn).rotate().resize({ width: 1600, withoutEnlargement: true });
-    const meta = await base.metadata();
-    const width = meta.width || 1600;
-    const height = meta.height || 900;
-    const watermarkSvg = Buffer.from(`
-    <svg width="${width}" height="${height}">
-      <defs>
-        <pattern id="p" patternUnits="userSpaceOnUse" width="520" height="300" patternTransform="rotate(-20)">
-          <text x="0" y="150" font-size="48"
-            fill="rgba(255,255,255,0.22)"
-            font-family="Arial" font-weight="700">
-            SKILLS MARKET • PREVIEW
-          </text>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#p)"/>
-    </svg>
-  `);
-    await base
-        .jpeg({ quality: 78 })
-        .composite([{ input: watermarkSvg, top: 0, left: 0 }])
-        .toFile(tmpOut);
+    // Resize and add watermark text overlay using Sharp
+    try {
+        await (0, sharp_1.default)(tmpIn)
+            .rotate()
+            .resize({ width: 1600, height: 1200, fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 78 })
+            .toFile(tmpOut);
+    }
+    catch (err) {
+        console.error("[watermarkToPreviewJpeg] Failed to process image", err);
+        throw err;
+    }
 }
 // Helper: Process file based on type (watermark images, generate previews for videos/pdfs)
 async function processFileToPreview(tmpIn, tmpOut, filename, contentType) {
@@ -134,50 +124,32 @@ async function processFileToPreview(tmpIn, tmpOut, filename, contentType) {
         return "image/jpeg"; // Always output as JPEG
     }
     else if (fileType === "video") {
-        // For videos: Extract thumbnail
+        // For videos: Create placeholder preview using Sharp (custom viewer will show actual video)
         try {
-            await extractVideoThumbnail(tmpIn, tmpOut);
-            return "image/jpeg"; // Output thumbnail as JPEG
+            const svg = Buffer.from(`<svg width="800" height="450" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="450" fill="#1f2937"/><text x="400" y="200" font-size="32" font-weight="bold" text-anchor="middle" fill="#ffffff" font-family="Arial">VIDEO PREVIEW</text><text x="400" y="250" font-size="24" text-anchor="middle" fill="#ffffff" font-family="Arial">Click to play</text></svg>`);
+            await (0, sharp_1.default)(svg, { density: 100 })
+                .jpeg({ quality: 80 })
+                .toFile(tmpOut);
         }
         catch (err) {
-            console.warn("[processFileToPreview] Video thumbnail failed, creating fallback");
-            // Fallback: Create simple text preview
-            const canvas = require("canvas");
-            const c = canvas.createCanvas(800, 450);
-            const ctx = c.getContext("2d");
-            ctx.fillStyle = "#f3f4f6";
-            ctx.fillRect(0, 0, 800, 450);
-            ctx.fillStyle = "#666";
-            ctx.font = "24px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText("Video Preview - Click to Play", 400, 225);
-            const buffer = c.toBuffer("image/jpeg");
-            await fs.writeFile(tmpOut, buffer);
-            return "image/jpeg";
+            console.error("[processFileToPreview] Video placeholder failed", err);
+            throw err;
         }
+        return "image/jpeg";
     }
     else if (fileType === "pdf") {
-        // For PDFs: Generate preview image with watermark
+        // For PDFs: Create placeholder preview using Sharp (custom viewer will show actual PDF)
         try {
-            await generatePdfPreview(tmpIn, tmpOut);
-            return "image/jpeg"; // Output preview as JPEG
+            const svg = Buffer.from(`<svg width="800" height="450" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="450" fill="#f3f4f6"/><text x="400" y="200" font-size="32" font-weight="bold" text-anchor="middle" fill="#374151" font-family="Arial">PDF DOCUMENT</text><text x="400" y="250" font-size="24" text-anchor="middle" fill="#6b7280" font-family="Arial">Click to view</text></svg>`);
+            await (0, sharp_1.default)(svg, { density: 100 })
+                .jpeg({ quality: 80 })
+                .toFile(tmpOut);
         }
         catch (err) {
-            console.warn("[processFileToPreview] PDF preview failed, creating fallback");
-            // Fallback: Create simple text preview
-            const canvas = require("canvas");
-            const c = canvas.createCanvas(800, 450);
-            const ctx = c.getContext("2d");
-            ctx.fillStyle = "#f3f4f6";
-            ctx.fillRect(0, 0, 800, 450);
-            ctx.fillStyle = "#666";
-            ctx.font = "24px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText("PDF Preview Available", 400, 225);
-            const buffer = c.toBuffer("image/jpeg");
-            await fs.writeFile(tmpOut, buffer);
-            return "image/jpeg";
+            console.error("[processFileToPreview] PDF placeholder failed", err);
+            throw err;
         }
+        return "image/jpeg";
     }
     else {
         // For documents/other files: Copy as-is with metadata
@@ -238,7 +210,7 @@ async function generatePdfPreview(tmpIn, tmpOut) {
         if (pdfDoc.getPageCount() > 0) {
             const firstPage = pdfDoc.getPage(0);
             const { width, height } = firstPage.getSize();
-            firstPage.drawText("SKILLS MARKET • PREVIEW", {
+            firstPage.drawText("changeworker • PREVIEW", {
                 x: 50,
                 y: height - 50,
                 size: 30,
@@ -356,7 +328,25 @@ exports.watermarkMilestoneUpload = (0, storage_1.onObjectFinalized)(async (event
         const tmpOut = path.join(tmpDir, `preview_${Date.now()}${tmpOutExt}`);
         await bucket.file(filePath).download({ destination: tmpIn });
         // Process file based on type
-        const previewContentType = await processFileToPreview(tmpIn, tmpOut, rawFilename, contentType);
+        let previewContentType;
+        try {
+            previewContentType = await processFileToPreview(tmpIn, tmpOut, rawFilename, contentType);
+        }
+        catch (err) {
+            console.error("[watermarkMilestoneUpload] Preview generation failed for", rawFilename, err);
+            // Create fallback placeholder
+            try {
+                const svg = Buffer.from(`<svg width="800" height="450" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="450" fill="#f3f4f6"/><text x="400" y="200" font-size="32" font-weight="bold" text-anchor="middle" fill="#6b7280" font-family="Arial">FILE UNAVAILABLE</text><text x="400" y="250" font-size="24" text-anchor="middle" fill="#9ca3af" font-family="Arial">Click to download</text></svg>`);
+                await (0, sharp_1.default)(svg, { density: 100 })
+                    .jpeg({ quality: 80 })
+                    .toFile(tmpOut);
+                previewContentType = "image/jpeg";
+            }
+            catch (fallback) {
+                console.error("[watermarkMilestoneUpload] Fallback failed, skipping file", fallback);
+                return; // Skip this file if we can't create any preview
+            }
+        }
         // Determine preview filename - images, videos, PDFs become JPEGs
         const previewFilename = ["image", "video", "pdf"].includes(fileType) ? `${Date.now()}_preview.jpg` : `${Date.now()}_preview${path.extname(rawFilename)}`;
         const previewPath = `workspaces/${wsId}/milestones/${milestoneId}/previews/${previewFilename}`;
@@ -379,6 +369,36 @@ exports.watermarkMilestoneUpload = (0, storage_1.onObjectFinalized)(async (event
             console.warn("[watermarkMilestoneUpload] size lookup failed, continuing", e);
         }
         console.log("[watermarkMilestoneUpload] writing firestore attachment", { previewPath, size, fileType });
+        // Generate signed URL for preview (7 days expiry)
+        let signedUrl = "";
+        try {
+            const [url] = await bucket.file(previewPath).getSignedUrl({
+                version: "v4",
+                action: "read",
+                expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+            });
+            signedUrl = url;
+            console.log("[watermarkMilestoneUpload] generated signed URL for preview");
+        }
+        catch (e) {
+            console.warn("[watermarkMilestoneUpload] failed to generate signed URL for preview, continuing", e);
+        }
+        // Generate signed URL for raw file if it's a PDF or video (7 days expiry)
+        let rawSignedUrl = "";
+        if (fileType === "pdf" || fileType === "video") {
+            try {
+                const [url] = await bucket.file(filePath).getSignedUrl({
+                    version: "v4",
+                    action: "read",
+                    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+                });
+                rawSignedUrl = url;
+                console.log("[watermarkMilestoneUpload] generated signed URL for raw file");
+            }
+            catch (e) {
+                console.warn("[watermarkMilestoneUpload] failed to generate signed URL for raw file, continuing", e);
+            }
+        }
         // Store preview attachment with file type info
         const previewName = ["image", "video", "pdf"].includes(fileType) ? "preview.jpg" : `preview${path.extname(rawFilename)}`;
         await db.doc(`workspaces/${wsId}/milestones/${milestoneId}`).set({
@@ -389,6 +409,9 @@ exports.watermarkMilestoneUpload = (0, storage_1.onObjectFinalized)(async (event
                 size,
                 storagePath: previewPath,
                 fileType: fileType, // Add file type for frontend
+                rawPath: filePath, // Add raw file path for modal content
+                url: signedUrl, // Store signed URL for direct client access
+                rawUrl: rawSignedUrl, // Store signed URL for raw file access (PDFs/videos)
             }),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
@@ -472,16 +495,36 @@ exports.watermarkFinalWorkUpload = (0, storage_1.onObjectFinalized)(async (event
         const tmpOut = path.join(tmpDir, `preview_fw_${Date.now()}${tmpOutExt}`);
         await bucket.file(filePath).download({ destination: tmpIn });
         // Process file based on type
-        const previewContentType = await processFileToPreview(tmpIn, tmpOut, rawFilename, contentType);
+        let previewContentType;
+        let effectiveFileType = fileType;
+        try {
+            previewContentType = await processFileToPreview(tmpIn, tmpOut, rawFilename, contentType);
+        }
+        catch (processError) {
+            console.error("[watermarkFinalWorkUpload] processFileToPreview failed", { rawFilename, error: String(processError) });
+            // Create a default placeholder for failed processing using Sharp
+            try {
+                const svg = Buffer.from(`<svg width="800" height="450" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="450" fill="#f3f4f6"/><text x="400" y="200" font-size="32" font-weight="bold" text-anchor="middle" fill="#6b7280" font-family="Arial">FILE UNAVAILABLE</text><text x="400" y="250" font-size="24" text-anchor="middle" fill="#9ca3af" font-family="Arial">Click to download</text></svg>`);
+                await (0, sharp_1.default)(svg, { density: 100 })
+                    .jpeg({ quality: 80 })
+                    .toFile(tmpOut);
+                previewContentType = "image/jpeg";
+                // Keep effectiveFileType as original fileType so signed URLs are still generated for PDFs/videos
+            }
+            catch (fallbackError) {
+                console.error("[watermarkFinalWorkUpload] fallback placeholder also failed", fallbackError);
+                throw fallbackError;
+            }
+        }
         // Determine preview filename - images, videos, PDFs become JPEGs
-        const previewFilename = ["image", "video", "pdf"].includes(fileType) ? `${Date.now()}_preview.jpg` : `${Date.now()}_preview${path.extname(rawFilename)}`;
+        const previewFilename = ["image", "video", "pdf"].includes(effectiveFileType) ? `${Date.now()}_preview.jpg` : `${Date.now()}_preview${path.extname(rawFilename)}`;
         const previewPath = `workspaces/${wsId}/finalWork/previews/${previewFilename}`;
         await bucket.upload(tmpOut, {
             destination: previewPath,
             contentType: previewContentType,
             metadata: {
                 cacheControl: "private, max-age=3600",
-                fileType: fileType, // Store file type as metadata
+                fileType: effectiveFileType, // Store file type as metadata
                 original: rawFilename,
             },
         });
@@ -494,24 +537,58 @@ exports.watermarkFinalWorkUpload = (0, storage_1.onObjectFinalized)(async (event
         catch (e) {
             console.warn("[watermarkFinalWorkUpload] size lookup failed, continuing", e);
         }
-        console.log("[watermarkFinalWorkUpload] writing firestore attachment", { previewPath, size, fileType });
+        console.log("[watermarkFinalWorkUpload] writing firestore attachment", { previewPath, size, fileType: effectiveFileType });
+        // Generate signed URL for preview (7 days expiry)
+        let signedUrl = "";
+        try {
+            const [url] = await bucket.file(previewPath).getSignedUrl({
+                version: "v4",
+                action: "read",
+                expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+            });
+            signedUrl = url;
+            console.log("[watermarkFinalWorkUpload] generated signed URL for preview");
+        }
+        catch (e) {
+            console.warn("[watermarkFinalWorkUpload] failed to generate signed URL for preview, continuing", e);
+        }
+        // Generate signed URL for raw file if it's a PDF or video (7 days expiry)
+        let rawSignedUrl = "";
+        if (effectiveFileType === "pdf" || effectiveFileType === "video") {
+            try {
+                const [url] = await bucket.file(filePath).getSignedUrl({
+                    version: "v4",
+                    action: "read",
+                    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+                });
+                rawSignedUrl = url;
+                console.log("[watermarkFinalWorkUpload] generated signed URL for raw file");
+            }
+            catch (e) {
+                console.warn("[watermarkFinalWorkUpload] failed to generate signed URL for raw file, continuing", e);
+            }
+        }
         // Store preview attachment with file type info
-        // Store preview attachment with file type info
-        const previewName = ["image", "video", "pdf"].includes(fileType) ? "preview.jpg" : `preview${path.extname(rawFilename)}`;
-        await db.doc(`workspaces/${wsId}/finalWork/submission`).set({
+        // Always try to add preview - document will be created by API if needed
+        const previewName = ["image", "video", "pdf"].includes(effectiveFileType) ? "preview.jpg" : `preview${path.extname(rawFilename)}`;
+        const docRef = db.doc(`workspaces/${wsId}/finalWork/submission`);
+        await docRef.set({
             attachments: admin.firestore.FieldValue.arrayUnion({
                 kind: "preview",
                 name: previewName,
                 contentType: previewContentType,
                 size,
                 storagePath: previewPath,
-                fileType: fileType, // Add file type for frontend
+                fileType: effectiveFileType, // Add file type for frontend
+                rawPath: filePath, // Add raw file path for modal content
+                url: signedUrl, // Store signed URL for direct client access
+                rawUrl: rawSignedUrl, // Store signed URL for raw file access (PDFs/videos)
             }),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
         await fs.unlink(tmpIn).catch(() => { });
         await fs.unlink(tmpOut).catch(() => { });
-        console.log("[watermarkFinalWorkUpload] done", { wsId, fileType });
+        console.log("[watermarkFinalWorkUpload] done", { wsId, fileType: effectiveFileType });
     }
     catch (err) {
         console.error("[watermarkFinalWorkUpload] FAILED", err);
@@ -519,84 +596,114 @@ exports.watermarkFinalWorkUpload = (0, storage_1.onObjectFinalized)(async (event
 });
 // Helper: process a payout request by releasing escrow to talent (credits wallet, records transactions, credits platform revenue, writes escrow ledger)
 async function processPayout(wsId, payoutId, actorUid = "system") {
-    const payoutRef = db.doc(`workspaces/${wsId}/payoutRequests/${payoutId}`);
-    return db.runTransaction(async (tx) => {
-        const prSnap = await tx.get(payoutRef);
-        if (!prSnap.exists)
-            return;
-        const pr = prSnap.data();
-        if (pr.status === "paid")
-            return;
-        const wsRef = db.doc(`workspaces/${wsId}`);
-        const wsSnap = await tx.get(wsRef);
-        if (!wsSnap.exists)
-            throw new Error("Workspace missing");
-        const ws = wsSnap.data();
-        const gross = Number(ws?.payment?.amount || 0);
-        if (!gross || gross <= 0)
-            throw new Error("Invalid escrow amount");
-        const fee = Number((gross * 0.1).toFixed(2));
-        const net = Number((gross - fee).toFixed(2));
-        const talentUid = ws.talentUid;
-        if (!talentUid)
-            throw new Error("Talent UID missing");
-        const walletRef = db.doc(`wallets/${talentUid}`);
-        const wSnap = await tx.get(walletRef);
-        const existing = wSnap?.exists ? wSnap.data() : {};
-        const newAvailable = Number((Number(existing.availableBalance || 0) + net).toFixed(2));
-        const newTotalEarned = Number((Number(existing.totalEarned || 0) + net).toFixed(2));
-        tx.set(walletRef, {
-            uid: talentUid,
-            role: "talent",
-            availableBalance: newAvailable,
-            totalEarned: newTotalEarned,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            createdAt: existing.createdAt || admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-        tx.set(walletRef.collection("transactions").doc(payoutId), {
-            type: "credit",
-            reason: "payout_release",
-            amount: net,
-            currency: "NGN",
-            status: "completed",
-            meta: { wsId, payoutId },
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    console.log("[processPayout] Starting:", { wsId, payoutId, actorUid });
+    try {
+        const payoutRef = db.doc(`workspaces/${wsId}/payoutRequests/${payoutId}`);
+        return db.runTransaction(async (tx) => {
+            console.log("[processPayout] Transaction started");
+            const prSnap = await tx.get(payoutRef);
+            if (!prSnap.exists) {
+                console.log("[processPayout] Payout request not found");
+                return;
+            }
+            const pr = prSnap.data();
+            console.log("[processPayout] Payout request status:", pr.status);
+            if (pr.status === "paid") {
+                console.log("[processPayout] Payout already paid");
+                return;
+            }
+            const wsRef = db.doc(`workspaces/${wsId}`);
+            console.log("[processPayout] Getting workspace...");
+            const wsSnap = await tx.get(wsRef);
+            if (!wsSnap.exists)
+                throw new Error("Workspace missing");
+            const ws = wsSnap.data();
+            // Check if payment amount is properly set
+            if (!ws?.payment || !ws.payment.amount) {
+                const errMsg = `No payment amount set in workspace ${wsId}. Payment data: ${JSON.stringify(ws?.payment)}`;
+                console.error("[processPayout]", errMsg);
+                throw new Error(errMsg);
+            }
+            const gross = Number(ws.payment.amount || 0);
+            console.log("[processPayout] Payment amount:", gross);
+            if (!gross || gross <= 0)
+                throw new Error("Invalid escrow amount: " + gross);
+            const fee = Number((gross * 0.1).toFixed(2));
+            const net = Number((gross - fee).toFixed(2));
+            const talentUid = ws.talentUid;
+            if (!talentUid)
+                throw new Error("Talent UID missing in workspace");
+            console.log("[processPayout] Amounts:", { gross, fee, net, talentUid });
+            const walletRef = db.doc(`wallets/${talentUid}`);
+            console.log("[processPayout] Getting wallet...");
+            const wSnap = await tx.get(walletRef);
+            const existing = wSnap?.exists ? wSnap.data() : {};
+            const newAvailable = Number((Number(existing.availableBalance || 0) + net).toFixed(2));
+            const newTotalEarned = Number((Number(existing.totalEarned || 0) + net).toFixed(2));
+            console.log("[processPayout] Wallet updates:", { newAvailable, newTotalEarned });
+            tx.set(walletRef, {
+                uid: talentUid,
+                role: "talent",
+                availableBalance: newAvailable,
+                totalEarned: newTotalEarned,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: existing.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            tx.set(walletRef.collection("transactions").doc(payoutId), {
+                type: "credit",
+                reason: "payout_release",
+                amount: net,
+                currency: "NGN",
+                status: "completed",
+                meta: { wsId, payoutId },
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // Record platform revenue (simple document for audit)
+            const platformRef = db.collection("payoutRevenue").doc(payoutId);
+            tx.set(platformRef, {
+                amount: fee,
+                currency: "NGN",
+                meta: { wsId, payoutId },
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // Write escrow ledger entry for release
+            const escrowLedgerRef = db.collection(`workspaces/${wsId}/escrowLedger`).doc();
+            tx.set(escrowLedgerRef, {
+                type: "release",
+                payoutId,
+                amount: gross,
+                netCredited: net,
+                platformFee: fee,
+                talentUid,
+                releasedBy: actorUid,
+                currency: "NGN",
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // Mark payout as paid and update workspace escrow flag
+            tx.update(payoutRef, {
+                status: "paid",
+                paidAt: admin.firestore.FieldValue.serverTimestamp(),
+                paidBy: actorUid,
+                netAmount: net,
+                platformFee: fee,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            tx.update(wsRef, {
+                "payment.escrow": false,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            console.log("[processPayout] Transaction complete");
         });
-        // Record platform revenue (simple document for audit)
-        const platformRef = db.doc(`platform/revenue/${payoutId}`);
-        tx.set(platformRef, {
-            amount: fee,
-            currency: "NGN",
-            meta: { wsId, payoutId },
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+    catch (e) {
+        console.error("[processPayout] Transaction error:", {
+            message: e?.message || "No message",
+            code: e?.code || "No code",
+            errorString: String(e),
+            stack: e?.stack || "No stack"
         });
-        // Write escrow ledger entry for release
-        const escrowLedgerRef = db.collection(`workspaces/${wsId}/escrowLedger`).doc();
-        tx.set(escrowLedgerRef, {
-            type: "release",
-            payoutId,
-            amount: gross,
-            netCredited: net,
-            platformFee: fee,
-            talentUid,
-            releasedBy: actorUid,
-            currency: "NGN",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        // Mark payout as paid and update workspace escrow flag
-        tx.update(payoutRef, {
-            status: "paid",
-            paidAt: admin.firestore.FieldValue.serverTimestamp(),
-            paidBy: actorUid,
-            netAmount: net,
-            platformFee: fee,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        tx.update(wsRef, {
-            "payment.escrow": false,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-    });
+        throw e;
+    }
 }
 // ------------------------------
 // Scheduled: auto-approve payoutRequests after 24h (every 5 mins)
@@ -668,21 +775,37 @@ exports.releasePayout = (0, https_1.onCall)(async (request) => {
     const uid = requireAuth(request);
     const wsId = String(request.data?.wsId || "");
     const payoutId = String(request.data?.payoutId || "");
-    if (!wsId || !payoutId)
+    console.log("[releasePayout] Request:", { uid, wsId, payoutId });
+    if (!wsId || !payoutId) {
+        console.error("[releasePayout] Missing required params:", { wsId, payoutId });
         throw new https_1.HttpsError("invalid-argument", "wsId and payoutId required");
+    }
     const wsSnap = await db.doc(`workspaces/${wsId}`).get();
-    if (!wsSnap.exists)
+    if (!wsSnap.exists) {
+        console.error("[releasePayout] Workspace not found:", wsId);
         throw new https_1.HttpsError("not-found", "Workspace not found");
+    }
     const ws = wsSnap.data();
-    if (uid !== ws.clientUid)
+    console.log("[releasePayout] Workspace data:", { talentUid: ws?.talentUid, clientUid: ws?.clientUid, paymentAmount: ws?.payment?.amount });
+    if (uid !== ws.clientUid) {
+        console.error("[releasePayout] Client mismatch:", { uid, clientUid: ws.clientUid });
         throw new https_1.HttpsError("permission-denied", "Client only");
+    }
     try {
+        console.log("[releasePayout] Starting payout processing...");
         await processPayout(wsId, payoutId, uid);
+        console.log("[releasePayout] Payout processed successfully");
         return { ok: true };
     }
     catch (e) {
-        console.error("[releasePayout] failed", e);
-        throw new https_1.HttpsError("internal", "Failed to release payout");
+        console.error("[releasePayout] processPayout failed with full error:", {
+            errorMessage: e?.message || "No message",
+            errorCode: e?.code || "No code",
+            errorString: String(e),
+            errorStack: e?.stack || "No stack",
+            errorDetails: JSON.stringify(e, null, 2)
+        });
+        throw new https_1.HttpsError("internal", `Failed to release payout: ${e?.message || String(e) || "Unknown error"}`);
     }
 });
 // ------------------------------

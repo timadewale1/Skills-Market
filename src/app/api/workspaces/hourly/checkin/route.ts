@@ -96,10 +96,35 @@ export async function POST(request: NextRequest) {
         </head>
         <body style="margin: 0; padding: 0; background-color: #fef7ed; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(249, 115, 22, 0.1);">
-    })
+            <div style="background: linear-gradient(135deg, #f97316, #ea580c); padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">Hourly Check-in Submitted</h1>
+              <p style="color: #fed7aa; margin: 10px 0 0 0; font-size: 16px;">Talent has completed their hourly check-in</p>
+            </div>
+            <div style="padding: 40px 30px;">
+              <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 10px 0; color: #1f2937; font-size: 18px; font-weight: 600;">Check-in Details</h2>
+                <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>Hour:</strong> ${currentHourIndex + 1}</p>
+                <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Workspace:</strong> ${wsData.gigTitle || 'Untitled Workspace'}</p>
+                <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Note:</strong> ${note.trim()}</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/workspaces/${wsId}" style="display: inline-block; background-color: #f97316; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 14px;">View Workspace</a>
+              </div>
+              <p style="margin: 20px 0 0 0; text-align: center; color: #9ca3af; font-size: 12px;">You can review the check-in and approve or dispute it in your workspace dashboard.</p>
+            </div>
+          </div>
         </body>
         </html>
       `,
+    })
+
+    // Send notification to talent
+    await notifyUser({
+      userId: wsData.talentUid,
+      type: "workspace",
+      title: "Check-in Submitted Successfully",
+      message: `Your check-in for hour ${currentHourIndex + 1} has been submitted in "${wsData.gigTitle || 'workspace'}"`,
+      link: `/dashboard/workspaces/${wsId}`,
     })
 
     // notify admins

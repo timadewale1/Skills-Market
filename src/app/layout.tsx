@@ -12,7 +12,7 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata = {
-  title: "Skills Marketplace",
+  title: "changeworker",
   description: "Upwork for Changemakers",
 }
 
@@ -48,7 +48,7 @@ export default function RootLayout({
               {/* FOOTER */}
               {/* <footer className="border-t" style={{ borderColor: "var(--border)" }}>
                 <div className="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600">
-                  © {new Date().getFullYear()} Skills Marketplace
+                  © {new Date().getFullYear()} changeworker
                 </div>
               </footer> */}
             </div>

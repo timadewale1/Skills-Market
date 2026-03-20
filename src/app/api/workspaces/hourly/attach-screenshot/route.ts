@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
 
     await checkinRef.update({
       screenshotPreviewPath: previewPath,
-      screenshotPreviewUrl: previewPath, // This would be the signed URL in production
       updatedAt: new Date(),
     })
 

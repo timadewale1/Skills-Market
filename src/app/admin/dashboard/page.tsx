@@ -151,7 +151,7 @@ export default function AdminDashboard() {
                 transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
               />
               <ShieldCheck size={16} className="text-[var(--primary)]" />
-              <span className="text-gray-700">Admin Console • SkillsMarket</span>
+              <span className="text-gray-700">Admin Console • changeworker</span>
             </div>
           </motion.div>
 

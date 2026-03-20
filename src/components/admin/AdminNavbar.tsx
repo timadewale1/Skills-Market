@@ -99,7 +99,7 @@ export default function AdminNavbar() {
             href="/admin/dashboard"
             className="text-xl font-extrabold text-[var(--primary)]"
           >
-            SkillsMarket
+            changeworker
           </Link>
 
           {/* DESKTOP NAV */}

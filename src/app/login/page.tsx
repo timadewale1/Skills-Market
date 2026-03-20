@@ -88,7 +88,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm p-6 border">
         <h1 className="text-2xl font-extrabold mb-2">Welcome back</h1>
         <p className="text-sm text-gray-600 mb-6">
-          Login to continue to Skills Marketplace
+          Login to continue to changeworker
         </p>
 
         <div className="space-y-4">
