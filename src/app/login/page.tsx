@@ -14,6 +14,10 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { doc, getDoc } from "firebase/firestore"
 import { Eye, EyeOff } from "lucide-react"
+import {
+  ensureBrowserSessionPersistence,
+  markAuthSession,
+} from "@/lib/authSession"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -51,6 +55,7 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
+      await ensureBrowserSessionPersistence()
       const res = await signInWithEmailAndPassword(auth, email, password)
 
       if (!res.user.emailVerified) {
@@ -59,6 +64,7 @@ export default function LoginPage() {
         return
       }
 
+      markAuthSession(res.user.uid)
       toast.success("Logged in successfully")
       await postLoginRedirect(res.user.uid)
     } catch (err: any) {
@@ -71,9 +77,11 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true)
     try {
+      await ensureBrowserSessionPersistence()
       const provider = new GoogleAuthProvider()
       const res = await signInWithPopup(auth, provider)
 
+      markAuthSession(res.user.uid)
       toast.success("Welcome!")
       await postLoginRedirect(res.user.uid)
     } catch {

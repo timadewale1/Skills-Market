@@ -25,9 +25,11 @@ export async function POST(request: NextRequest) {
       valueRating,
       comment,
       isPublic,
+      userName,
+      userProfileImage,
     } = await request.json()
 
-    if (!workspaceId || !comment) {
+    if (!workspaceId || !comment || !userName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -60,6 +62,8 @@ export async function POST(request: NextRequest) {
       workspaceId,
       fromUserId: userId,
       fromRole: wsData?.clientUid === userId ? "client" : "talent",
+      userName,
+      userProfileImage,
       rating: Number(rating),
       easeOfUseRating: Number(easeOfUseRating),
       supportRating: Number(supportRating),

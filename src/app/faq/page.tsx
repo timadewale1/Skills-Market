@@ -76,7 +76,7 @@ const ALL_FAQS: CategoryFAQs[] = [
     faqs: [
       {
         q: "What is changeworker?",
-        a: "changeworker is Nigeria's first curated talent marketplace for the social impact sector. We connect nonprofits, NGOs, and social enterprises with pre-vetted freelance professionals — from grant writers and M&E specialists to project managers and communications experts. Unlike general freelance platforms, every freelancer on changeworker has been personally reviewed for sector experience.",
+        a: "changeworker is Nigeria's talent marketplace for the social impact sector. We connect nonprofits, NGOs, and social enterprises with freelance professionals - from grant writers and M&E specialists to project managers and communications experts. Unlike general freelance platforms, changeworker is built around sector-specific profiles, matching, proposals, messaging, and workspace delivery.",
         tags: ["platform","overview"],
       },
       {
@@ -86,17 +86,17 @@ const ALL_FAQS: CategoryFAQs[] = [
       },
       {
         q: "Is changeworker available outside Nigeria?",
-        a: "Currently, changeworker operates within Nigeria. We serve both organizations and freelancers based in Nigeria. We are actively planning expansion to Ghana, Kenya, and other African markets. If you're outside Nigeria and interested in early access, send us a note at hello@changeworker.ng — we'd love to hear from you.",
+        a: "Currently, changeworker operates within Nigeria. We serve both organizations and freelancers based in Nigeria. We are actively planning expansion to Ghana, Kenya, and other African markets. If you're outside Nigeria and interested in early access, send us a note at hello@changeworker.ng - we'd love to hear from you.",
         tags: ["location","availability"],
       },
       {
         q: "Is changeworker free to use?",
-        a: "Registration is free for both organizations and freelancers. changeworker earns a 10% platform commission, charged to the organization upon successful project completion. There are no subscription fees, no listing fees, and no charge to browse or apply for projects.",
+        a: "Registration is free for both organizations and freelancers. changeworker uses a flat 10% platform fee on completed projects. There are no subscription fees, no listing fees, and no charge to browse or apply for projects.",
         tags: ["pricing","free"],
       },
       {
         q: "How is changeworker different from Upwork or other platforms?",
-        a: "Three key differences: (1) Curation — we don't let anyone sign up as a freelancer. Every profile is personally reviewed. Organizations get 2–3 matches, not a list of 200 applicants. (2) Sector focus — our community understands nonprofit operations, donor reporting, and impact metrics. (3) Nigeria-native — Naira pricing, Paystack payments, and a team rooted in the local NGO ecosystem. We're built for this sector, not retrofitted for it.",
+        a: "Three key differences: (1) Sector focus - our community understands nonprofit operations, donor reporting, and impact metrics. (2) Structured workflow - organizations can post gigs, review profiles and proposals, message talent, and manage delivery in one place. (3) Nigeria-native - Naira pricing, Paystack payments, and a team rooted in the local NGO ecosystem. We're built for this sector, not retrofitted for it.",
         tags: ["comparison","unique"],
       },
       {
@@ -111,27 +111,27 @@ const ALL_FAQS: CategoryFAQs[] = [
     faqs: [
       {
         q: "How do I post a project?",
-        a: "After creating your organization account, click 'Post a Project' and complete a structured brief. You'll describe the skills needed, your project scope, timeline, budget range, and any specific requirements. The whole process takes about 5 minutes. Our team reviews every brief before it goes live to ensure clarity and completeness.",
+        a: "After creating your organization account, click 'Post a Project' and complete a structured brief. You'll describe the skills needed, your project scope, timeline, budget range, and any specific requirements. The whole process takes about 5 minutes.",
         tags: ["getting started","posting"],
       },
       {
         q: "How quickly will I receive candidate matches?",
-        a: "Once your project is approved (usually within a few hours), our matching team identifies the best candidates from our vetted pool. You'll receive 2–3 curated match profiles within 48 business hours. Each profile includes the freelancer's portfolio, rates, relevant experience, and our team's recommendation note.",
+        a: "Once your project is posted, changeworker starts surfacing relevant talent based on skills, SDG alignment, sector fit, and profile data. You can browse matching profiles, review proposals, and move into messaging directly in the platform.",
         tags: ["matching","speed"],
       },
       {
         q: "Can I choose my own freelancer, or do you assign one?",
-        a: "You always choose. We provide curated recommendations — our shortlist of the 2–3 best fits for your project — but the final hiring decision is entirely yours. You can review profiles, ask clarifying questions, and select the person you feel most confident about.",
+        a: "You always choose. changeworker helps surface relevant profiles and proposals, but the final hiring decision is entirely yours. You can review profiles, ask clarifying questions, and select the person you feel most confident about.",
         tags: ["control","hiring"],
       },
       {
         q: "What if none of the matches are right for me?",
-        a: "Tell us why and we'll look again. Our matching team takes feedback seriously and will refine the search. If a genuinely strong match doesn't exist in our current pool, we'll be honest with you about it and let you know when a suitable candidate joins the platform.",
+        a: "You can keep browsing, review more proposals, refine your brief, or continue conversations with other talent in the platform until you find the right fit.",
         tags: ["matching","quality"],
       },
       {
         q: "Can I rehire a freelancer I've worked with before?",
-        a: "Yes — and we make it easy. Any freelancer you've successfully worked with can be saved to your 'Talent Bench.' To rehire them, simply start a new project and select them directly. No fresh matching process needed. Many organizations build long-term relationships with 2–3 core freelancers this way.",
+        a: "Yes. You can save talent profiles in the platform and return to them later when you want to start a new conversation or project.",
         tags: ["rehire","bench"],
       },
       {
@@ -151,22 +151,22 @@ const ALL_FAQS: CategoryFAQs[] = [
     faqs: [
       {
         q: "How do I join as a freelancer?",
-        a: "Click 'Find Work' on the homepage to start your freelancer application. You'll complete a profile with your bio, skills, work history, rates, and work samples. Our team personally reviews every application — we're not an open marketplace. You'll receive a decision within 3 business days.",
+        a: "Click 'Find Work' on the homepage to start building your freelancer profile. You'll complete your bio, skills, work history, rates, and work samples, then use the platform to discover gigs, submit proposals, and manage conversations.",
         tags: ["getting started","application"],
       },
       {
         q: "What does the vetting process involve?",
-        a: "Our review covers four areas: (1) Identity verification — a government-issued ID check. (2) Skills assessment — we review your stated skills against your portfolio and references. (3) Sector experience — we evaluate whether you've worked with or have demonstrated understanding of the social impact sector. (4) A brief interview for senior or specialist profiles. We're looking for quality, not volume.",
+        a: "The platform supports profile completion and verification steps such as government-issued ID, supporting documents, portfolio links, and public profile information. Clients can also review ratings, reviews, and previous platform activity when deciding who to hire.",
         tags: ["vetting","process"],
       },
       {
         q: "Do I need nonprofit experience to apply?",
-        a: "It helps significantly, but isn't always required. We look for candidates who either have direct nonprofit experience or can demonstrate clear relevance of their skills to the sector — for example, a data analyst who has worked with social research data, or a writer with policy or advocacy experience. If you're passionate about impact work and have transferable skills, apply and explain your interest in your bio.",
+        a: "It helps significantly, but isn't always required. We look for candidates who either have direct nonprofit experience or can demonstrate clear relevance of their skills to the sector - for example, a data analyst who has worked with social research data, or a writer with policy or advocacy experience. If you're passionate about impact work and have transferable skills, apply and explain your interest in your bio.",
         tags: ["eligibility","experience"],
       },
       {
         q: "How do I get matched to projects?",
-        a: "You don't need to search or bid. When a relevant project lands on the platform, our matching team reviews the pool and identifies the best fits. You'll receive a notification with the project details. To signal interest, you click once — no lengthy proposal required. The organization then reviews the shortlisted profiles and makes the hire decision.",
+        a: "You can browse gigs in the platform, submit proposals, and use your profile data to improve how relevant opportunities surface to you. Organizations then review proposals, profiles, and messages before making a hiring decision.",
         tags: ["matching","process"],
       },
       {
@@ -176,7 +176,7 @@ const ALL_FAQS: CategoryFAQs[] = [
       },
       {
         q: "What happens if an organization doesn't pay?",
-        a: "This is exactly why we built escrow. Organizations must fund escrow before you start work. When you complete the project and it's marked done, funds are released to you. Organizations cannot withhold payment once work is delivered unless they raise a formal dispute within 7 days. Our team mediates all disputes fairly.",
+        a: "changeworker supports on-platform payment, milestone review, final approval, and dispute flows. If a payment issue happens, the workspace history and dispute tools provide a documented path for resolution.",
         tags: ["payment","protection"],
       },
       {
@@ -191,12 +191,12 @@ const ALL_FAQS: CategoryFAQs[] = [
     faqs: [
       {
         q: "How does payment work?",
-        a: "All payments flow through the changeworker platform using Paystack. The process: (1) Organization agrees to hire and funds escrow. (2) Freelancer completes the work. (3) Organization reviews and marks the project complete. (4) Funds are released from escrow to the freelancer. (5) changeworker's 10% commission is collected separately from the organization.",
+        a: "All payments flow through the changeworker platform using Paystack. The usual flow is: client hires, the workspace is created, work is submitted through milestones or final delivery, the client reviews, and approved funds move through the platform payout flow.",
         tags: ["process","escrow"],
       },
       {
         q: "What is the platform commission?",
-        a: "changeworker charges a flat 10% commission on the agreed project value. This is charged to the organization — not the freelancer. So if a project is worth ₦100,000, the freelancer receives ₦100,000 and the organization pays a separate ₦10,000 platform fee. The commission covers matching, vetting, payment processing, escrow, and ongoing support.",
+        a: "changeworker uses a flat 10% platform fee. The fee supports matching, payments, workspace delivery flows, dispute handling, and ongoing support across the platform.",
         tags: ["fees","commission"],
       },
       {
@@ -211,12 +211,12 @@ const ALL_FAQS: CategoryFAQs[] = [
       },
       {
         q: "What if I want a refund as an organization?",
-        a: "Refunds are not issued automatically. If you believe deliverables don't meet the agreed brief, raise a formal dispute within 7 days of receiving work. Our resolution team reviews all communications and deliverables and makes a determination — which may include a partial refund, full refund, or a revised deliverable.",
+        a: "Refunds are not issued automatically. If you believe deliverables do not meet the agreed brief, use the platform's dispute flow so the work history, submissions, and conversations can be reviewed before a resolution is made.",
         tags: ["refund","dispute"],
       },
       {
         q: "Are there taxes I need to be aware of?",
-        a: "As a freelancer, you are responsible for your own tax obligations under Nigerian law, including income tax and any applicable withholding tax. changeworker does not withhold taxes on your behalf. We recommend consulting a tax professional if you're unsure of your obligations. As an organization, the platform commission may be a deductible business expense — consult your accountant.",
+        a: "As a freelancer, you are responsible for your own tax obligations under Nigerian law, including income tax and any applicable withholding tax. changeworker does not withhold taxes on your behalf. We recommend consulting a tax professional if you're unsure of your obligations. As an organization, the platform commission may be a deductible business expense - consult your accountant.",
         tags: ["tax","compliance"],
       },
     ],
@@ -226,7 +226,7 @@ const ALL_FAQS: CategoryFAQs[] = [
     faqs: [
       {
         q: "How does the matching algorithm work?",
-        a: "Our matching is a combination of human curation and structured data. When a project is posted, our team reviews the brief and identifies candidates whose skills, sector experience, availability, rates, and location align with the need. We prioritize quality of fit over speed. You receive 2–3 recommendations, not a ranked list of 200.",
+        a: "Matching uses structured profile and gig data such as skills, sector fit, rates, availability, SDG tags, and public profile information to help surface relevant talent and opportunities in the platform.",
         tags: ["process","algorithm"],
       },
       {
@@ -241,7 +241,7 @@ const ALL_FAQS: CategoryFAQs[] = [
       },
       {
         q: "Can I request a specific freelancer by name?",
-        a: "Yes — if you've worked with them before, you can rehire directly from your Talent Bench. If you've seen their public profile and want to work with them for the first time, mention them in your project brief and we'll check their availability. We don't guarantee availability, but we'll always try.",
+        a: "Yes - if you've worked with them before, you can rehire directly from your saved talent. If you've seen their public profile and want to work with them for the first time, mention them in your project brief and we'll check their availability. We don't guarantee availability, but we'll always try.",
         tags: ["request","specific"],
       },
       {
@@ -256,27 +256,27 @@ const ALL_FAQS: CategoryFAQs[] = [
     faqs: [
       {
         q: "How do I know a freelancer is legitimate?",
-        a: "Every freelancer undergoes identity verification, portfolio review, skills assessment, and reference checks before being approved. Verified profiles display a 'Verified' badge. You can also view their ratings and reviews from previous changeworker projects, and their full work history on the platform.",
+        a: "Talent profiles can include verification status, portfolio samples, ratings, reviews, and past platform activity. Clients can use that information together with proposals and messaging to decide who to hire.",
         tags: ["vetting","verification"],
       },
       {
         q: "What protections do organizations have?",
-        a: "Three layers: (1) Vetting — only quality-checked freelancers appear on the platform. (2) Escrow — you don't release payment until you're satisfied with the work. (3) Dispute resolution — if something goes wrong, our team mediates and can issue partial or full refunds. You're never left without recourse.",
+        a: "Three layers: (1) Vetting - only quality-checked freelancers appear on the platform. (2) Escrow - you don't release payment until you're satisfied with the work. (3) Dispute resolution - if something goes wrong, our team mediates and can issue partial or full refunds. You're never left without recourse.",
         tags: ["protection","org"],
       },
       {
         q: "What protections do freelancers have?",
-        a: "Three layers: (1) Escrow — funds are locked before you start, so you know the money is there. (2) Dispute resolution — we won't allow an organization to refuse payment for completed work without cause. (3) Review system — your reputation is protected; we investigate claims of unfair reviews.",
+        a: "Three layers: (1) Escrow - funds are locked before you start, so you know the money is there. (2) Dispute resolution - we won't allow an organization to refuse payment for completed work without cause. (3) Review system - your reputation is protected; we investigate claims of unfair reviews.",
         tags: ["protection","freelancer"],
       },
       {
         q: "How do you handle disputes?",
-        a: "Any user can raise a dispute from their dashboard within 7 days of the triggering event. A changeworker resolution officer reviews all project communications, deliverables, and the original brief. Both parties submit their position. The officer makes a binding recommendation within 10 business days. Either party can escalate to formal arbitration under Lagos Court of Arbitration rules.",
+        a: "Any participant in a workspace can raise a dispute from the platform. The dispute flow keeps the matter documented in-app so admins can review the workspace context, communication, and submitted evidence before deciding next steps.",
         tags: ["disputes","resolution"],
       },
       {
         q: "Can I report a user for misconduct?",
-        a: "Yes. Use the 'Report' button on any profile, project, or message. You can also email trust@changeworker.ng directly. We investigate all reports confidentially and take appropriate action — from warnings to permanent account removal and legal referral for serious offenses.",
+        a: "Yes. Use the 'Report' button on any profile, project, or message. You can also email trust@changeworker.ng directly. We investigate all reports confidentially and take appropriate action - from warnings to permanent account removal and legal referral for serious offenses.",
         tags: ["reporting","safety"],
       },
     ],
@@ -286,17 +286,17 @@ const ALL_FAQS: CategoryFAQs[] = [
     faqs: [
       {
         q: "How do I update my profile or account details?",
-        a: "Log in and navigate to Settings → Profile. You can update your bio, skills, rates, work samples, contact details, and notification preferences at any time. Changes to verified identity information (name, ID documents) require a re-verification request.",
+        a: "Log in and go to your dashboard profile page. You can update your bio, skills, rates, work samples, contact details, and related profile information there.",
         tags: ["settings","profile"],
       },
       {
-        q: "I forgot my password — what do I do?",
+        q: "I forgot my password - what do I do?",
         a: "Click 'Forgot password' on the login page and enter your registered email address. You'll receive a secure reset link within a few minutes. If you don't see it, check your spam folder. If you still can't access your account, email support@changeworker.ng.",
         tags: ["password","access"],
       },
       {
         q: "Can I have both an organization and a freelancer account?",
-        a: "Currently, each email address can be registered to one account type. If you need both (e.g., you run an NGO but also consult independently), contact support@changeworker.ng — we can accommodate dual-role accounts in verified cases.",
+        a: "Currently, each email address can be registered to one account type. If you need both (e.g., you run an NGO but also consult independently), contact support@changeworker.ng - we can accommodate dual-role accounts in verified cases.",
         tags: ["account","dual"],
       },
       {
@@ -306,7 +306,7 @@ const ALL_FAQS: CategoryFAQs[] = [
       },
       {
         q: "Is my data secure on changeworker?",
-        a: "Yes. We use AES-256 encryption for data at rest and TLS 1.3 for data in transit. We never store full card details — payment data is tokenised by Paystack. We comply with the Nigeria Data Protection Act (NDPA) 2023. Full details are in our Privacy Policy.",
+        a: "We take account and payment security seriously, we rely on trusted infrastructure partners such as Firebase and Paystack, and we do not store full card details ourselves. Full details are in our Privacy Policy.",
         tags: ["security","data"],
       },
     ],
@@ -664,7 +664,7 @@ export default function FAQPage() {
                       ))}
                       {searchResults.length > 8 && (
                         <div className="px-4 py-2.5 text-center">
-                          <span className="text-white/30 text-xs font-mono">+{searchResults.length - 8} more results — scroll page to find them</span>
+                          <span className="text-white/30 text-xs font-mono">+{searchResults.length - 8} more results - scroll page to find them</span>
                         </div>
                       )}
                     </>
@@ -933,7 +933,7 @@ export default function FAQPage() {
                 Didn't find your answer?
               </h2>
               <p className="text-gray-400 text-base font-display font-normal max-w-md mx-auto">
-                Our team reads every message and responds within 24 hours. No bots — real people who understand the social sector.
+                Reach out any time and share what you need help with. We read every message and follow up as quickly as we can.
               </p>
             </div>
 
@@ -943,7 +943,7 @@ export default function FAQPage() {
                   icon: FiMail,
                   color: "#F97316",
                   title: "Email us",
-                  body: "Write to us any time. We'll get back to you within 24 hours on business days.",
+                  body: "Write to us any time and share the details of what you need help with.",
                   action: "hello@changeworker.ng",
                   href: "mailto:hello@changeworker.ng",
                   cta: "Send email",
@@ -952,7 +952,7 @@ export default function FAQPage() {
                   icon: FiMessageSquare,
                   color: "#6366F1",
                   title: "Contact page",
-                  body: "Use our detailed contact form to tell us exactly what you need — routing to the right team.",
+                  body: "Use our detailed contact form to tell us exactly what you need - routing to the right team.",
                   action: "Open contact form",
                   href: "/contact",
                   cta: "Go to contact",
@@ -1035,3 +1035,4 @@ export default function FAQPage() {
     </>
   )
 }
+

@@ -179,7 +179,7 @@ function downloadAgreementPdf(thread: Thread, agreement: Agreement) {
   )
   if (agreement.terms.proposedHoursPerWeek) addText(`Hours per Week: ${agreement.terms.proposedHoursPerWeek}`, 10)
   addText(
-    `Duration: ${agreement.terms.hoursDuration ? agreement.terms.hoursDuration + " hours" : agreement.terms.durationText || "—"}`,
+    `Duration: ${agreement.terms.hoursDuration ? agreement.terms.hoursDuration + " hours" : agreement.terms.durationText || "-"}`,
     10
   )
   if (agreement.terms.startDateText) addText(`Start Date: ${agreement.terms.startDateText}`, 10)
@@ -245,7 +245,7 @@ function downloadAgreementPdf(thread: Thread, agreement: Agreement) {
   pdf.setFontSize(20)
   pdf.setFont("helvetica", "bold")
   pdf.setTextColor(...primaryRGB)
-  pdf.text(agreement.clientSignature?.signatureText || "——————————————", margin + 2, yPos)
+  pdf.text(agreement.clientSignature?.signatureText || "--------------", margin + 2, yPos)
   pdf.setTextColor(0, 0, 0)
   yPos += 12
   pdf.setFontSize(9)
@@ -258,7 +258,7 @@ function downloadAgreementPdf(thread: Thread, agreement: Agreement) {
   pdf.setFontSize(20)
   pdf.setFont("helvetica", "bold")
   pdf.setTextColor(...primaryRGB)
-  pdf.text(agreement.talentSignature?.signatureText || "——————————————", margin + 2, yPos)
+  pdf.text(agreement.talentSignature?.signatureText || "--------------", margin + 2, yPos)
   pdf.setTextColor(0, 0, 0)
   yPos += 12
   pdf.setFontSize(9)
@@ -336,7 +336,7 @@ async function generateAgreementPdfBlob(thread: Thread, agreement: Agreement) {
   )
   if (agreement.terms.proposedHoursPerWeek) addText(`Hours per Week: ${agreement.terms.proposedHoursPerWeek}`, 10)
   addText(
-    `Duration: ${agreement.terms.hoursDuration ? agreement.terms.hoursDuration + " hours" : agreement.terms.durationText || "—"}`,
+    `Duration: ${agreement.terms.hoursDuration ? agreement.terms.hoursDuration + " hours" : agreement.terms.durationText || "-"}`,
     10
   )
 
@@ -365,7 +365,7 @@ async function generateAgreementPdfBlob(thread: Thread, agreement: Agreement) {
   pdf.setFontSize(20)
   pdf.setFont("helvetica", "bold")
   pdf.setTextColor(...primaryRGB)
-  pdf.text(agreement.clientSignature?.signatureText || "——————————————", margin + 2, yPos)
+  pdf.text(agreement.clientSignature?.signatureText || "--------------", margin + 2, yPos)
   pdf.setTextColor(0, 0, 0)
   yPos += 12
   pdf.setFontSize(9)
@@ -378,7 +378,7 @@ async function generateAgreementPdfBlob(thread: Thread, agreement: Agreement) {
   pdf.setFontSize(20)
   pdf.setFont("helvetica", "bold")
   pdf.setTextColor(...primaryRGB)
-  pdf.text(agreement.talentSignature?.signatureText || "——————————————", margin + 2, yPos)
+  pdf.text(agreement.talentSignature?.signatureText || "--------------", margin + 2, yPos)
   pdf.setTextColor(0, 0, 0)
   yPos += 12
   pdf.setFontSize(9)
@@ -816,7 +816,7 @@ export default function ThreadPage() {
 }
 
 
-      toast.success("Agreement signed — opening workspace")
+      toast.success("Agreement signed - opening workspace")
       router.push(`/dashboard/workspaces/${wsId}`)
     } catch (e: any) {
       console.error(e)
@@ -1036,7 +1036,7 @@ export default function ThreadPage() {
 
                       {fullySigned ? (
                         <div className="text-xs text-gray-500 font-semibold">
-                          Agreement is fully signed — hiring actions are locked.
+                          Agreement is fully signed - hiring actions are locked.
                         </div>
                       ) : (
                         <div className="text-xs text-gray-500 font-semibold">
@@ -1078,13 +1078,13 @@ export default function ThreadPage() {
                     {agreement.status === "talent_declined" && isClient && (
                       <div className="text-sm text-gray-700 whitespace-pre-wrap">
                         <span className="font-extrabold">Talent declined:</span>{" "}
-                        {agreement.talentDeclineReason || "—"}
+                        {agreement.talentDeclineReason || "-"}
                       </div>
                     )}
 
                     {agreement.status === "fully_signed" && (
                       <div className="space-y-3">
-                        <div className="text-sm text-gray-700">✅ Fully signed — workspace ready.</div>
+                        <div className="text-sm text-gray-700">✅ Fully signed - workspace ready.</div>
 
                         <button
                           onClick={() => router.push(`/dashboard/workspaces/${wsId}`)}

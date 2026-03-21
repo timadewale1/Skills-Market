@@ -3,6 +3,7 @@ import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
+import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
 
 export async function POST(req: Request) {
   try {
@@ -44,11 +45,13 @@ export async function POST(req: Request) {
     })
 
     // Notify client
+    const context = await getWorkspaceNotificationContext(workspaceId)
+
     await notifyUser({
       userId: workspace.clientUid,
       type: "milestone_submission",
       title: "Milestone submitted",
-      message: "Talent has submitted a milestone for review",
+      message: `${context?.talentName || "Talent"} submitted a milestone for ${context?.gigTitle || "this workspace"}.`,
       link: `/dashboard/workspaces/${workspaceId}`,
     })
 
@@ -56,7 +59,7 @@ export async function POST(req: Request) {
     await notifyAdmins({
       type: "admin:workspace",
       title: "Milestone Submitted",
-      message: `Milestone ${milestoneId} was submitted in workspace ${workspaceId}.`,
+      message: `${context?.talentName || "Talent"} submitted milestone ${milestoneId} for ${context?.gigTitle || "a workspace"} with ${context?.clientName || "the client"}.`,
       link: `/admin/workspaces/${workspaceId}`,
     })
 

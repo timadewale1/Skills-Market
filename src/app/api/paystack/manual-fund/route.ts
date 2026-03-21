@@ -3,6 +3,7 @@ import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
+import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
 
 export async function POST(req: Request) {
   try {
@@ -95,10 +96,11 @@ export async function POST(req: Request) {
 
     // inform admins of workspace funding
     try {
+      const context = await getWorkspaceNotificationContext(wsId)
       await notifyAdmins({
         type: "admin:workspace",
         title: "Workspace funded",
-        message: `Workspace ${wsId} funded (₦${amount.toLocaleString()})`,
+        message: `${context?.clientName || "Client"} funded ${context?.gigTitle || "a workspace"} with ${context?.talentName || "the talent"} for N${amount.toLocaleString()}.`,
         link: `/admin/workspaces/${wsId}`,
       })
     } catch (err) {

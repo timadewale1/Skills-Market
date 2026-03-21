@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
-import RequireAdmin from "@/components/admin/RequireAdmin"
-import AdminNavbar from "@/components/admin/AdminNavbar"
 import { db } from "@/lib/firebase"
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, where } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Button from "@/components/ui/Button"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +20,6 @@ import {
   CheckCircle,
   X,
   Ban,
-  Edit,
   Trash2,
   AlertTriangle,
   ShieldCheck,
@@ -78,9 +75,20 @@ export default function AdminTalentDetailPage() {
     const fetchProfile = async () => {
       setLoading(true)
       try {
-        const profileRef = doc(db, "publicProfiles", uid)
-        const profileSnap = await getDoc(profileRef)
-        const userRef = doc(db, "users", uid)
+        let resolvedUid = uid
+        let profileRef = doc(db, "publicProfiles", resolvedUid)
+        let profileSnap = await getDoc(profileRef)
+
+        if (!profileSnap.exists()) {
+          const slugSnap = await getDocs(query(collection(db, "publicProfiles"), where("slug", "==", uid)))
+          if (!slugSnap.empty) {
+            resolvedUid = slugSnap.docs[0].id
+            profileRef = doc(db, "publicProfiles", resolvedUid)
+            profileSnap = await getDoc(profileRef)
+          }
+        }
+
+        const userRef = doc(db, "users", resolvedUid)
         const userSnap = await getDoc(userRef)
 
         if (profileSnap.exists()) {
@@ -89,7 +97,7 @@ export default function AdminTalentDetailPage() {
           const kycData = userData?.kyc || {}
           
           setProfile({
-            uid,
+            uid: resolvedUid,
             slug: profileData.slug,
             fullName: profileData.fullName || "Unnamed Talent",
             email: profileData.email || userData?.email,
@@ -206,22 +214,17 @@ export default function AdminTalentDetailPage() {
 
   if (loading) {
     return (
-      <RequireAdmin>
-        <AdminNavbar />
         <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)] flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
             <p className="text-gray-600">Loading talent profile...</p>
           </div>
         </div>
-      </RequireAdmin>
     )
   }
 
   if (!profile) {
     return (
-      <RequireAdmin>
-        <AdminNavbar />
         <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)] flex items-center justify-center">
           <div className="text-center">
             <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
@@ -232,13 +235,10 @@ export default function AdminTalentDetailPage() {
             </Link>
           </div>
         </div>
-      </RequireAdmin>
     )
   }
 
   return (
-    <RequireAdmin>
-      <AdminNavbar />
 
       <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)]">
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -326,31 +326,25 @@ export default function AdminTalentDetailPage() {
             </div>
 
             {/* related data tabs */}
-            <div className="mt-6 flex gap-6">
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href={`/admin/talents/${profile.uid}/proposals`}
-                className="text-sm text-[var(--primary)] hover:underline"
+                className="inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
               >
+                <FileText size={14} />
                 Proposals
               </Link>
               <Link
                 href={`/admin/talents/${profile.uid}/workspaces`}
-                className="text-sm text-[var(--primary)] hover:underline"
+                className="inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
               >
+                <Briefcase size={14} />
                 Workspaces
               </Link>
             </div>
 
             {/* ADMIN ACTIONS */}
             <div className="flex flex-col gap-2 min-w-[200px]">
-              <Link
-                href={`/admin/talents/${profile.slug || profile.uid}/edit`}
-                className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm font-semibold hover:shadow-sm transition"
-              >
-                <Edit size={14} />
-                Edit Profile
-              </Link>
-
               <div className="flex flex-col gap-1">
                 {profile.verification?.status !== "verified" && (
                   <Button
@@ -700,6 +694,5 @@ export default function AdminTalentDetailPage() {
           </div>
         </div>
       </div>
-    </RequireAdmin>
   )
 }

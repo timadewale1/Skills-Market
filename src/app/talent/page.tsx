@@ -251,7 +251,7 @@ export default function TalentBrowsePage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold">Browse Talent</h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Search by name, role, skills, SDGs, or categories — then filter down.
+              Search by name, role, skills, SDGs, or categories - then filter down.
             </p>
           </div>
 

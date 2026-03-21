@@ -3,6 +3,7 @@ import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
+import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
 
 export async function POST(req: Request) {
   try {
@@ -57,11 +58,16 @@ export async function POST(req: Request) {
       ? "Your milestone submission has been approved"
       : "Your milestone submission needs revision"
 
+    const context = await getWorkspaceNotificationContext(workspaceId)
+
     await notifyUser({
       userId: workspace.talentUid,
       type: "milestone_approval",
       title: notificationTitle,
-      message: notificationMessage,
+      message:
+        decision === "approved"
+          ? `${context?.clientName || "Client"} approved your milestone for ${context?.gigTitle || "this workspace"}.`
+          : `${context?.clientName || "Client"} requested revisions on your milestone for ${context?.gigTitle || "this workspace"}.`,
       link: `/dashboard/workspaces/${workspaceId}`,
     })
 
@@ -69,7 +75,7 @@ export async function POST(req: Request) {
     await notifyAdmins({
       type: "admin:workspace",
       title: `Milestone ${status}`,
-      message: `Milestone ${milestoneId} in workspace ${workspaceId} was ${status}.`,
+      message: `${context?.clientName || "Client"} ${status} milestone ${milestoneId} in ${context?.gigTitle || "a workspace"} with ${context?.talentName || "the talent"}.`,
       link: `/admin/workspaces/${workspaceId}`,
     })
 

@@ -8,7 +8,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "") == "admin";
     }
 
     function isMe(uid) {
@@ -16,8 +17,8 @@ service cloud.firestore {
     }
 
     function isGigClient(gigId) {
-      return signedIn() && firestore.exists(/databases/$(database)/documents/gigs/$(gigId))
-        && request.auth.uid == firestore.get(/databases/$(database)/documents/gigs/$(gigId)).data.clientUid;
+      return signedIn() && exists(/databases/$(database)/documents/gigs/$(gigId))
+        && request.auth.uid == get(/databases/$(database)/documents/gigs/$(gigId)).data.clientUid;
     }
 
     function kycStatusAllowed(oldStatus, newStatus) {
@@ -30,7 +31,21 @@ service cloud.firestore {
 
     // ===== USERS =====
     match /users/{uid} {
-      allow read: if isMe(uid) || isAdmin();
+      // Users can always read their own document
+      allow read: if isMe(uid);
+      
+      // Admins can read all user documents
+      allow read: if isAdmin();
+
+      allow create: if (
+          isMe(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.role in ["client", "talent"]
+        )
+        || (
+          isAdmin()
+          && request.resource.data.uid == uid
+        );
 
       allow write: if isAdmin()
         || (
@@ -78,8 +93,14 @@ service cloud.firestore {
     // ===== PUBLIC PROFILES =====
     match /publicProfiles/{uid} {
       allow read: if true;
-      allow create, update: if isMe(uid);
-      allow delete: if false;
+      allow create, update: if isMe(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== STATS =====
+    match /stats/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // ===== GIGS =====
@@ -321,8 +342,25 @@ service cloud.firestore {
 
     // ===== DISPUTES =====
     match /disputes/{disputeId} {
+      allow read: if isAdmin()
+        || (
+          signedIn()
+          && exists(/databases/$(database)/documents/workspaces/$(resource.data.workspaceId))
+          && (
+            request.auth.uid == get(/databases/$(database)/documents/workspaces/$(resource.data.workspaceId)).data.clientUid
+            || request.auth.uid == get(/databases/$(database)/documents/workspaces/$(resource.data.workspaceId)).data.talentUid
+          )
+        );
+      allow write: if isAdmin();
+    }
+
+    match /disputeMessages/{messageId} {
       allow read: if isAdmin();
       allow write: if isAdmin();
+    }
+
+    match /payoutRevenue/{docId} {
+      allow read, write: if isAdmin();
     }
 
     // ===== TRANSACTIONS =====

@@ -40,6 +40,11 @@ export default function PlatformReviewModal({
       return
     }
 
+    if (!user?.displayName) {
+      toast.error("Please set your name in your profile")
+      return
+    }
+
     if (!comment.trim()) {
       toast.error("Please share your thoughts about Changeworker")
       return
@@ -63,6 +68,8 @@ export default function PlatformReviewModal({
           valueRating: value,
           comment: comment.trim(),
           isPublic,
+          userName: user.displayName,
+          userProfileImage: user.photoURL || null,
         }),
       })
 

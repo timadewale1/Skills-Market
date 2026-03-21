@@ -187,7 +187,7 @@ export default function ClientsBrowsePage() {
 
                               <span className="inline-flex items-center gap-2 font-semibold">
                                 <Star size={14} className="text-[var(--primary)]" />
-                                {c.ratingAvg ? c.ratingAvg.toFixed(1) : "—"} ({c.ratingCount || 0})
+                                {c.ratingAvg ? c.ratingAvg.toFixed(1) : "-"} ({c.ratingCount || 0})
                               </span>
 
                               <span className="inline-flex items-center gap-2 font-semibold">

@@ -1,93 +1,118 @@
 "use client"
 
 import { useState } from "react"
-import { signInWithEmailAndPassword } from "firebase/auth"
-import { auth, db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Eye, EyeOff } from "lucide-react"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { doc, getDoc } from "firebase/firestore"
+import { auth, db } from "@/lib/firebase"
+import Button from "@/components/ui/Button"
+import AdminAuthShell from "@/components/admin/AdminAuthShell"
+import {
+  ensureBrowserSessionPersistence,
+  markAuthSession,
+} from "@/lib/authSession"
 
-export default function AdminLogin() {
+export default function AdminLoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  async function login() {
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError("Enter your admin email and password.")
+      return
+    }
+
     try {
       setLoading(true)
+      setError("")
+
+      await ensureBrowserSessionPersistence()
       const cred = await signInWithEmailAndPassword(auth, email, password)
       const userDoc = await getDoc(doc(db, "users", cred.user.uid))
 
-      if (!userDoc.exists()) {
-        throw new Error("User not found")
-      }
-
-      const user = userDoc.data()
-
-      if (user?.role !== "admin") {
+      if (!userDoc.exists() || userDoc.data()?.role !== "admin") {
+        setError("This account does not have admin access.")
         router.push("/")
         return
       }
 
+      markAuthSession(cred.user.uid)
       router.push("/admin/dashboard")
-    } catch (e: any) {
-      setError(e.message || "Login failed")
+    } catch (err: any) {
+      setError(err?.message || "Login failed")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-      <Card className="w-full max-w-md rounded-xl shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-t-xl">
-          <CardTitle className="text-2xl font-extrabold text-gray-900">Admin Login</CardTitle>
-          <p className="text-sm text-gray-600 mt-1">Sign in to your admin account</p>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
+    <AdminAuthShell
+      title="Sign in to manage the platform."
+      subtitle="Access disputes, user verification, gigs, transactions, workspaces, analytics, and the day-to-day operating flow from one admin workspace."
+    >
+      <div>
+        <h2 className="text-2xl font-extrabold text-gray-900">Admin login</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Use an admin-approved account to continue.
+        </p>
+      </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+      <div className="mt-6 space-y-4">
+        {error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </div>
+        ) : null}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Password
-            </label>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Email address</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="admin@changeworker.ng"
+            className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-[var(--primary)]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Password</label>
+          <div className="relative">
             <input
-              placeholder="••••••••"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your password"
+              className="w-full rounded-2xl border px-4 py-3 pr-11 text-sm outline-none transition focus:border-[var(--primary)]"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+              aria-label="Toggle password visibility"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
+        </div>
 
-          <button
-            onClick={login}
-            disabled={loading}
-            className="w-full py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Logging in..." : "Sign In"}
-          </button>
-        </CardContent>
-      </Card>
-    </div>
+        <Button onClick={handleLogin} disabled={loading} className="w-full">
+          {loading ? "Signing in..." : "Sign in to admin"}
+        </Button>
+      </div>
+
+      <div className="mt-6 flex items-center justify-between text-sm text-gray-600">
+        <span>Need a new admin account?</span>
+        <Link href="/admin/signup" className="font-semibold text-[var(--primary)]">
+          Create one
+        </Link>
+      </div>
+    </AdminAuthShell>
   )
 }

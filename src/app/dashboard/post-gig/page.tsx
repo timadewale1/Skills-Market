@@ -860,7 +860,7 @@ export default function PostGigPage() {
                   <div className="flex items-start gap-2">
                     <MapPin size={16} className="mt-0.5 text-[var(--primary)]" />
                     <div>
-                      If it’s Remote, location can be optional — but adding a region helps matching.
+                      If it’s Remote, location can be optional - but adding a region helps matching.
                     </div>
                   </div>
                   <div className="flex items-start gap-2">

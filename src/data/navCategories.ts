@@ -49,6 +49,16 @@ export const hireCategories = [
       "Public sector consultants",
     ],
   },
+  {
+    title: "Operations, Legal & Administration",
+    items: [
+      "Operations managers",
+      "Accountants & bookkeepers",
+      "Legal consultants",
+      "Administrative coordinators",
+      "Compliance specialists",
+    ],
+  },
 ]
 
 export const findWorkCategories = hireCategories

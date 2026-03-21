@@ -75,17 +75,17 @@ const floaty = {
 }
 
 function formatNaira(n?: number | null) {
-  if (!n && n !== 0) return "—"
+  if (!n && n !== 0) return "-"
   return `₦${Number(n).toLocaleString()}`
 }
 
 function formatDate(ts: any) {
   try {
     const d = ts?.toDate?.() ? ts.toDate() : ts
-    if (!d) return "—"
+    if (!d) return "-"
     return new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(d)
   } catch {
-    return "—"
+    return "-"
   }
 }
 
@@ -449,10 +449,10 @@ export default function MyGigsPage() {
   g.budgetType === "hourly"
     ? g.hourlyRate
       ? `₦${Number(g.hourlyRate).toLocaleString()}/hr`
-      : "—"
+      : "-"
     : g.fixedBudget
     ? `₦${Number(g.fixedBudget).toLocaleString()}`
-    : "—"
+    : "-"
 
 
                       return (

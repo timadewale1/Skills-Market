@@ -81,7 +81,7 @@ const CARD_META = [
 
 const TRUST_PILLARS = [
   { icon: FiShield, color: "#F97316", title: "Escrow on every gig", desc: "Funds are secured before work begins. Payment releases only when deliverables are approved." },
-  { icon: RiShieldCheckLine, color: "#6366F1", title: "Verified talent profiles", desc: "Every freelancer is personally vetted — identity, skills, and sector track record confirmed." },
+  { icon: RiShieldCheckLine, color: "#6366F1", title: "Verified talent profiles", desc: "Every freelancer is personally vetted - identity, skills, and sector track record confirmed." },
   { icon: FiZap, color: "#10B981", title: "Instant matching", desc: "The moment a gig is posted, our engine surfaces the most relevant talent automatically." },
   { icon: TbHeartHandshake, color: "#EC4899", title: "Fair pay enforced", desc: "We set and enforce minimum rate floors. 'For the mission' is never a substitute for fair pay." },
 ]
@@ -169,7 +169,7 @@ export default function WhyUsLanding() {
             </h1>
 
             <p className={`fs italic text-2xl lg:text-3xl text-white/38 mb-10 max-w-2xl ${heroRef.inView?"reveal":"opacity-0"}`} style={{"--d":".28s"} as React.CSSProperties}>
-              From finding the right talent to securing payment — we've built the infrastructure that Nigeria's social sector was missing.
+              From finding the right talent to securing payment - we've built the infrastructure that Nigeria's social sector was missing.
             </p>
 
             {/* stat chips */}
@@ -235,7 +235,7 @@ export default function WhyUsLanding() {
               </h2>
             </div>
 
-            {/* FEATURED CARD (success stories) — full width */}
+            {/* FEATURED CARD (success stories) - full width */}
             <div className={`mb-5 ${cardsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".08s"} as React.CSSProperties}>
               <Link
                 href={`/why-us/${slugify(whyUsLinks[0].title)}`}

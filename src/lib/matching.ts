@@ -108,18 +108,16 @@ export function matchTalentsToClient(talents: TalentProfile[], client: Partial<C
 }
 
 export function matchGigsToTalent(gigs: Gig[], talent: TalentProfile): Gig[] {
-  const criteria: Partial<Gig> = {
-    requiredSkills: talent.skills,
-    category: talent.categories ? { item: talent.categories[0] } : undefined,
-    sdgTags: talent.sdgTags,
-    workMode: talent.workMode,
-    location: talent.location,
-  }
-
   return gigs
     .map(gig => ({
       ...gig,
-      matchScore: calculateMatchScore(talent, criteria as any) // Reuse the function
+      matchScore: calculateMatchScore(talent, {
+        skills: gig.requiredSkills,
+        categories: gig.category?.item ? [gig.category.item] : [],
+        sdgTags: gig.sdgTags,
+        workMode: gig.workMode,
+        location: gig.location,
+      })
     }))
     .filter(gig => gig.matchScore >= 2)
     .sort((a, b) => b.matchScore - a.matchScore)

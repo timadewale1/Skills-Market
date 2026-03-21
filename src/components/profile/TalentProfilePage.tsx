@@ -95,7 +95,7 @@ export default function TalentProfilePage() {
   const ratingCount = useMemo(() => Number(userDoc?.rating?.count || 0), [userDoc])
 
   // from onboarding
-  const [roleTitle, setRoleTitle] = useState("—")
+  const [roleTitle, setRoleTitle] = useState("-")
   const [hourlyRate, setHourlyRate] = useState<number | null>(null)
   const [skills, setSkills] = useState<string[]>([]) // must fetch from onboarding
 
@@ -291,7 +291,7 @@ const addEmptyEmployment = () => ({
         setVerified(Boolean(data?.kyc?.status === "verified"))
 
         // onboarding / talent
-        setRoleTitle(data?.talent?.roleTitle || "—")
+        setRoleTitle(data?.talent?.roleTitle || "-")
         setHourlyRate(typeof data?.talent?.hourlyRate === "number" ? data.talent.hourlyRate : null)
 
         // ✅ skills fetched from onboarding
@@ -405,13 +405,13 @@ const addEmptyEmployment = () => ({
 
               <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                 <MapPin size={14} />
-                {location || "—"}
+                {location || "-"}
               </div>
 
               <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                 <Star size={14} className="text-[var(--primary)]" />
                 <span className="font-semibold">
-                  {ratingAvg ? ratingAvg.toFixed(1) : "—"}
+                  {ratingAvg ? ratingAvg.toFixed(1) : "-"}
                 </span>
                 <span>({ratingCount || 0})</span>
               </div>
@@ -478,7 +478,7 @@ const addEmptyEmployment = () => ({
                   <div className="rounded-2xl border bg-white p-4">
                     <div className="text-xs font-semibold text-gray-500">Hourly rate</div>
                     <div className="font-extrabold mt-1">
-                      {hourlyRate === null ? "—" : `₦${hourlyRate.toLocaleString()}/hr`}
+                      {hourlyRate === null ? "-" : `₦${hourlyRate.toLocaleString()}/hr`}
                     </div>
                   </div>
                   <div className="rounded-2xl border bg-white p-4">
@@ -530,7 +530,7 @@ const addEmptyEmployment = () => ({
                       <div>
                         <div className="text-xs font-semibold text-gray-500">Hourly rate</div>
                         <div className="text-xl font-extrabold mt-1">
-                          {hourlyRate === null ? "—" : `₦${hourlyRate.toLocaleString()}/hr`}
+                          {hourlyRate === null ? "-" : `₦${hourlyRate.toLocaleString()}/hr`}
                         </div>
                       </div>
                       <button
@@ -553,7 +553,7 @@ const addEmptyEmployment = () => ({
                       <div className="flex-1">
                         <div className="text-xs font-semibold text-gray-500">Bio</div>
                         <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
-                          {bio || "—"}
+                          {bio || "-"}
                         </div>
                       </div>
                       <button
@@ -696,7 +696,7 @@ const addEmptyEmployment = () => ({
       <div>
         <div className="text-xs font-semibold text-gray-500">Skills</div>
         <div className="text-sm text-gray-600 mt-1">
-          These started from onboarding — you can add more.
+          These started from onboarding - you can add more.
         </div>
       </div>
 
@@ -711,7 +711,7 @@ const addEmptyEmployment = () => ({
 
     <div className="mt-3 flex flex-wrap gap-2">
       {skills.length === 0 ? (
-        <div className="text-sm text-gray-600">—</div>
+        <div className="text-sm text-gray-600">-</div>
       ) : (
         skills.map((s) => (
           <span key={s} className="text-xs font-extrabold px-3 py-2 rounded-full border bg-white">
@@ -733,7 +733,7 @@ const addEmptyEmployment = () => ({
                       <div className="flex-1">
                         <div className="text-xs font-semibold text-gray-500">Languages</div>
                         <div className="mt-2 text-sm text-gray-700">
-                          {languages.length ? languages.join(", ") : "—"}
+                          {languages.length ? languages.join(", ") : "-"}
                         </div>
                       </div>
                       <button
@@ -756,7 +756,7 @@ const addEmptyEmployment = () => ({
   <div>
     <div className="text-xs font-semibold text-gray-500">Education</div>
     <div className="font-extrabold mt-1">
-      {education.length ? `${education.length} record(s)` : "—"}
+      {education.length ? `${education.length} record(s)` : "-"}
     </div>
   </div>
 
@@ -777,7 +777,7 @@ const addEmptyEmployment = () => ({
                             <div className="text-xs font-semibold text-gray-500">{e.type}</div>
                             <div className="font-extrabold mt-1">{e.qualification}</div>
                             <div className="text-sm text-gray-600 mt-1">
-                              {e.institution || "—"} • {e.startYear} - {e.endYear}
+                              {e.institution || "-"} • {e.startYear} - {e.endYear}
                             </div>
                           </div>
                         ))}
@@ -795,7 +795,7 @@ const addEmptyEmployment = () => ({
   <div>
     <div className="text-xs font-semibold text-gray-500">Certifications</div>
     <div className="font-extrabold mt-1">
-      {certifications.length ? `${certifications.length} record(s)` : "—"}
+      {certifications.length ? `${certifications.length} record(s)` : "-"}
     </div>
   </div>
 
@@ -820,7 +820,7 @@ const addEmptyEmployment = () => ({
   <div>
     <div className="text-xs font-semibold text-gray-500">Employment</div>
     <div className="font-extrabold mt-1">
-      {employment.length ? `${employment.length} record(s)` : "—"}
+      {employment.length ? `${employment.length} record(s)` : "-"}
     </div>
   </div>
 

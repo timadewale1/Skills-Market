@@ -15,7 +15,7 @@ function contentFor(slug: string) {
   if (slug === "success-stories") {
     return {
       headline: "Success Stories",
-      intro: "Impact teams and purpose-driven talent use changeworker to deliver real-world outcomes — from climate research to clean energy deployment.",
+      intro: "Impact teams and purpose-driven talent use changeworker to deliver real-world outcomes - from climate research to clean energy deployment.",
       tag: "Social proof",
       tagColor: "#F97316",
       icon: "⭐",
@@ -55,7 +55,7 @@ function contentFor(slug: string) {
   if (slug === "how-to-hire") {
     return {
       headline: "How to Hire on changeworker",
-      intro: "Hiring impact talent should be structured, secure, and outcome-driven. Our process protects both clients and freelancers — every single time.",
+      intro: "Hiring impact talent should be structured, secure, and outcome-driven. Our process protects both clients and freelancers - every single time.",
       tag: "Client guide",
       tagColor: "#6366F1",
       icon: "🏢",
@@ -75,13 +75,13 @@ function contentFor(slug: string) {
         },
         {
           title: "3. Agree Scope & Fund Escrow",
-          body: "Discuss expectations in chat. Finalize deliverables, timeline, and payment terms inside the workspace agreement. Once agreed, fund the escrow. Your money is secured — it cannot be accessed until you approve the final work.",
+          body: "Discuss expectations in chat. Finalize deliverables, timeline, and payment terms inside the workspace agreement. Once agreed, fund the escrow. Your money is secured - it cannot be accessed until you approve the final work.",
           badge: "Protected",
           badgeColor: "#10B981",
         },
         {
           title: "4. Review & Release",
-          body: "Talent submits final work inside the workspace. Review everything before approving. Once you mark the gig complete, payment releases from escrow to the talent's wallet. Our 10% platform fee is deducted from the talent's payout — you pay exactly what was agreed, nothing more.",
+          body: "Talent submits final work inside the workspace. Review everything before approving. Once you mark the gig complete, payment releases from escrow to the talent's wallet. Our 10% platform fee is deducted from the talent's payout - you pay exactly what was agreed, nothing more.",
           badge: "Final step",
           badgeColor: "#EC4899",
         },
@@ -95,7 +95,7 @@ function contentFor(slug: string) {
   if (slug === "reviews") {
     return {
       headline: "Reviews & Accountability",
-      intro: "Trust is built on transparency. Our review system strengthens the entire ecosystem — every gig builds a record that compounds into real reputation.",
+      intro: "Trust is built on transparency. Our review system strengthens the entire ecosystem - every gig builds a record that compounds into real reputation.",
       tag: "Community trust",
       tagColor: "#10B981",
       icon: "💬",
@@ -103,19 +103,19 @@ function contentFor(slug: string) {
       sections: [
         {
           title: "Mutual Reviews After Every Gig",
-          body: "After a workspace is completed, both client and talent can leave structured feedback. This builds reputation and long-term credibility for both parties — not just the freelancer. Reliable clients attract stronger talent on future gigs.",
+          body: "After a workspace is completed, both client and talent can leave structured feedback. This builds reputation and long-term credibility for both parties - not just the freelancer. Reliable clients attract stronger talent on future gigs.",
           badge: "Both sides",
           badgeColor: "#10B981",
         },
         {
           title: "Outcome-Focused Feedback",
-          body: "Reviews are structured around four dimensions: delivery quality, communication clarity, timeliness, and professionalism. This gives future parties genuinely useful signals — not just star ratings.",
+          body: "Reviews are structured around four dimensions: delivery quality, communication clarity, timeliness, and professionalism. This gives future parties genuinely useful signals - not just star ratings.",
           badge: "Structured",
           badgeColor: "#F97316",
         },
         {
           title: "Long-Term Reputation",
-          body: "High-performing talent build visible track records that unlock higher-value gigs. Organisations with strong client profiles attract better talent. The review system rewards quality — consistently.",
+          body: "High-performing talent build visible track records that unlock higher-value gigs. Organisations with strong client profiles attract better talent. The review system rewards quality - consistently.",
           badge: "Compounding",
           badgeColor: "#6366F1",
         },
@@ -135,7 +135,7 @@ function contentFor(slug: string) {
   if (slug === "how-to-find-work") {
     return {
       headline: "How to Find Work on changeworker",
-      intro: "changeworker helps purpose-driven professionals build sustainable freelance careers in climate, energy, civic tech, and development — with instant matching instead of endless bidding.",
+      intro: "changeworker helps purpose-driven professionals build sustainable freelance careers in climate, energy, civic tech, and development - with instant matching instead of endless bidding.",
       tag: "Talent guide",
       tagColor: "#EC4899",
       icon: "🎯",
@@ -143,13 +143,13 @@ function contentFor(slug: string) {
       sections: [
         {
           title: "1. Build a Strong Profile",
-          body: "Highlight your skills, sector experience, and measurable past outcomes. Tag yourself to the SDGs you're passionate about and experienced in. Clients look for proof of results and sector fluency — not just credentials.",
+          body: "Highlight your skills, sector experience, and measurable past outcomes. Tag yourself to the SDGs you're passionate about and experienced in. Clients look for proof of results and sector fluency - not just credentials.",
           badge: "First step",
           badgeColor: "#EC4899",
         },
         {
           title: "2. Get Auto-Matched to Gigs",
-          body: "The moment a relevant gig is posted, you're instantly surfaced to the client — no bidding war, no proposal race, no cold pitching. Our matching engine connects your profile to the right gigs automatically. You focus on the work, not the hustle of finding it.",
+          body: "The moment a relevant gig is posted, you're instantly surfaced to the client - no bidding war, no proposal race, no cold pitching. Our matching engine connects your profile to the right gigs automatically. You focus on the work, not the hustle of finding it.",
           badge: "Automatic",
           badgeColor: "#F97316",
         },
@@ -161,7 +161,7 @@ function contentFor(slug: string) {
         },
         {
           title: "4. Deliver, Get Paid, Build Reputation",
-          body: "Submit your work through the workspace. Once the client approves, payment releases from escrow. Our 10% platform fee is deducted from your payout — you agreed on a rate and that's what you see minus the fee. Every completed gig builds your rating and review history.",
+          body: "Submit your work through the workspace. Once the client approves, payment releases from escrow. Our 10% platform fee is deducted from your payout - you agreed on a rate and that's what you see minus the fee. Every completed gig builds your rating and review history.",
           badge: "Rewarded",
           badgeColor: "#10B981",
         },
@@ -189,7 +189,7 @@ function contentFor(slug: string) {
       },
       {
         title: "Freelancer Proposal Guides",
-        body: "Learn how to write outcome-focused pitches that stand out, set rates that reflect your real value, and build a portfolio that communicates sector credibility — even when your work is confidential.",
+        body: "Learn how to write outcome-focused pitches that stand out, set rates that reflect your real value, and build a portfolio that communicates sector credibility - even when your work is confidential.",
         badge: "For talent",
         badgeColor: "#F97316",
       },
@@ -206,7 +206,7 @@ function contentFor(slug: string) {
         badgeColor: "#6366F1",
       },
     ],
-    highlight: "We don't just connect talent and clients — we provide the structure, knowledge, and tools to succeed at impact work.",
+    highlight: "We don't just connect talent and clients - we provide the structure, knowledge, and tools to succeed at impact work.",
     cta: { label: "Explore gig categories", href: "/hire" },
     ctaSecondary: { label: "Read the blog", href: "/blog" },
   }

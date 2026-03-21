@@ -1,62 +1,120 @@
 import Link from "next/link"
 import { getAdminDb } from "@/lib/firebaseAdmin"
+import AdminPageHeader from "@/components/admin/AdminPageHeader"
 import { Card, CardContent } from "@/components/ui/card"
+import { formatAdminDate } from "@/lib/adminData"
+
 export const dynamic = "force-dynamic"
+
+type MessagesPageProps = {
+  searchParams?: Promise<{ q?: string; page?: string }>
+}
 
 async function getThreads() {
   const db = getAdminDb()
-  const snap = await db.collection("threads").get()
+  const snap = await db.collection("threads").orderBy("createdAt", "desc").get()
   return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
 }
 
-export default async function MessagesPage() {
-  const threads: any = await getThreads()
+export default async function MessagesPage({ searchParams }: MessagesPageProps) {
+  const threads: any[] = await getThreads()
+  const resolvedSearchParams = (await searchParams) || {}
+  const q = String(resolvedSearchParams.q || "").trim().toLowerCase()
+  const page = Math.max(1, Number(resolvedSearchParams.page || 1))
+  const pageSize = 10
+  const filtered = threads.filter((thread) => {
+    if (!q) return true
+    const blob = `${thread.gigTitle || ""} ${thread.clientName || ""} ${thread.talentName || ""}`.toLowerCase()
+    return blob.includes(q)
+  })
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const paramsFor = (nextPage: number) => {
+    const params = new URLSearchParams()
+    if (resolvedSearchParams.q) params.set("q", String(resolvedSearchParams.q))
+    if (nextPage > 1) params.set("page", String(nextPage))
+    const s = params.toString()
+    return s ? `/admin/messages?${s}` : "/admin/messages"
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Messages / Threads</h1>
-        <div className="space-y-4">
-          {threads.length === 0 ? (
-            <Card className="rounded-xl">
-              <CardContent className="p-8 text-center text-gray-600">No threads found</CardContent>
-            </Card>
-          ) : (
-            threads.map((t: any) => (
-              <Card key={t.id} className="rounded-xl hover:shadow-md transition">
-                <CardContent className="p-6 flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-extrabold text-gray-900 mb-2">Thread {t.id}</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Conversation oversight"
+        title="Messages and threads"
+        description="Review relationship threads created across gigs and workspaces so admin can follow context when disputes, funding, or quality issues surface."
+        stats={[
+          { label: "Threads", value: filtered.length },
+          { label: "Scope", value: "Client + talent" },
+          { label: "View", value: "Metadata" },
+          { label: "Latest", value: "Realtime" },
+        ]}
+      />
+
+      <Card className="rounded-[1.75rem] border-0 shadow-sm">
+        <CardContent className="p-6">
+          <form action="/admin/messages" className="flex gap-3">
+            <input
+              name="q"
+              defaultValue={resolvedSearchParams.q || ""}
+              placeholder="Search by gig, client, or talent"
+              className="w-full rounded-full border px-4 py-2 text-sm"
+            />
+            <button className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white">Search</button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-4">
+        {visible.length === 0 ? (
+          <Card className="rounded-[1.75rem] border-0 shadow-sm">
+            <CardContent className="p-10 text-center text-gray-600">No threads found.</CardContent>
+          </Card>
+        ) : (
+          visible.map((thread) => (
+            <Card key={thread.id} className="rounded-[1.75rem] border-0 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="grid gap-4 text-sm md:grid-cols-2 xl:grid-cols-4">
                       <div>
-                        <span className="text-gray-500 font-semibold">Client</span>
-                        <p className="text-gray-900">{t.clientName || t.clientUid}</p>
+                        <div className="font-semibold text-gray-500">Thread</div>
+                        <div className="mt-1 font-semibold text-gray-900">{thread.gigTitle || thread.id}</div>
                       </div>
                       <div>
-                        <span className="text-gray-500 font-semibold">Talent</span>
-                        <p className="text-gray-900">{t.talentName || t.talentUid}</p>
+                        <div className="font-semibold text-gray-500">Client</div>
+                        <div className="mt-1 text-gray-900">{thread.clientName || thread.clientUid || "N/A"}</div>
                       </div>
                       <div>
-                        <span className="text-gray-500 font-semibold">Gig</span>
-                        <p className="text-gray-900">{t.gigTitle || t.gigId}</p>
+                        <div className="font-semibold text-gray-500">Talent</div>
+                        <div className="mt-1 text-gray-900">{thread.talentName || thread.talentUid || "N/A"}</div>
                       </div>
                       <div>
-                        <span className="text-gray-500 font-semibold">Created</span>
-                        <p className="text-gray-900">{t.createdAt?.toDate?.().toLocaleDateString() || "N/A"}</p>
+                        <div className="font-semibold text-gray-500">Created</div>
+                        <div className="mt-1 text-gray-900">{formatAdminDate(thread.createdAt, true)}</div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/admin/messages/${t.id}`} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition">
-                      View
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                  <Link
+                    href={`/admin/messages/${thread.id}`}
+                    className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    View conversation
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
+      {filtered.length > pageSize ? (
+        <div className="flex items-center justify-center gap-3">
+          <Link href={paramsFor(Math.max(1, safePage - 1))} className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700">Previous</Link>
+          <div className="text-sm font-semibold text-gray-600">Page {safePage} of {totalPages}</div>
+          <Link href={paramsFor(Math.min(totalPages, safePage + 1))} className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700">Next</Link>
+        </div>
+      ) : null}
     </div>
   )
 }

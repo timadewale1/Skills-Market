@@ -3,8 +3,6 @@
 export const dynamic = "force-dynamic"
 
 import { useEffect, useMemo, useState } from "react"
-import RequireAdmin from "@/components/admin/RequireAdmin"
-import AdminNavbar from "@/components/admin/AdminNavbar"
 import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where, doc, updateDoc, deleteDoc } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,11 +12,9 @@ import {
   ShieldCheck,
   X,
   Search as SearchIcon,
-  Edit,
+  Eye,
   Ban,
   CheckCircle,
-  AlertTriangle,
-  Briefcase,
   Star,
 } from "lucide-react"
 import Link from "next/link"
@@ -169,9 +165,7 @@ export default function AdminClientsPage() {
   }
 
   return (
-    <RequireAdmin>
-      <AdminNavbar />
-
+    <>
       <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)]">
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* HEADER */}
@@ -179,7 +173,7 @@ export default function AdminClientsPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold">Manage Clients</h1>
               <p className="text-gray-600 mt-1 text-sm">
-                Search, filter, and manage client profiles — verify, disable, or edit details.
+                Search, filter, and manage client profiles - verify, disable, or edit details.
               </p>
             </div>
 
@@ -267,7 +261,7 @@ export default function AdminClientsPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap mb-1">
                               <Link
-                                href={`/admin/clients/${c.slug || c.uid}`}
+                                href={`/admin/clients/${c.uid}`}
                                 className="font-extrabold text-gray-900 hover:text-[var(--primary)] transition"
                               >
                                 {c.fullName}
@@ -334,11 +328,11 @@ export default function AdminClientsPage() {
 
                         <div className="flex flex-col gap-2">
                           <Link
-                            href={`/admin/clients/${c.slug || c.uid}`}
+                            href={`/admin/clients/${c.uid}`}
                             className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold hover:shadow-sm transition"
                           >
-                            <Edit size={14} />
-                            Edit
+                            <Eye size={14} />
+                            View client
                           </Link>
 
                           <div className="flex flex-col gap-1">
@@ -465,6 +459,6 @@ export default function AdminClientsPage() {
           </div>
         </div>
       )}
-    </RequireAdmin>
+    </>
   )
 }

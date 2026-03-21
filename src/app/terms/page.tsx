@@ -277,7 +277,7 @@ export default function TermsPage() {
               <div>
                 <p className="font-display font-bold text-gray-900 text-sm mb-1">Plain-English Summary</p>
                 <p className="text-gray-600 text-sm leading-relaxed font-display font-normal">
-                  changeworker connects nonprofits and social enterprises with vetted freelancers. We charge a <strong>10% commission</strong> on completed projects. Both parties must behave professionally. All payments flow through the platform. Nigerian law governs this agreement. If something goes wrong, reach us at <strong>legal@changeworker.ng</strong>.
+                  changeworker connects nonprofits and social enterprises with freelance professionals through profile discovery, proposals, messaging, workspaces, and payment flows. We charge a <strong>10% platform fee</strong> on completed projects. Both parties must behave professionally. Nigerian law governs this agreement. If something goes wrong, reach us at <strong>legal@changeworker.ng</strong>.
                 </p>
               </div>
             </div>
@@ -347,7 +347,7 @@ export default function TermsPage() {
                 <Highlight color="orange">
                   You must be at least 18 years old to use changeworker. By accepting these Terms, you represent that you meet this requirement and have the legal capacity to enter into a binding agreement.
                 </Highlight>
-                <P>These Terms constitute a legally binding agreement between you and Impactpal Africa. They apply to all users — organizations, freelancers, and visitors.</P>
+                <P>These Terms constitute a legally binding agreement between you and Impactpal Africa. They apply to all users - organizations, freelancers, and visitors.</P>
               </section>
 
               <Divider />
@@ -387,7 +387,7 @@ export default function TermsPage() {
                 <P>We reserve the right to refuse registration, suspend, or permanently delete accounts that violate these Terms, engage in fraudulent activity, or are otherwise deemed harmful to the platform community.</P>
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-7 mb-3">Account Verification</h3>
-                <P>All accounts are subject to identity and legitimacy verification. For <strong>Organizations</strong>, this includes submission of CAC (Corporate Affairs Commission) registration certificates or equivalent documentation. For <strong>Freelancers</strong>, this includes government-issued photo identification and skills assessment.</P>
+                <P>All accounts are subject to identity and legitimacy verification. For <strong>Organizations</strong>, this may include submission of CAC (Corporate Affairs Commission) registration certificates or equivalent documentation. For <strong>Freelancers</strong>, this may include government-issued photo identification and supporting profile information.</P>
                 <P>Accounts will be marked "Verified" upon successful review. changeworker may request additional documentation at any time. Failure to provide requested documentation may result in account suspension.</P>
               </section>
 
@@ -415,7 +415,7 @@ export default function TermsPage() {
                   "Not engaging changeworker-matched freelancers directly outside the platform for a period of 12 months following first engagement.",
                 ]} />
                 <Highlight color="red">
-                  Circumventing the changeworker platform to engage freelancers directly — with the intent to avoid our commission — constitutes a material breach of these Terms and may result in immediate account termination and legal action to recover damages.
+                  Circumventing the changeworker platform to engage freelancers directly - with the intent to avoid our commission - constitutes a material breach of these Terms and may result in immediate account termination and legal action to recover damages.
                 </Highlight>
               </section>
 
@@ -457,23 +457,23 @@ export default function TermsPage() {
                 <SHead id="payments" number="06" icon={FiDollarSign} title="Payments, Fees & Escrow" />
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-2 mb-3">6.1 Platform Commission</h3>
-                <P>changeworker charges a <strong>10% commission</strong> on the total agreed project value. This fee is charged to the Organization upon project completion and marked as paid. It covers our matching, vetting, platform maintenance, and support services.</P>
+                <P>changeworker charges a <strong>10% platform fee</strong> on completed projects. The fee supports matching, profile discovery, payment flows, platform maintenance, and support services.</P>
                 <Highlight color="orange">
-                  Example: An Organization agrees to pay ₦100,000 for a grant writing project. Upon completion, the Organization pays ₦100,000 to the Freelancer, and ₦10,000 (10%) separately to changeworker as a platform fee.
+                  Example: If a project is agreed at N100,000, changeworker applies a 10% platform fee as part of the completed project payment flow.
                 </Highlight>
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-6 mb-3">6.2 Payment Processing</h3>
                 <P>All payments are processed through <strong>Paystack</strong>, our authorised payment partner. By using the platform, you agree to Paystack's terms of service in addition to these Terms. changeworker does not store full card details on our servers.</P>
                 <ClauseList items={[
-                  "Organizations must fund escrow before a Freelancer commences work.",
-                  "Funds held in escrow are released to the Freelancer upon the Organization marking the project as complete.",
-                  "If a project is abandoned without resolution, funds remain in escrow pending dispute resolution.",
-                  "changeworker does not pay interest on escrowed funds.",
+                  "Payments are processed through Paystack and linked platform payment flows.",
+                  "Milestones, final submissions, approvals, and payouts may be tracked through the workspace.",
+                  "If a project is paused or disputed, payment handling may be delayed while the issue is reviewed.",
+                  "changeworker may update payment mechanics as the platform evolves.",
                 ]} />
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-6 mb-3">6.3 Refunds & Disputes</h3>
-                <P>Refunds are not automatically issued. If an Organization believes work was not delivered to the agreed standard, they must raise a formal dispute within <strong>7 days</strong> of receiving deliverables. Disputes are resolved through our internal mediation process described in Section 9.</P>
-                <P>changeworker reserves the right to make final binding decisions on disputes where parties cannot agree, including partial refunds, full refunds, or payment release to the Freelancer.</P>
+                <P>Refunds are not automatically issued. If an Organization believes work was not delivered to the agreed standard, they should raise a formal dispute through the platform so the relevant workspace history can be reviewed.</P>
+                <P>changeworker may review the available records and help the parties move toward an appropriate resolution, which can include further clarification, revised delivery, or payment adjustments where applicable.</P>
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-6 mb-3">6.4 Currency & Taxes</h3>
                 <P>All transactions on changeworker are conducted in <strong>Nigerian Naira (₦)</strong>. You are solely responsible for determining and fulfilling any tax obligations arising from your use of the platform, including but not limited to income tax, VAT, and WHT under Nigerian law.</P>
@@ -518,7 +518,7 @@ export default function TermsPage() {
                 <P>Parties are strongly encouraged to document IP ownership terms explicitly within their project agreements.</P>
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-6 mb-3">8.3 User Content</h3>
-                <P>By submitting content to changeworker — including profile information, work samples, project descriptions, and reviews — you grant changeworker a non-exclusive, royalty-free, worldwide licence to use, display, and distribute such content for the purpose of operating and promoting the platform.</P>
+                <P>By submitting content to changeworker - including profile information, work samples, project descriptions, and reviews - you grant changeworker a non-exclusive, royalty-free, worldwide licence to use, display, and distribute such content for the purpose of operating and promoting the platform.</P>
               </section>
 
               <Divider />
@@ -530,15 +530,15 @@ export default function TermsPage() {
                 <h3 className="font-display font-bold text-gray-900 text-base mt-2 mb-3">9.1 Internal Mediation</h3>
                 <P>In the event of a dispute between an Organization and a Freelancer, both parties agree to first attempt resolution through changeworker's internal mediation process:</P>
                 <ClauseList items={[
-                  "The aggrieved party raises a formal dispute via the platform within 7 days of the triggering event.",
-                  "changeworker assigns a resolution officer who reviews all relevant communications, deliverables, and project briefs.",
-                  "Both parties are given 5 business days to submit their position in writing.",
-                  "The resolution officer issues a binding recommendation within 10 business days.",
-                  "Either party may accept or escalate to formal arbitration within 3 days of the recommendation.",
+                  "The aggrieved party raises a formal dispute via the platform.",
+                  "changeworker reviews relevant communications, deliverables, and project records available in the workspace.",
+                  "Both parties may be asked to submit additional context or supporting information.",
+                  "We aim to help the parties reach a practical resolution based on the available records.",
+                  "Where needed, changeworker may pause payment actions while the dispute is being reviewed.",
                 ]} />
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-6 mb-3">9.2 Arbitration</h3>
-                <P>If internal mediation fails to resolve the dispute, both parties agree to resolve the matter through <strong>binding arbitration</strong> under the Lagos Court of Arbitration (LCA) Rules. The arbitration shall be conducted in English in Lagos, Nigeria. Each party bears their own legal costs unless the arbitrator orders otherwise.</P>
+                <P>If internal mediation does not resolve the dispute, the parties may pursue any further remedies available to them under applicable Nigerian law.</P>
 
                 <h3 className="font-display font-bold text-gray-900 text-base mt-6 mb-3">9.3 Governing Law</h3>
                 <P>These Terms are governed by and construed in accordance with the <strong>laws of the Federal Republic of Nigeria</strong>. To the extent that formal court proceedings are necessary, you consent to the exclusive jurisdiction of the courts of Lagos State, Nigeria.</P>

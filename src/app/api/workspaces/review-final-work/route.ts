@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
+import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
+import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
 
 export async function POST(req: Request) {
   try {
@@ -60,12 +62,24 @@ export async function POST(req: Request) {
       ? "Your final work has been approved! The workspace is now complete"
       : "Your final work needs revision"
 
+    const context = await getWorkspaceNotificationContext(workspaceId)
+
     await notifyUser({
       userId: workspace.talentUid,
       type: "final_work_approval",
       title: notificationTitle,
-      message: notificationMessage,
+      message:
+        decision === "approved"
+          ? `${context?.clientName || "Client"} approved your final work for ${context?.gigTitle || "this workspace"}.`
+          : `${context?.clientName || "Client"} requested changes to your final work for ${context?.gigTitle || "this workspace"}.`,
       link: `/dashboard/workspaces/${workspaceId}`,
+    })
+
+    await notifyAdmins({
+      type: "admin:workspace",
+      title: `Final work ${status}`,
+      message: `${context?.clientName || "Client"} ${status} final work in ${context?.gigTitle || "a workspace"} with ${context?.talentName || "the talent"}.`,
+      link: `/admin/workspaces/${workspaceId}`,
     })
 
     return NextResponse.json({ success: true })

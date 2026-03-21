@@ -198,7 +198,7 @@ export default function MessagesPage() {
                   <CardTitle className="text-base font-extrabold">Hiring flow</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm text-gray-600">
-                  Shortlist/Accept starts screening — final hiring happens inside chat via agreement signing.
+                  Shortlist/Accept starts screening - final hiring happens inside chat via agreement signing.
                 </CardContent>
               </Card>
             </div>

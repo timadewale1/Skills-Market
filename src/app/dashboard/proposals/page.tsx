@@ -61,7 +61,7 @@ function toDate(v: any): Date | null {
 }
 
 function timeAgo(d?: Date | null) {
-  if (!d) return "—"
+  if (!d) return "-"
   const diff = Date.now() - d.getTime()
   const sec = Math.floor(diff / 1000)
   if (sec < 10) return "just now"
@@ -171,7 +171,7 @@ export default function TalentProposalsHubPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold">Your proposals</h1>
             <p className="text-sm text-gray-600 mt-1">
-              Track proposals — edits lock once the client views your proposal.
+              Track proposals - edits lock once the client views your proposal.
             </p>
           </div>
 

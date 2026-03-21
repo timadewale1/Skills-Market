@@ -371,7 +371,7 @@ export default function PublicTalentProfilePage() {
                       <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                         <Star size={14} className="text-[var(--primary)]" />
                         <span className="font-semibold">
-                          {ratingAvg ? ratingAvg.toFixed(1) : "—"}
+                          {ratingAvg ? ratingAvg.toFixed(1) : "-"}
                         </span>
                         <span>({ratingCount || 0})</span>
                       </div>
@@ -385,7 +385,7 @@ export default function PublicTalentProfilePage() {
                             ? `₦${Number(
                                 data.publicProfile.hourlyRate
                               ).toLocaleString()}/hr`
-                            : "—"}
+                            : "-"}
                         </div>
                       </div>
 
@@ -476,7 +476,7 @@ export default function PublicTalentProfilePage() {
                         </span>
                       ))}
                       {!data.sdgTags?.length && (
-                        <div className="text-sm text-gray-600">—</div>
+                        <div className="text-sm text-gray-600">-</div>
                       )}
                     </div>
                   </div>
@@ -503,7 +503,7 @@ export default function PublicTalentProfilePage() {
                           <input type="radio" name="selectedGig" value={g.id} checked={selectedGigId === g.id} onChange={() => setSelectedGigId(g.id)} />
                           <div>
                             <div className="font-semibold">{g.title}</div>
-                            <div className="text-xs text-gray-500">{g.location || "—"}</div>
+                            <div className="text-xs text-gray-500">{g.location || "-"}</div>
                           </div>
                         </label>
                       ))}
@@ -690,7 +690,7 @@ export default function PublicTalentProfilePage() {
                             {e.qualification || "Qualification"}
                             {e.type ? ` • ${e.type}` : ""}{" "}
                             {e.startYear || e.endYear
-                              ? ` • ${e.startYear || "—"} – ${e.endYear || "—"}`
+                              ? ` • ${e.startYear || "-"} – ${e.endYear || "-"}`
                               : ""}
                           </div>
                         </div>
@@ -783,7 +783,7 @@ export default function PublicTalentProfilePage() {
                             {j.company ? ` • ${j.company}` : ""}
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
-                            {j.startYear || "—"} – {j.endYear || "—"}
+                            {j.startYear || "-"} – {j.endYear || "-"}
                           </div>
                           {!!j.responsibilities && (
                             <div className="text-sm text-gray-700 mt-2">

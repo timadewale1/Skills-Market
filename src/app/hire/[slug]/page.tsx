@@ -64,7 +64,7 @@ export default function HireRolePage({ params }: { params: { slug: string } }) {
     }
   }, [])
 
-  // Fetch talents for this category — depend on `slug` (primitive) and
+  // Fetch talents for this category - depend on `slug` (primitive) and
   // avoid running twice under React strict mode.
   const fetchedRef = useRef(false)
   useEffect(() => {

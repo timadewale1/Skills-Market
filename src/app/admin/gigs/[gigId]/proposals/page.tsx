@@ -1,16 +1,15 @@
 import Link from "next/link"
-import { getAdminDb } from "@/lib/firebaseAdmin"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import AdminPageHeader from "@/components/admin/AdminPageHeader"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { getAdminDb } from "@/lib/firebaseAdmin"
+
 export const dynamic = "force-dynamic"
 
 async function getProposalsForGig(gigId: string) {
   const db = getAdminDb()
   const snap = await db.collection("gigs").doc(gigId).collection("proposals").get()
-  return snap.docs.map((doc: any) => ({
-    id: doc.id,
-    ...doc.data(),
-  }))
+  return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
 }
 
 async function getGigTitle(gigId: string) {
@@ -19,91 +18,96 @@ async function getGigTitle(gigId: string) {
   return snap.data()?.title || "Gig"
 }
 
-function statusBadge(status: string) {
-  if (status === "submitted") return <Badge className="bg-orange-100 text-orange-900">Submitted</Badge>
-  if (status === "shortlisted") return <Badge className="bg-blue-100 text-blue-900">Shortlisted</Badge>
-  if (status === "accepted") return <Badge className="bg-green-100 text-green-900">Accepted</Badge>
-  if (status === "rejected") return <Badge className="bg-red-100 text-red-900">Rejected</Badge>
-  return <Badge>{status}</Badge>
-}
-
-export default async function AdminGigProposalsPage({ params }: { params: { gigId: string } }) {
-  const { gigId } = params
-  const proposals: any = await getProposalsForGig(gigId)
+export default async function AdminGigProposalsPage({
+  params,
+}: {
+  params: Promise<{ gigId: string }>
+}) {
+  const { gigId } = await params
+  const proposals: any[] = await getProposalsForGig(gigId)
   const gigTitle = await getGigTitle(gigId)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <Link href={`/admin/gigs/${gigId}`} className="text-blue-600 hover:underline mb-6 inline-block">
-          ← Back to {gigTitle}
-        </Link>
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Gig proposals"
+        title={`Proposals for ${gigTitle}`}
+        description="Review every proposal submitted for this gig, including who applied, their rate, and the current proposal state."
+        actions={
+          <Link
+            href={`/admin/gigs/${gigId}`}
+            className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+          >
+            Back to gig
+          </Link>
+        }
+        stats={[
+          { label: "Proposals", value: proposals.length },
+          { label: "Gig", value: gigTitle },
+          { label: "Scope", value: "Single gig" },
+          { label: "Latest", value: "Realtime" },
+        ]}
+      />
 
-        <h1 className="text-3xl font-extrabold text-gray-900">Proposals for "{gigTitle}"</h1>
-        <p className="text-gray-600 mt-2">Manage all proposals submitted for this gig</p>
-
-        <div className="mt-8 space-y-4">
-          {proposals.length === 0 ? (
-            <Card className="rounded-xl">
-              <CardContent className="p-8 text-center text-gray-600">
-                No proposals found
-              </CardContent>
-            </Card>
-          ) : (
-            proposals.map((p: any) => (
-              <Card key={p.id} className="rounded-xl hover:shadow-md transition">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap mb-3">
-                        <h3 className="text-lg font-extrabold text-gray-900">
-                          {p.talentName || p.talentUid}
-                        </h3>
-                        {statusBadge(p.status)}
-                      </div>
-
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-3">{p.coverLetter}</p>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500 font-semibold">Talent</span>
-                          <Link href={`/admin/talents/${p.talentUid}`} className="text-blue-600 hover:underline block">
-                            {p.talentName || p.talentUid}
-                          </Link>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 font-semibold">Proposed Rate</span>
-                          <p className="text-gray-900 font-semibold">
-                            {p.proposedRate ? `₦${Number(p.proposedRate).toLocaleString()}` : "N/A"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 font-semibold">Duration</span>
-                          <p className="text-gray-900 font-semibold">{p.proposedDuration || "N/A"}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 font-semibold">Submitted</span>
-                          <p className="text-gray-900 font-semibold">
-                            {p.createdAt?.toDate?.().toLocaleDateString() || "N/A"}
-                          </p>
-                        </div>
-                      </div>
+      <div className="space-y-4">
+        {proposals.length === 0 ? (
+          <Card className="rounded-[1.75rem] border-0 shadow-sm">
+            <CardContent className="p-10 text-center text-gray-600">No proposals found.</CardContent>
+          </Card>
+        ) : (
+          proposals.map((proposal) => (
+            <Card key={proposal.id} className="rounded-[1.75rem] border-0 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-lg font-extrabold text-gray-900">
+                        {proposal.talentName || proposal.talentUid || "Unknown talent"}
+                      </h2>
+                      <Badge className="bg-orange-50 text-[var(--primary)] hover:bg-orange-50">
+                        {proposal.status || "submitted"}
+                      </Badge>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition text-sm">
-                        Review
-                      </button>
-                      <button className="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm">
-                        Delete
-                      </button>
+                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">
+                      {proposal.coverLetter || "No cover letter provided."}
+                    </p>
+
+                    <div className="mt-4 grid gap-4 text-sm md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <div className="font-semibold text-gray-500">Talent</div>
+                        <div className="mt-1 text-gray-900">{proposal.talentName || proposal.talentUid || "N/A"}</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-500">Rate</div>
+                        <div className="mt-1 text-gray-900">
+                          {proposal.proposedRate ? `N${Number(proposal.proposedRate).toLocaleString()}` : "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-500">Duration</div>
+                        <div className="mt-1 text-gray-900">{proposal.proposedDuration || "N/A"}</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-500">Submitted</div>
+                        <div className="mt-1 text-gray-900">
+                          {proposal.createdAt?.toDate?.().toLocaleDateString() || "N/A"}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+
+                  <Link
+                    href={`/admin/proposals/${gigId}/${proposal.id}`}
+                    className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    View proposal
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   )

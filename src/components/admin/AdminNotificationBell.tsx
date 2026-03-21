@@ -2,31 +2,36 @@
 
 import { useEffect, useState } from "react"
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { useAuth } from "@/context/AuthContext"
 import { Bell } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import { db } from "@/lib/firebase"
+import { useAuth } from "@/context/AuthContext"
+import {
+  formatNotificationType,
+  getNotificationMeta,
+  isAdminNotification,
+} from "@/lib/notifications/presentation"
+import {
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/lib/notifications/client"
 
 export default function AdminNotificationBell() {
   const { user } = useAuth()
   const [notifications, setNotifications] = useState<any[]>([])
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
     if (!user) return
 
-    const q = query(
-      collection(db, "notifications"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    )
-
+    const q = query(collection(db, "notifications"), where("userId", "==", user.uid), orderBy("createdAt", "desc"))
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }))
-      setNotifications(data)
+      setNotifications(data.filter((item: any) => isAdminNotification(item.type)))
     })
 
     return () => unsub()
@@ -34,99 +39,104 @@ export default function AdminNotificationBell() {
 
   const unread = notifications.filter((n) => !n.read).length
 
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-
   const markAsRead = async (id: string) => {
     try {
-      await fetch("/api/notifications/mark-read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId: id }),
-      })
+      await markNotificationRead(id)
     } catch (err) {
       console.error("mark-read error:", err)
     }
   }
 
   return (
-    <div className="relative">
+    <div className="relative inline-block">
       <motion.button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        animate={unread > 0 ? { scale: [1, 1.1, 1] } : {}}
-        transition={{ repeat: unread > 0 ? Infinity : 0, duration: 1 }}
-        className="relative p-2 rounded-full hover:bg-orange-100 transition"
+        animate={unread > 0 ? { scale: [1, 1.08, 1] } : {}}
+        transition={{ repeat: unread > 0 ? Infinity : 0, duration: 1.2 }}
+        className="relative rounded-full p-2 transition hover:bg-orange-100"
         title="Admin Notifications"
       >
         <Bell size={20} className="text-[var(--primary)]" />
-        {unread > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+        {unread > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
             {unread > 9 ? "9+" : unread}
           </span>
-        )}
+        ) : null}
       </motion.button>
 
-      {dropdownOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-          <div className="p-4 border-b sticky top-0 bg-white">
-            <h3 className="font-bold text-lg text-gray-900">Admin Notifications</h3>
-            <span className="text-xs text-gray-500">{unread} unread</span>
+      {dropdownOpen ? (
+        <div className="fixed sm:absolute left-0 right-0 top-auto sm:left-auto sm:right-0 z-50 m-2 sm:m-0 sm:mt-2 w-[calc(100%-1rem)] sm:w-[26rem] overflow-y-auto rounded-[1.5rem] border bg-white shadow-xl" style={{ maxHeight: '80vh' }}>
+          <div className="sticky top-0 border-b bg-white px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-base font-extrabold text-gray-900">Admin Notifications</div>
+                <div className="text-xs text-gray-500">{unread} unread</div>
+              </div>
+              {unread > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void markAllNotificationsRead()}
+                  className="text-xs font-semibold text-[var(--primary)] transition hover:text-orange-700"
+                >
+                  Mark all read
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {notifications.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
               <Bell size={32} className="mx-auto mb-2 text-gray-400" />
-              <p>No notifications yet</p>
+              <p>No admin notifications yet</p>
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.slice(0, 15).map((n) => (
-                <div
-                  key={n.id}
-                  className={`p-4 hover:bg-gray-50 cursor-pointer transition border-l-4 ${
-                    !n.read
-                      ? "bg-blue-50 border-l-[var(--primary)]"
-                      : "border-l-transparent"
-                  }`}
-                  onClick={() => {
-                    if (!n.read) markAsRead(n.id)
-                    if (n.link) window.location.href = n.link
-                    setDropdownOpen(false)
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm">
-                        {n.title}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                        {n.message}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        {n.createdAt
-                          ? new Date(n.createdAt.toDate()).toLocaleDateString()
-                          : ""}
-                      </p>
+              {notifications.slice(0, 3).map((n) => {
+                const meta = getNotificationMeta(n.type)
+                const Icon = meta.Icon
+                return (
+                  <div
+                    key={n.id}
+                    className={`cursor-pointer border-l-4 px-5 py-4 transition hover:bg-gray-50 ${n.read ? "border-l-transparent" : meta.borderClass}`}
+                    onClick={() => {
+                      if (!n.read) void markAsRead(n.id)
+                      if (n.link) window.location.href = n.link
+                      setDropdownOpen(false)
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${meta.chipClass}`}>
+                            <Icon size={12} />
+                            {meta.label}
+                          </div>
+                          {!n.read ? <span className="h-2 w-2 rounded-full bg-blue-500" /> : null}
+                        </div>
+                        <div className="mt-2 font-semibold text-gray-900">{n.title}</div>
+                        <div className="mt-1 line-clamp-2 text-sm text-gray-600">{n.message}</div>
+                        <div className="mt-2 text-xs text-gray-400">
+                          {formatNotificationType(n.type)} · {n.createdAt ? new Date(n.createdAt.toDate()).toLocaleDateString() : "N/A"}
+                        </div>
+                      </div>
                     </div>
-                    {!n.read && (
-                      <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)] flex-shrink-0 mt-1" />
-                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
-          <div className="p-3 border-t sticky bottom-0 bg-white">
+          <div className="sticky bottom-0 border-t bg-white px-5 py-3">
             <Link
               href="/admin/notifications"
-              className="block text-center text-sm font-semibold text-[var(--primary)] hover:text-orange-700 transition"
+              className="block text-center text-sm font-semibold text-[var(--primary)] transition hover:text-orange-700"
               onClick={() => setDropdownOpen(false)}
             >
-              View All Notifications →
+              View all admin notifications
             </Link>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

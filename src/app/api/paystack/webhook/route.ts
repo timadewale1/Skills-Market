@@ -5,6 +5,7 @@ import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
+import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
 
 export const runtime = "nodejs"
 
@@ -139,12 +140,14 @@ export async function POST(req: Request) {
     const clientUid = ws?.clientUid
     const talentUid = ws?.talentUid
 
+    const context = await getWorkspaceNotificationContext(wsId)
+
     if (clientUid) {
       await notifyUser({
         userId: clientUid,
         type: "workspace_funded",
         title: "Workspace funded",
-        message: "Your workspace payment has been confirmed and work can now begin",
+        message: `Your payment for ${context?.gigTitle || "this workspace"} has been confirmed and work can now begin.`,
         link: `/dashboard/workspaces/${wsId}`,
       })
     }
@@ -154,7 +157,7 @@ export async function POST(req: Request) {
         userId: talentUid,
         type: "workspace_funded",
         title: "Workspace funded",
-        message: "The workspace has been funded and you can now start work",
+        message: `${context?.clientName || "Client"} funded ${context?.gigTitle || "your workspace"} and you can now start work.`,
         link: `/dashboard/workspaces/${wsId}`,
       })
     }
@@ -164,7 +167,7 @@ export async function POST(req: Request) {
       await notifyAdmins({
         type: "admin:workspace",
         title: "Workspace funded",
-        message: `Workspace ${wsId} has been funded`,
+        message: `${context?.clientName || "Client"} funded ${context?.gigTitle || "a workspace"} with ${context?.talentName || "the talent"}.`,
         link: `/admin/workspaces/${wsId}`,
       })
     } catch (err) {

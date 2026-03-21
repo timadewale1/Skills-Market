@@ -8,6 +8,56 @@ import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
 export const runtime = "nodejs"
 
+async function parsePaystackResponse(resp: Response) {
+  const text = await resp.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return {
+      status: false,
+      message: text || "Paystack returned an invalid response",
+    }
+  }
+}
+
+async function createTransferRecipient(secret: string, bank: any) {
+  const recipientResp = await fetch("https://api.paystack.co/transferrecipient", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "nuban",
+      name: bank.accountName,
+      account_number: bank.accountNumber,
+      bank_code: bank.bankCode,
+      currency: "NGN",
+    }),
+  })
+
+  const recipientJson = await parsePaystackResponse(recipientResp)
+  if (!recipientResp.ok || !recipientJson?.status || !recipientJson?.data?.recipient_code) {
+    throw new Error(recipientJson?.message || "Unable to create transfer recipient")
+  }
+
+  return String(recipientJson.data.recipient_code)
+}
+
+async function initiateTransfer(secret: string, recipientCode: string, amountNaira: number, withdrawalId: string) {
+  const transferResp = await fetch("https://api.paystack.co/transfer", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source: "balance",
+      amount: Math.round(amountNaira * 100),
+      recipient: recipientCode,
+      reason: "changeworker withdrawal",
+      reference: withdrawalId,
+    }),
+  })
+
+  const transferJson = await parsePaystackResponse(transferResp)
+  return { transferResp, transferJson }
+}
+
 export async function POST(req: Request) {
   try {
     const adminDb = getAdminDb()
@@ -74,19 +124,43 @@ export async function POST(req: Request) {
     const wSnap2 = await walletRef.get()
     const w2 = wSnap2.data() as any
 
-    const transferResp = await fetch("https://api.paystack.co/transfer", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        source: "balance",
-        amount: Math.round(amountNaira * 100),
-        recipient: w2.bank.recipientCode,
-        reason: "changeworker withdrawal",
-        reference: withdrawalId,
-      }),
-    })
+    let recipientCode = String(w2?.bank?.recipientCode || "")
+    if (!recipientCode && w2?.bank?.accountNumber && w2?.bank?.bankCode && w2?.bank?.accountName) {
+      recipientCode = await createTransferRecipient(secret, w2.bank)
+      await walletRef.set(
+        {
+          bank: {
+            ...w2.bank,
+            recipientCode,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      )
+    }
 
-    const transferJson = await transferResp.json()
+    let { transferResp, transferJson } = await initiateTransfer(secret, recipientCode, amountNaira, withdrawalId)
+
+    if (
+      (!transferResp.ok || !transferJson?.status) &&
+      String(transferJson?.message || "").toLowerCase().includes("recipient") &&
+      w2?.bank?.accountNumber &&
+      w2?.bank?.bankCode &&
+      w2?.bank?.accountName
+    ) {
+      recipientCode = await createTransferRecipient(secret, w2.bank)
+      await walletRef.set(
+        {
+          bank: {
+            ...w2.bank,
+            recipientCode,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      )
+      ;({ transferResp, transferJson } = await initiateTransfer(secret, recipientCode, amountNaira, withdrawalId))
+    }
 
     if (!transferResp.ok || !transferJson?.status) {
       // rollback pending -> available
@@ -101,12 +175,19 @@ export async function POST(req: Request) {
         tx.update(walletRef.collection("withdrawals").doc(withdrawalId), {
           status: "failed",
           error: transferJson,
+          errorMessage: transferJson?.message || "Transfer failed",
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         })
         tx.update(walletRef.collection("transactions").doc(withdrawalId), { status: "failed" })
       })
 
-      return NextResponse.json({ error: "Transfer failed", details: transferJson }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: transferJson?.message || "Transfer failed",
+          details: transferJson,
+        },
+        { status: 400 }
+      )
     }
 
     await walletRef.collection("withdrawals").doc(withdrawalId).set(

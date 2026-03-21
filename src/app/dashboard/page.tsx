@@ -7,7 +7,7 @@ import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
-import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from "firebase/firestore"
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Briefcase,
@@ -45,10 +45,16 @@ type UserDoc = {
   }
   talent?: { roleTitle?: string }
   client?: { orgName?: string }
-  wallet?: {
-    totalEarned?: number
-    totalDeposited?: number
-  }
+  wallet?: { totalEarned?: number; totalDeposited?: number; totalSpent?: number }
+}
+
+type ActivityItem = {
+  id: string
+  type: "gig" | "proposal" | "workspace" | "thread" | "wallet"
+  title: string
+  description: string
+  href: string
+  createdAt?: any
 }
 
 const fadeUp = {
@@ -70,6 +76,23 @@ const floaty = {
     repeat: Infinity,
     ease: "easeInOut" as const,
   },
+}
+
+function toMillis(value: any) {
+  if (!value) return 0
+  if (typeof value?.toMillis === "function") return value.toMillis()
+  if (typeof value?.toDate === "function") return value.toDate().getTime()
+  if (value instanceof Date) return value.getTime()
+  if (typeof value === "number") return value
+  return 0
+}
+
+function sortByRecent<T extends { createdAt?: any; updatedAt?: any }>(items: T[]) {
+  return [...items].sort((a, b) => {
+    const aTime = toMillis(a.updatedAt || a.createdAt)
+    const bTime = toMillis(b.updatedAt || b.createdAt)
+    return bTime - aTime
+  })
 }
 
 export default function DashboardPage() {
@@ -99,8 +122,7 @@ export default function DashboardPage() {
   // Workspaces count
   const [workspacesCount, setWorkspacesCount] = useState(0)
 
-  // Recent activities
-  const [recentActivities, setRecentActivities] = useState<any[]>([])
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
 
   useEffect(() => {
     const run = async () => {
@@ -118,67 +140,56 @@ export default function DashboardPage() {
       const rAvg = Number(data?.rating?.avg || 0)
       const rCount = Number(data?.rating?.count || 0)
 
-      // Fetch counts for stats
       let activeProposals = 0
       let openGigs = 0
       let messages = 0
       let workspaces = 0
+      let suggestedCount = 0
 
-      if (role === "talent") {
-        // For talent, active proposals count - since proposals are subcollections, set to 0 for now
-        activeProposals = 0
-      } else {
-        try {
-          const gigsQuery = query(collection(db, "gigs"), where("clientUid", "==", user.uid))
-          const gigsSnap = await getDocs(gigsQuery)
-          openGigs = gigsSnap.docs.filter((doc) => doc.data().status === "open").length
-        } catch (error) {
-          console.error('Error fetching gigs:', error)
-          openGigs = 0
-        }
-      }
+      const [threadsResult, workspacesResult, walletResult, gigsResult, proposalsIndexResult, walletTxResult] =
+        await Promise.allSettled([
+          getDocs(query(collection(db, "threads"), where("participants", "array-contains", user.uid))),
+          getDocs(
+            query(
+              collection(db, "workspaces"),
+              where(role === "talent" ? "talentUid" : "clientUid", "==", user.uid)
+            )
+          ),
+          getDoc(doc(db, "wallets", user.uid)),
+          role === "client"
+            ? getDocs(query(collection(db, "gigs"), where("clientUid", "==", user.uid)))
+            : Promise.resolve(null),
+          role === "talent"
+            ? getDocs(collection(db, "users", user.uid, "proposals"))
+            : Promise.resolve(null),
+          getDocs(collection(db, "wallets", user.uid, "transactions")),
+        ])
 
-      // Fetch messages count - count threads where user is participant
-      try {
-        const threadsQuery = query(collection(db, "threads"), where("participants", "array-contains", user.uid))
-        const threadsSnap = await getDocs(threadsQuery)
-        messages = threadsSnap.size
-      } catch (error) {
-        console.error('Error fetching threads:', error)
-        messages = 0
-      }
+      const threadsDocs = threadsResult.status === "fulfilled" ? threadsResult.value.docs : []
+      const workspaceDocs = workspacesResult.status === "fulfilled" ? workspacesResult.value.docs : []
+      const walletDoc = walletResult.status === "fulfilled" ? walletResult.value : null
+      const gigsDocs = gigsResult.status === "fulfilled" && gigsResult.value ? gigsResult.value.docs : []
+      const proposalIndexDocs =
+        proposalsIndexResult.status === "fulfilled" && proposalsIndexResult.value ? proposalsIndexResult.value.docs : []
+      const walletTxDocs = walletTxResult.status === "fulfilled" ? walletTxResult.value.docs : []
 
-      // Fetch workspaces count
-      try {
-        let workspacesQuery
-        if (role === "talent") {
-          workspacesQuery = query(collection(db, "workspaces"), where("talentUid", "==", user.uid))
-        } else {
-          workspacesQuery = query(collection(db, "workspaces"), where("clientUid", "==", user.uid))
-        }
-        const workspacesSnap = await getDocs(workspacesQuery)
-        workspaces = workspacesSnap.size
-      } catch (error) {
-        console.error('Error fetching workspaces:', error)
-        workspaces = 0
-      }
+      messages = threadsDocs.length
+      workspaces = workspaceDocs.length
+      openGigs = gigsDocs.filter((gigDoc) => String(gigDoc.data()?.status || "").toLowerCase() === "open").length
 
       // Fetch wallet total from wallets collection
-      let earned = 0
-      let deposited = 0
-      try {
-        const walletDoc = await getDoc(doc(db, "wallets", user.uid))
-        if (walletDoc.exists()) {
-          earned = Number(walletDoc.data()?.totalEarned || 0)
-          deposited = Number(walletDoc.data()?.totalDeposited || 0)
-          console.log('Wallet data fetched:', { earned, deposited })
-        }
-      } catch (error) {
-        console.error('Error fetching wallet:', error)
-        earned = Number(data?.wallet?.totalEarned || 0)
-        deposited = Number(data?.wallet?.totalDeposited || 0)
-      }
-      const total = role === "client" ? deposited : earned
+      const walletData = walletDoc?.exists() ? walletDoc.data() : null
+      const earned =
+        Number(walletData?.totalEarned || 0) ||
+        Number(walletData?.availableBalance || 0) +
+          Number(walletData?.pendingBalance || 0) +
+          Number(walletData?.totalWithdrawn || 0) ||
+        Number(data?.wallet?.totalEarned || 0)
+      const funded =
+        Number(walletData?.totalSpent || 0) ||
+        workspaceDocs.reduce((sum, docSnap) => sum + Number(docSnap.data()?.payment?.amount || 0), 0) ||
+        Number(data?.wallet?.totalSpent || data?.wallet?.totalDeposited || 0)
+      const total = role === "client" ? funded : earned
       animate(0, total, {
         duration: 0.9,
         onUpdate: (v) => setWalletTotal(Math.round(v)),
@@ -204,6 +215,7 @@ export default function DashboardPage() {
             location: data?.location || "",
           }
           const matched = matchTalentsToClient(allTalents, clientCriteria)
+          suggestedCount = matched.length
           const talentRows: TalentRow[] = matched.slice(0, 8).map((t) => ({
             uid: t.uid,
             slug: t.slug,
@@ -240,6 +252,7 @@ export default function DashboardPage() {
             location: data?.location || "",
           }
           const matched = matchGigsToTalent(allGigs, talentCriteria)
+          suggestedCount = matched.length
           setSuggestedGigs(matched.slice(0, 8))
         } catch (error) {
           console.error("Failed to fetch suggested gigs:", error)
@@ -248,28 +261,29 @@ export default function DashboardPage() {
         }
       }
 
-      // Set stat targets and animate - using setTimeout to ensure promised values are ready
-      setTimeout(() => {
-        let aTarget = 0
-        let bTarget = 0
-        let cTarget = 0
+      if (role === "talent" && proposalIndexDocs.length) {
+        const proposalStatuses = await Promise.all(
+          proposalIndexDocs.map(async (proposalDoc) => {
+            try {
+              const proposalSnap = await getDoc(doc(db, "gigs", proposalDoc.id, "proposals", user.uid))
+              return String(proposalSnap.data()?.status || "submitted").toLowerCase()
+            } catch {
+              return "submitted"
+            }
+          })
+        )
+        activeProposals = proposalStatuses.filter((status) =>
+          ["submitted", "shortlisted", "accepted"].includes(status)
+        ).length
+      }
 
-        if (role === "talent") {
-          aTarget = suggestedGigs.length
-          bTarget = activeProposals
-          cTarget = messages
-          console.log('Talent stats:', { suggested: aTarget, proposals: bTarget, messages: cTarget })
-        } else {
-          aTarget = suggestedTalents.length
-          bTarget = openGigs
-          cTarget = messages
-          console.log('Client stats:', { suggested: aTarget, gigs: bTarget, messages: cTarget })
-        }
+      const aTarget = suggestedCount
+      const bTarget = role === "talent" ? activeProposals : openGigs
+      const cTarget = messages
 
-        animate(0, aTarget, { duration: 0.8, onUpdate: (v) => setStatA(Math.round(v)) })
-        animate(0, bTarget, { duration: 0.9, onUpdate: (v) => setStatB(Math.round(v)) })
-        animate(0, cTarget, { duration: 1.0, onUpdate: (v) => setStatC(Math.round(v)) })
-      }, 500)
+      animate(0, aTarget, { duration: 0.8, onUpdate: (v) => setStatA(Math.round(v)) })
+      animate(0, bTarget, { duration: 0.9, onUpdate: (v) => setStatB(Math.round(v)) })
+      animate(0, cTarget, { duration: 1.0, onUpdate: (v) => setStatC(Math.round(v)) })
 
       // Workspaces count
       animate(0, workspaces, { duration: 0.8, onUpdate: (v) => setWorkspacesCount(Math.round(v)) })
@@ -277,27 +291,102 @@ export default function DashboardPage() {
       // Fetch recent activities
       try {
         if (role === "talent") {
-          try {
-            const workspacesQuery = query(collection(db, "workspaces"), where("talentUid", "==", user.uid), orderBy("createdAt", "desc"), limit(5))
-            const snap = await getDocs(workspacesQuery)
-            const activities = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), type: "workspace" }))
-            console.log('Talent activities:', activities)
-            setRecentActivities(activities)
-          } catch (error) {
-            console.error('Error fetching workspaces for activities:', error)
-            setRecentActivities([])
-          }
+          const proposalActivities: ActivityItem[] = proposalIndexDocs.map((proposalDoc) => ({
+            id: proposalDoc.id,
+            type: "proposal",
+            title: (proposalDoc.data() as any)?.title || "Proposal updated",
+            description: `Proposal status: ${String((proposalDoc.data() as any)?.status || "submitted")}`,
+            href: `/dashboard/proposals/${proposalDoc.id}`,
+            createdAt: (proposalDoc.data() as any)?.updatedAt || (proposalDoc.data() as any)?.createdAt,
+          }))
+
+          const workspaceActivities: ActivityItem[] = workspaceDocs.map((workspaceDoc) => {
+            const workspace = workspaceDoc.data() as any
+            return {
+              id: workspaceDoc.id,
+              type: "workspace",
+              title: workspace.gigTitle || "Workspace updated",
+              description: `Workspace status: ${workspace.status || "active"}`,
+              href: `/dashboard/workspaces/${workspaceDoc.id}`,
+              createdAt: workspace.updatedAt || workspace.createdAt,
+            }
+          })
+
+          const threadActivities: ActivityItem[] = threadsDocs.map((threadDoc) => {
+            const thread = threadDoc.data() as any
+            return {
+              id: threadDoc.id,
+              type: "thread",
+              title: thread.gigTitle || "New conversation activity",
+              description: thread.lastMessageText || `Conversation with ${thread.clientName || "client"}`,
+              href: `/dashboard/messages/${thread.threadId || threadDoc.id}`,
+              createdAt: thread.updatedAt || thread.lastMessageAt,
+            }
+          })
+
+          const walletActivities: ActivityItem[] = walletTxDocs.map((txDoc) => {
+            const tx = txDoc.data() as any
+            return {
+              id: txDoc.id,
+              type: "wallet",
+              title: tx.reason ? `Wallet ${String(tx.reason).replace(/_/g, " ")}` : "Wallet update",
+              description: `₦${Number(tx.amount || 0).toLocaleString()} • ${tx.status || "pending"}`,
+              href: "/dashboard/wallet",
+              createdAt: tx.createdAt || tx.updatedAt,
+            }
+          })
+
+          setRecentActivities(sortByRecent([...proposalActivities, ...workspaceActivities, ...threadActivities, ...walletActivities]).slice(0, 6))
         } else {
-          try {
-            const gigsQuery = query(collection(db, "gigs"), where("clientUid", "==", user.uid), orderBy("createdAt", "desc"), limit(5))
-            const snap = await getDocs(gigsQuery)
-            const activities = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), type: "gig" }))
-            console.log('Client activities:', activities)
-            setRecentActivities(activities)
-          } catch (error) {
-            console.error('Error fetching gigs for activities:', error)
-            setRecentActivities([])
-          }
+          const gigActivities: ActivityItem[] = gigsDocs.map((gigDoc) => {
+            const gig = gigDoc.data() as any
+            return {
+              id: gigDoc.id,
+              type: "gig",
+              title: gig.title || "Gig updated",
+              description: `Gig status: ${gig.status || "draft"}`,
+              href: `/dashboard/gigs/${gigDoc.id}`,
+              createdAt: gig.updatedAt || gig.createdAt,
+            }
+          })
+
+          const workspaceActivities: ActivityItem[] = workspaceDocs.map((workspaceDoc) => {
+            const workspace = workspaceDoc.data() as any
+            return {
+              id: workspaceDoc.id,
+              type: "workspace",
+              title: workspace.gigTitle || "Workspace updated",
+              description: `Workspace status: ${workspace.status || "active"}`,
+              href: `/dashboard/workspaces/${workspaceDoc.id}`,
+              createdAt: workspace.updatedAt || workspace.createdAt,
+            }
+          })
+
+          const threadActivities: ActivityItem[] = threadsDocs.map((threadDoc) => {
+            const thread = threadDoc.data() as any
+            return {
+              id: threadDoc.id,
+              type: "thread",
+              title: thread.gigTitle || "Conversation updated",
+              description: thread.lastMessageText || `Conversation with ${thread.talentName || "talent"}`,
+              href: `/dashboard/messages/${thread.threadId || threadDoc.id}`,
+              createdAt: thread.updatedAt || thread.lastMessageAt,
+            }
+          })
+
+          const walletActivities: ActivityItem[] = walletTxDocs.map((txDoc) => {
+            const tx = txDoc.data() as any
+            return {
+              id: txDoc.id,
+              type: "wallet",
+              title: tx.reason ? `Payment ${String(tx.reason).replace(/_/g, " ")}` : "Wallet update",
+              description: `₦${Number(tx.amount || 0).toLocaleString()} • ${tx.status || "pending"}`,
+              href: "/dashboard/wallet",
+              createdAt: tx.createdAt || tx.updatedAt,
+            }
+          })
+
+          setRecentActivities(sortByRecent([...gigActivities, ...workspaceActivities, ...threadActivities, ...walletActivities]).slice(0, 6))
         }
       } catch (error) {
         console.error('Error in recent activities:', error)
@@ -452,7 +541,7 @@ export default function DashboardPage() {
 
               <div className="flex-1">
                 <span className="font-extrabold text-gray-900">Impact-first matching</span>{" "}
-                — gigs and talent are organized by SDGs, location, and budget.
+                - gigs and talent are organized by SDGs, location, and budget.
               </div>
 
               <div className="hidden md:block text-xs font-semibold text-gray-600">
@@ -637,17 +726,17 @@ export default function DashboardPage() {
             ₦{walletTotal.toLocaleString()}
           </div>
           <div className="text-xs font-semibold text-gray-500">
-            {role === "client" ? "Total deposited" : "Total earned"}
+            {role === "client" ? "Total funded" : "Total earned"}
           </div>
         </div>
       </div>
 
       <div className="mt-3 font-extrabold">Wallet</div>
-      <div className="text-sm text-gray-600 mt-1">
-        {role === "client"
-          ? "Your deposits will show here for escrow and payouts."
+        <div className="text-sm text-gray-600 mt-1">
+          {role === "client"
+          ? "Your funded workspace amounts will show here for escrow and payouts."
           : "Your earnings will show here after completed gigs."}
-      </div>
+        </div>
 
       <div className="mt-4">
         <Link
@@ -791,7 +880,7 @@ export default function DashboardPage() {
                                       <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                                         <span className="inline-flex items-center gap-1">
                                           <MapPin size={14} />
-                                          {gig.workMode === "Remote" ? "Remote" : gig.location || "—"}
+                                          {gig.workMode === "Remote" ? "Remote" : gig.location || "-"}
                                         </span>
                                         <span className="mx-1">•</span>
                                         <span>
@@ -852,7 +941,7 @@ export default function DashboardPage() {
                 {recentActivities.length === 0 ? (
                   <div className="flex items-center justify-between">
                     <div>
-                      No activity yet — once you apply to gigs / post gigs, you’ll see them here.
+                      No activity yet - once you apply to gigs / post gigs, you’ll see them here.
                     </div>
                     <span className="hidden md:inline text-xs font-semibold text-gray-500">
                       Coming soon
@@ -860,31 +949,30 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {recentActivities.map((activity, index) => (
+                    {recentActivities.slice(0, 5).map((activity, index) => (
                       <Link
                         key={activity.id}
-                        href={
-                          activity.type === "workspace"
-                            ? `/dashboard/workspaces/${activity.id}`
-                            : `/dashboard/gigs/${activity.id}`
-                        }
+                        href={activity.href}
                         className="block"
                       >
                         <Card className="p-3 hover:bg-gray-50 transition-colors">
                           <div className="flex items-center gap-3">
                             {activity.type === "workspace" ? (
                               <FolderOpen size={20} className="text-[var(--primary)]" />
+                            ) : activity.type === "proposal" ? (
+                              <TrendingUp size={20} className="text-[var(--primary)]" />
+                            ) : activity.type === "thread" ? (
+                              <MessageSquare size={20} className="text-[var(--primary)]" />
+                            ) : activity.type === "wallet" ? (
+                              <Wallet size={20} className="text-[var(--primary)]" />
                             ) : (
                               <Briefcase size={20} className="text-[var(--primary)]" />
                             )}
                             <div className="flex-1">
-                              <p className="font-medium text-gray-900">
-                                {activity.type === "workspace"
-                                  ? `Joined workspace: ${activity.gigTitle || "Unknown"}`
-                                  : `Posted gig: ${activity.title || "Unknown"}`}
-                              </p>
+                              <p className="font-medium text-gray-900">{activity.title}</p>
+                              <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
                               <p className="text-xs text-gray-500">
-                                {activity.createdAt?.toDate?.()?.toLocaleDateString() || "Recent"}
+                                {(activity.createdAt?.toDate?.() || (activity.createdAt instanceof Date ? activity.createdAt : null))?.toLocaleDateString() || "Recent"}
                               </p>
                             </div>
                             <ArrowRight size={16} className="text-gray-400" />
@@ -969,7 +1057,7 @@ function RatingsCard({
 
             <div className="text-right">
               <div className="text-2xl font-extrabold">
-                {avg ? avg.toFixed(1) : "—"}
+                {avg ? avg.toFixed(1) : "-"}
               </div>
               <div className="text-xs font-semibold text-gray-500">
                 {count ? `${count} review${count === 1 ? "" : "s"}` : "No reviews yet"}

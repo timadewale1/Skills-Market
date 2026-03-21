@@ -45,10 +45,10 @@ export default function TestCarousel({ inView, testimonials }: { inView: boolean
   // Handle different data structures
   const isRealReview = t.id !== undefined
   const quote = isRealReview ? t.comment : t.q
-  const name = isRealReview ? (t.reviewerName || 'User') : t.name
-  const role = isRealReview ? (t.reviewerRole === 'client' ? 'Client' : 'Talent') : (t.role || 'User')
-  const org = isRealReview ? (t.reviewerOrg || '') : t.org
-  const stars = isRealReview ? Math.max(0, Math.min(5, Math.floor((((t.easeOfUse || 0) + (t.support || 0) + (t.value || 0)) / 3) || 5))) : (t.stars || 5)
+  const name = isRealReview ? t.userName : t.name
+  const role = isRealReview ? (t.fromRole === 'client' ? 'Client' : 'Talent') : (t.role || 'User')
+  const profileImage = isRealReview ? t.userProfileImage : null
+  const stars = isRealReview ? Math.max(0, Math.min(5, Math.floor((((t.easeOfUseRating || 0) + (t.supportRating || 0) + (t.valueRating || 0)) / 3) || 5))) : (t.stars || 5)
   
   // Assign color based on index for variety
   const colorIndex = active % REVIEW_COLORS.length
@@ -63,11 +63,19 @@ export default function TestCarousel({ inView, testimonials }: { inView: boolean
         </div>
         <p className="font-display font-normal text-gray-700 text-lg leading-relaxed mb-8 max-w-xl">"{quote}"</p>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black font-display"
-            style={{background:`linear-gradient(135deg,${color},${color}88)`}}>{name[0]?.toUpperCase() || 'U'}</div>
+          {profileImage ? (
+            <img 
+              src={profileImage} 
+              alt={name}
+              className="w-12 h-12 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black font-display"
+              style={{background:`linear-gradient(135deg,${color},${color}88)`}}>{name?.[0]?.toUpperCase() || 'U'}</div>
+          )}
           <div>
             <p className="font-display font-bold text-gray-900">{name}</p>
-            <p className="text-gray-400 text-sm">{role}{org ? ` · ${org}` : ''}</p>
+            <p className="text-gray-400 text-sm">{role}</p>
           </div>
         </div>
       </SpotCard>

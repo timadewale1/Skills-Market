@@ -69,14 +69,14 @@ function safeFileName(name: string) {
 }
 
 function money(n?: number | null) {
-  if (n === null || n === undefined) return "—"
+  if (n === null || n === undefined) return "-"
   return `₦${Number(n).toLocaleString()}`
 }
 
 function gigBudgetLabel(g: Gig) {
   if (g.budgetType === "hourly") return `${money(g.hourlyRate)}/hr`
   if (g.budgetType === "fixed") return `${money(g.fixedBudget)} fixed`
-  return "—"
+  return "-"
 }
 
 export default function ProposalDetailPage() {
@@ -132,7 +132,7 @@ export default function ProposalDetailPage() {
   }, [proposal?.viewedAt])
 
   const effectiveRateLabel = useMemo(() => {
-    if (!gig) return "—"
+    if (!gig) return "-"
     const pRate =
       proposedRate.trim() === ""
         ? null
@@ -146,7 +146,7 @@ export default function ProposalDetailPage() {
 
   const effectiveDurationLabel = useMemo(() => {
     if (proposedDuration.trim()) return proposedDuration.trim()
-    return gig?.duration || "—"
+    return gig?.duration || "-"
   }, [proposedDuration, gig?.duration])
 
   const handlePickFiles = (list: FileList | null) => {
@@ -552,7 +552,7 @@ export default function ProposalDetailPage() {
                     <div className="rounded-2xl border bg-[var(--secondary)] p-4 text-sm text-gray-700">
                       <div className="font-extrabold">✅ Proposal accepted</div>
                       <div className="text-xs text-gray-600 font-semibold mt-1">
-                        Client has accepted your proposal — you can start a conversation.
+                        Client has accepted your proposal - you can start a conversation.
                       </div>
 
                       <div className="mt-3">
@@ -597,13 +597,13 @@ export default function ProposalDetailPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500 font-semibold">Duration</span>
-                      <span className="font-extrabold">{gig.duration || "—"}</span>
+                      <span className="font-extrabold">{gig.duration || "-"}</span>
                     </div>
                     <Separator />
                     <div>
                       <div className="text-gray-500 font-semibold">Client</div>
                       <div className="font-extrabold">
-                        {gig.clientOrgName || gig.clientName || "—"}
+                        {gig.clientOrgName || gig.clientName || "-"}
                       </div>
                     </div>
                   </CardContent>

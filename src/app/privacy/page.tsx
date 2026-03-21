@@ -97,7 +97,7 @@ const DATA_TYPES = [
     category: "Organisational Data",
     color: "#EC4899",
     icon: FiUsers,
-    items: ["Organisation name and type", "CAC registration number", "Website and social profiles", "Mission statement and sector focus", "Organisation size and annual budget range"],
+    items: ["Organisation name and type", "CAC registration number", "Website and social profiles", "Mission statement and sector focus", "Organisation contact information"],
   },
   {
     category: "Transaction Data",
@@ -121,13 +121,13 @@ const DATA_TYPES = [
     category: "Usage Data",
     color: "#14B8A6",
     icon: FiEye,
-    items: ["Search queries", "Pages viewed and time spent", "Feature interactions", "Error logs", "A/B test group assignments"],
+    items: ["Search queries", "Pages viewed and time spent", "Feature interactions", "Error logs", "General usage diagnostics"],
   },
 ]
 
 const USER_RIGHTS = [
   { icon: FiEye,      title: "Right to Access",      desc: "Request a copy of all personal data we hold about you in a portable, machine-readable format.",                                     color: "#F97316" },
-  { icon: FiEdit3,    title: "Right to Rectification",desc: "Correct inaccurate or incomplete personal data. Most data can be edited directly in your account settings.",                       color: "#6366F1" },
+  { icon: FiEdit3,    title: "Right to Rectification",desc: "Correct inaccurate or incomplete personal data. Many profile details can be updated directly in your dashboard profile pages.",       color: "#6366F1" },
   { icon: FiTrash2,   title: "Right to Erasure",      desc: "Request deletion of your personal data where we have no legal basis for continued processing ('right to be forgotten').",          color: "#EC4899" },
   { icon: FiLock,     title: "Right to Restriction",  desc: "Ask us to restrict processing of your data while you contest its accuracy or while a dispute is pending.",                         color: "#10B981" },
   { icon: FiDownload, title: "Right to Portability",  desc: "Receive your personal data in a structured, commonly used, machine-readable format and transfer it to another controller.",         color: "#F59E0B" },
@@ -141,10 +141,8 @@ const COOKIES_TABLE = [
   { name: "cw_csrf",          type: "Essential",    duration: "Session",  purpose: "Prevents cross-site request forgery attacks" },
   { name: "cw_prefs",         type: "Functional",   duration: "1 year",   purpose: "Stores your display preferences (language, theme)" },
   { name: "cw_onboarding",    type: "Functional",   duration: "30 days",  purpose: "Tracks which onboarding steps you've completed" },
-  { name: "_ga",              type: "Analytics",    duration: "2 years",  purpose: "Google Analytics — distinguishes unique users" },
-  { name: "_gid",             type: "Analytics",    duration: "24 hours", purpose: "Google Analytics — stores page view information" },
   { name: "pstk_*",           type: "Payment",      duration: "Session",  purpose: "Paystack secure payment processing tokens" },
-  { name: "cw_ab",            type: "Performance",  duration: "90 days",  purpose: "A/B test group assignment for feature testing" },
+  { name: "cw_usage",         type: "Performance",  duration: "90 days",  purpose: "Supports general performance and product diagnostics" },
 ]
 
 const COOKIE_COLORS: Record<string, string> = {
@@ -438,7 +436,7 @@ export default function PrivacyPage() {
               <section className="mb-0">
                 <SHead id="overview" number="01" icon={MdOutlinePolicy} title="Overview & Commitment" />
                 <P>This Privacy Policy explains how <strong>Impactpal Africa</strong> ("we", "us", "our"), operator of the changeworker platform, collects, uses, stores, shares, and protects your personal data when you use our services at changeworker.ng.</P>
-                <P>We are committed to your privacy and to responsible data stewardship. This Policy is written in plain language wherever possible, and we encourage you to read it in full. It applies to all users of the platform — organizations, freelancers, and visitors.</P>
+                <P>We are committed to your privacy and to responsible data stewardship. This Policy is written in plain language wherever possible, and we encourage you to read it in full. It applies to all users of the platform - organizations, freelancers, and visitors.</P>
                 <Highlight color="violet">
                   changeworker is compliant with the <strong>Nigeria Data Protection Act (NDPA) 2023</strong> and the regulations issued by the Nigeria Data Protection Commission (NDPC). Where you are located in another jurisdiction, we apply equivalent or higher standards.
                 </Highlight>
@@ -480,7 +478,7 @@ export default function PrivacyPage() {
                 </div>
 
                 <Highlight color="emerald">
-                  We apply the principle of <strong>data minimisation</strong> — we only collect what is strictly necessary for the purposes described in this Policy. We do not collect sensitive personal data such as biometric data, health information, or political opinions.
+                  We apply the principle of <strong>data minimisation</strong> - we only collect what is strictly necessary for the purposes described in this Policy. We do not collect sensitive personal data such as biometric data, health information, or political opinions.
                 </Highlight>
               </section>
 
@@ -515,8 +513,8 @@ export default function PrivacyPage() {
                 <P>We may receive data about you from:</P>
                 <ClauseList items={[
                   "Paystack: transaction confirmation, payment status, and fraud signals.",
-                  "Google Analytics: aggregated behaviour and traffic data.",
-                  "Identity verification services: document verification outcomes (pass/fail — not raw document copies).",
+                  "General analytics and usage diagnostics where enabled.",
+                  "Other verification or compliance checks you choose to complete inside the platform.",
                   "Other users: reviews, ratings, and project feedback submitted about your account.",
                 ]} />
               </section>
@@ -559,7 +557,7 @@ export default function PrivacyPage() {
                 </Highlight>
 
                 <SubHead>Marketing Communications</SubHead>
-                <P>We send marketing emails only to users who have opted in. Every marketing email includes a clear unsubscribe link. You can manage your notification preferences at any time in your account settings under <strong>Settings → Notifications</strong>.</P>
+                <P>We send marketing emails only to users who have opted in. Every marketing email includes a clear unsubscribe link. You can also contact us if you want your marketing preferences updated.</P>
               </section>
 
               <Divider />
@@ -582,11 +580,8 @@ export default function PrivacyPage() {
                 <P>We share data with trusted third-party processors who help us operate the platform, each bound by strict data processing agreements:</P>
                 <div className="overflow-hidden rounded-2xl border border-gray-100 my-4 shadow-sm">
                   {[
-                    { provider: "Paystack",          purpose: "Payment processing & escrow",          data: "Identity, payment",         location: "Nigeria" },
-                    { provider: "Google Analytics",  purpose: "Platform analytics",                   data: "Usage (anonymised)",       location: "USA (SCCs)" },
-                    { provider: "Amazon Web Services",purpose: "Cloud hosting & storage",             data: "All platform data",        location: "Nigeria/EU" },
-                    { provider: "Mailchimp",         purpose: "Transactional & marketing email",      data: "Name, email",              location: "USA (SCCs)" },
-                    { provider: "Sentry",            purpose: "Error monitoring",                     data: "Technical, partial usage", location: "USA (SCCs)" },
+                    { provider: "Paystack",          purpose: "Payment processing",                   data: "Identity, payment",         location: "Nigeria" },
+                    { provider: "Firebase",          purpose: "Core platform infrastructure",         data: "Platform account and usage data", location: "Managed by provider" },
                   ].map(({ provider, purpose, data, location }, i) => (
                     <div key={i} className={`grid grid-cols-4 px-5 py-3.5 border-b border-gray-50 text-xs cookie-row ${i % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}>
                       <span className="font-display font-semibold text-gray-800">{provider}</span>
@@ -633,8 +628,7 @@ export default function PrivacyPage() {
                 </div>
 
                 <SubHead>Managing Cookies</SubHead>
-                <P>You can control cookies through your browser settings. Note that disabling <strong>Essential</strong> cookies will prevent the platform from functioning correctly. You may opt out of Analytics cookies at any time via the cookie preference centre in your account settings.</P>
-                <P>For Google Analytics opt-out, you may also use the <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener" className="text-violet-600 hover:text-violet-700 underline underline-offset-2">Google Analytics opt-out browser add-on</a>.</P>
+                <P>You can control cookies through your browser settings. Note that disabling <strong>Essential</strong> cookies will prevent the platform from functioning correctly.</P>
               </section>
 
               <Divider />
@@ -682,10 +676,10 @@ export default function PrivacyPage() {
                   {[
                     { icon: FiLock,    color: "#7C3AED", title: "Encryption at rest & in transit",   desc: "All data is encrypted using AES-256 at rest and TLS 1.3 in transit. Payment data is additionally tokenised by Paystack." },
                     { icon: FiKey,     color: "#F97316", title: "Access control",                     desc: "Role-based access controls ensure staff can only access data necessary for their job function. All access is logged and audited." },
-                    { icon: FiShield,  color: "#10B981", title: "Penetration testing",                desc: "We conduct periodic third-party security audits and penetration tests to identify and remediate vulnerabilities." },
-                    { icon: FiServer,  color: "#6366F1", title: "Secure infrastructure",              desc: "Platform hosted on AWS with SOC 2 Type II certified data centres. Automated backups run every 6 hours with 30-day retention." },
-                    { icon: FiEye,     color: "#EC4899", title: "Monitoring & alerts",                desc: "24/7 automated threat monitoring with immediate alerts for anomalous activity. Incident response plan tested annually." },
-                    { icon: MdFingerprint, color: "#F59E0B", title: "Multi-factor authentication",   desc: "MFA is available and strongly recommended for all accounts. Admin accounts require MFA by policy." },
+                    { icon: FiShield,  color: "#10B981", title: "Security review",                    desc: "We review platform security practices and work to improve protections around account, payment, and workspace data." },
+                    { icon: FiServer,  color: "#6366F1", title: "Secure infrastructure",              desc: "changeworker relies on managed platform infrastructure and provider security controls to support application data and availability." },
+                    { icon: FiEye,     color: "#EC4899", title: "Monitoring & alerts",                desc: "We monitor the platform for reliability and investigate suspicious activity when it is detected." },
+                    { icon: MdFingerprint, color: "#F59E0B", title: "Account protection",             desc: "We encourage strong passwords, account verification, and prompt reporting of suspicious access." },
                   ].map(({ icon: Icon, color, title, desc }, i) => (
                     <div key={i} className="right-card rounded-xl border border-gray-100 p-5 flex gap-3.5">
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}12` }}>
@@ -700,7 +694,7 @@ export default function PrivacyPage() {
                 </div>
 
                 <Highlight color="amber">
-                  While we implement robust security measures, no system is entirely secure. If you suspect your account has been compromised, contact us immediately at <strong>security@changeworker.ng</strong>. In the event of a data breach affecting your rights and freedoms, we will notify you and the NDPC within 72 hours of becoming aware.
+                  While we implement security measures, no system is entirely secure. If you suspect your account has been compromised, contact us immediately at <strong>security@changeworker.ng</strong>. We will respond to confirmed incidents in line with our legal obligations.
                 </Highlight>
               </section>
 
@@ -748,7 +742,7 @@ export default function PrivacyPage() {
                 <P>changeworker is not intended for use by persons under the age of <strong>18 years</strong>. We do not knowingly collect personal data from minors.</P>
                 <P>If you are a parent or guardian and believe your child has provided personal data to changeworker, please contact us immediately at <strong>privacy@changeworker.ng</strong>. We will take prompt steps to delete any such data from our systems.</P>
                 <Highlight color="red">
-                  If we discover that we have inadvertently collected personal data from a person under 18, we will delete it from our systems within 48 hours of becoming aware, without requiring any action from the minor or their guardian.
+                  If we discover that we have inadvertently collected personal data from a person under 18, we will take prompt steps to delete it from our systems.
                 </Highlight>
               </section>
 
@@ -757,7 +751,7 @@ export default function PrivacyPage() {
               {/* ─── 11. INTERNATIONAL TRANSFERS ─── */}
               <section>
                 <SHead id="transfers" number="11" icon={FiGlobe} title="International Data Transfers" />
-                <P>changeworker primarily processes data within <strong>Nigeria</strong>. However, some of our third-party service providers (such as Google Analytics and Mailchimp) may process data in other countries, including the United States.</P>
+                <P>changeworker primarily processes data within <strong>Nigeria</strong>. Some service providers may process or store data in other jurisdictions depending on their infrastructure.</P>
                 <P>Where data is transferred outside Nigeria, we ensure adequate safeguards are in place, including:</P>
                 <ClauseList items={[
                   "Standard Contractual Clauses (SCCs) approved by the relevant supervisory authority.",
@@ -829,7 +823,7 @@ export default function PrivacyPage() {
                   <p className="font-display font-semibold text-gray-800 text-sm mb-1.5">Postal Address</p>
                   <p className="text-gray-500 text-sm font-display font-normal leading-relaxed">
                     Data Protection Officer<br />
-                    Impactpal Africa — changeworker<br />
+                    Impactpal Africa - changeworker<br />
                     Lagos, Federal Republic of Nigeria
                   </p>
                 </div>

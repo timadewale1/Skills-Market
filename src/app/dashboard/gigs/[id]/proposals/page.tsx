@@ -81,15 +81,15 @@ const TABS: Array<{ key: "all" | ProposalStatus; label: string }> = [
 ]
 
 function money(n?: number | null) {
-  if (n === null || n === undefined) return "—"
+  if (n === null || n === undefined) return "-"
   return `₦${Number(n).toLocaleString()}`
 }
 
 function gigBudgetLabel(g?: Gig | null) {
-  if (!g) return "—"
+  if (!g) return "-"
   if (g.budgetType === "hourly") return `${money(g.hourlyRate)}/hr`
   if (g.budgetType === "fixed") return `${money(g.fixedBudget)} fixed`
-  return "—"
+  return "-"
 }
 
 export default function GigProposalsPage() {
@@ -220,7 +220,7 @@ export default function GigProposalsPage() {
         updatedAt: serverTimestamp(),
       })
       setGig((g) => (g ? { ...g, status: "closed" } : g))
-      toast.success("Hiring slots filled — gig closed automatically")
+      toast.success("Hiring slots filled - gig closed automatically")
       return
     }
 
@@ -231,7 +231,7 @@ export default function GigProposalsPage() {
         updatedAt: serverTimestamp(),
       })
       setGig((g) => (g ? { ...g, status: "open" } : g))
-      toast.success("Hires increased — gig reopened")
+      toast.success("Hires increased - gig reopened")
     }
   }
 
@@ -531,7 +531,7 @@ export default function GigProposalsPage() {
                 filtered.map((p, idx) => {
                   const name = getTalentName(p)
                   const displayRate = p.proposedRate ? `${money(p.proposedRate)}/hr` : budgetFallback
-                  const displayDuration = p.proposedDuration || gig.duration || "—"
+                  const displayDuration = p.proposedDuration || gig.duration || "-"
 
                   return (
                     <motion.button
@@ -671,7 +671,7 @@ export default function GigProposalsPage() {
                         <div className="rounded-2xl border bg-white p-4">
                           <div className="text-xs text-gray-500 font-semibold">Duration</div>
                           <div className="text-lg font-extrabold mt-1">
-                            {open.proposedDuration || gig.duration || "—"}
+                            {open.proposedDuration || gig.duration || "-"}
                           </div>
                           {!open.proposedDuration && (
                             <div className="text-xs text-gray-500 font-semibold mt-1">

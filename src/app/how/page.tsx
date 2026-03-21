@@ -51,9 +51,9 @@ const CLIENT_STEPS = [
   {
     number: "02",
     icon: FiZap,
-    title: "Instant matching",
-    desc: "The moment your gig goes live, our system instantly surfaces the most relevant vetted talent based on skills, SDG alignment, sector experience, and availability.",
-    detail: "No waiting. No manual review delay. As soon as you publish, matching happens automatically. You see a curated shortlist of talent profiles within seconds — not 48 hours.",
+    title: "Discover relevant talent",
+    desc: "Once your gig goes live, changeworker starts surfacing relevant talent based on skills, SDG alignment, sector experience, and availability.",
+    detail: "As soon as you publish, the platform can start surfacing relevant profiles and proposals. You can browse, compare, message, and decide who is the best fit for the work.",
     color: "#6366F1",
   },
   {
@@ -61,15 +61,15 @@ const CLIENT_STEPS = [
     icon: FiUsers,
     title: "Review & select",
     desc: "Browse the matched talent profiles, check their portfolios and past reviews, and select the person you want to work with.",
-    detail: "Every profile shows verified credentials, sector experience, SDG alignment, past gig ratings, and a portfolio of past work. You're choosing from a pre-screened shortlist, not scrolling through thousands of unvetted applicants.",
+    detail: "Profiles can show verification status, sector experience, SDG alignment, past gig ratings, and a portfolio of past work. You can use that information together with proposals and messages to decide who to hire.",
     color: "#10B981",
   },
   {
     number: "04",
     icon: FiLock,
-    title: "Fund escrow & begin",
-    desc: "Agree on the final scope, fund the escrow, and your talent gets to work. Funds are secured — nobody can touch them until the gig is done right.",
-    detail: "Escrow protects both parties. The talent knows funds are committed before they start. You know your money is safe until you're satisfied with the deliverables. Zero payment risk on both sides.",
+    title: "Agree terms & begin",
+    desc: "Agree on the final scope, confirm the workspace, and move into delivery with milestones or final submission tracked in-platform.",
+    detail: "changeworker supports payment and workspace flows that help both sides keep delivery, approvals, and communication documented while the gig is in progress.",
     color: "#EC4899",
   },
   {
@@ -77,7 +77,7 @@ const CLIENT_STEPS = [
     icon: FiCheckCircle,
     title: "Review & release",
     desc: "Receive the deliverables, review the work, and release payment. That's it. changeworker handles the rest.",
-    detail: "Mark the gig complete when you're happy with the work. Funds release from escrow automatically. Leave a review for the talent to help the community. Our 10% platform fee is deducted from the talent's payout — you pay exactly what was agreed.",
+    detail: "Mark the gig complete when you're happy with the work. Leave a review for the talent to help the community. changeworker applies a flat 10% platform fee on completed projects.",
     color: "#F59E0B",
   },
 ]
@@ -94,9 +94,9 @@ const TALENT_STEPS = [
   {
     number: "02",
     icon: FiZap,
-    title: "Get matched instantly",
-    desc: "The moment a relevant gig is posted, you're instantly surfaced to the client — no bidding, no proposal wars, no cold pitching.",
-    detail: "Our matching engine runs the moment a gig goes live. If your profile aligns with the gig's skills, SDG focus, and sector requirements, you appear in the client's shortlist automatically. You focus on the work, not the hustle of finding it.",
+    title: "Find relevant gigs",
+    desc: "As gigs are posted, your profile data helps relevant opportunities surface more easily - and you can still browse and apply directly.",
+    detail: "Your profile, skills, rates, and sector focus help the platform surface stronger-fit opportunities, while you stay in control of which gigs you apply to and discuss with clients.",
     color: "#6366F1",
   },
   {
@@ -104,7 +104,7 @@ const TALENT_STEPS = [
     icon: FiMessageSquare,
     title: "Discuss & agree",
     desc: "The client reviews your profile and reaches out. Discuss the scope, timeline, and any questions. Agree on the final terms.",
-    detail: "All communication happens on the platform for transparency. Once you and the client agree on scope and deliverables, the client funds escrow and you can begin. You never start work without payment secured.",
+    detail: "All communication happens on the platform for transparency. Once you and the client agree on scope and deliverables, you can move into the workspace and start delivery with milestones or final submission tracked there.",
     color: "#10B981",
   },
   {
@@ -112,25 +112,25 @@ const TALENT_STEPS = [
     icon: TbTargetArrow,
     title: "Deliver great work",
     desc: "Do what you do best. Communicate updates, meet deadlines, and deliver work that moves the mission forward.",
-    detail: "Use the platform's built-in communication tools to keep the client updated. Submit deliverables through the platform for a clean record. Consistent quality builds your rating — which unlocks higher-value gigs over time.",
+    detail: "Use the platform's built-in communication tools to keep the client updated. Submit deliverables through the platform for a clean record. Consistent quality builds your rating - which unlocks higher-value gigs over time.",
     color: "#EC4899",
   },
   {
     number: "05",
     icon: TbCurrencyNaira,
     title: "Get paid, grow your reputation",
-    desc: "Once the client approves, payment releases from escrow to your wallet. A 10% platform fee is deducted from your payout — what you agreed is what you see.",
-    detail: "Payments land in your changeworker wallet within 1–3 business days after release. Withdraw anytime via bank transfer. Every completed gig builds your rating and review history — your most powerful asset for winning future work.",
+    desc: "Once the client approves, payment moves through the platform payout flow and your work history helps build your reputation.",
+    detail: "Withdrawals are handled through the wallet flow and linked bank setup in the platform. Every completed gig builds your rating and review history - your most powerful asset for winning future work.",
     color: "#F59E0B",
   },
 ]
 
 const TRUST_FEATURES = [
-  { icon: FiLock, title: "Escrow protection", desc: "Funds are secured before work begins. Nobody gets paid until the gig is done right.", color: "#F97316" },
-  { icon: MdOutlineVerified, title: "Verified talent", desc: "Every freelancer is personally vetted — identity, skills, sector experience. No unvetted profiles.", color: "#6366F1" },
-  { icon: MdGavel, title: "Dispute resolution", desc: "Fair, binding dispute resolution for any disagreement. Our team mediates, you don't fight alone.", color: "#10B981" },
+  { icon: FiLock, title: "Workspace protection", desc: "Milestones, final submissions, reviews, and payment flows stay documented inside the platform.", color: "#F97316" },
+  { icon: MdOutlineVerified, title: "Verified profiles", desc: "Talent and clients can complete identity and organization verification steps that appear on their profiles.", color: "#6366F1" },
+  { icon: MdGavel, title: "Dispute tools", desc: "If something goes wrong, the platform includes a formal dispute flow tied to the workspace history.", color: "#10B981" },
   { icon: RiShieldCheckLine, title: "NDPA compliant", desc: "Your data is protected under the Nigeria Data Protection Act 2023. We never sell your data.", color: "#EC4899" },
-  { icon: FiStar, title: "Transparent ratings", desc: "Every gig leaves a review. Ratings are verified and permanent — they build real community trust.", color: "#F59E0B" },
+  { icon: FiStar, title: "Transparent ratings", desc: "Every gig leaves a review. Ratings are verified and permanent - they build real community trust.", color: "#F59E0B" },
   { icon: TbHeartHandshake, title: "Fair pay standards", desc: "We enforce minimum rate floors. 'For the mission' is not a substitute for fair compensation.", color: "#3B82F6" },
 ]
 
@@ -180,7 +180,7 @@ function StepCard({ step, idx, inView, side }: {
       className={`relative ${inView ? (side === "client" ? "reveal" : "reveal-l") : "opacity-0"}`}
       style={{ "--d": `${.05 + idx * .1}s` } as React.CSSProperties}
     >
-      {/* connector line — not on last */}
+      {/* connector line - not on last */}
       {!isLast && (
         <div className="absolute left-6 top-14 bottom-0 w-0.5 z-0"
           style={{ background: `linear-gradient(to bottom, ${step.color}60, ${CLIENT_STEPS[idx+1].color}60)` }} />
@@ -308,7 +308,7 @@ function FeeCalculator() {
           <span className="text-white font-display font-bold text-sm">You receive</span>
           <span className="font-mono font-black text-white text-xl">₦{talentReceives.toLocaleString()}</span>
         </div>
-        <p className="text-gray-400 text-[11px] font-display text-center">The client pays exactly ₦{gigAmount.toLocaleString()} — no extra fees on their side.</p>
+        <p className="text-gray-400 text-[11px] font-display text-center">The client pays exactly ₦{gigAmount.toLocaleString()} - no extra fees on their side.</p>
       </div>
     </div>
   )
@@ -436,9 +436,9 @@ export default function HowItWorksPage() {
             {/* quick chips */}
             <div className={`flex flex-wrap gap-3 pb-20 ${heroRef.inView?"reveal":"opacity-0"}`} style={{"--d":".42s"} as React.CSSProperties}>
               {[
-                {icon:FiZap,text:"Instant matching",color:"#F97316"},
-                {icon:FiLock,text:"Escrow protected",color:"#6366F1"},
-                {icon:TbCurrencyNaira,text:"10% talent-side fee",color:"#10B981"},
+                {icon:FiZap,text:"Smart matching",color:"#F97316"},
+                {icon:FiLock,text:"Workspace tracked",color:"#6366F1"},
+                {icon:TbCurrencyNaira,text:"10% platform fee",color:"#10B981"},
                 {icon:FiGlobe,text:"SDG-aligned",color:"#EC4899"},
               ].map(({icon:Icon,text,color})=>(
                 <div key={text} className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/6 border border-white/10 backdrop-blur-sm">
@@ -463,9 +463,9 @@ export default function HowItWorksPage() {
           <div className="max-w-5xl mx-auto px-6">
             <div className="grid sm:grid-cols-3 gap-5">
               {[
-                {icon:TbBuildingCommunity,color:"#F97316",title:"For organizations",body:"Post a gig, get instantly matched to vetted talent aligned with your SDG focus, fund escrow, and get it done. No bidding wars, no guesswork.",cta:"See client steps →"},
-                {icon:RiTeamLine,color:"#6366F1",title:"For talent",body:"Build your impact profile, get auto-matched to relevant gigs the moment they go live, deliver great work, and grow your reputation in the sector.",cta:"See talent steps →"},
-                {icon:FiShield,color:"#10B981",title:"For everyone",body:"Escrow, verified profiles, transparent ratings, fair pay standards, and dispute resolution — structural trust baked into every gig.",cta:"See trust features →"},
+                {icon:TbBuildingCommunity,color:"#F97316",title:"For organizations",body:"Post a gig, browse relevant talent, review proposals, move into messaging, and manage delivery in one place.",cta:"See client steps →"},
+                {icon:RiTeamLine,color:"#6366F1",title:"For talent",body:"Build your impact profile, discover relevant gigs, submit proposals, deliver strong work, and grow your reputation in the sector.",cta:"See talent steps →"},
+                {icon:FiShield,color:"#10B981",title:"For everyone",body:"Verified profiles, transparent ratings, workspace records, payment support, and dispute tools help every gig stay more accountable.",cta:"See trust features →"},
               ].map(({icon:Icon,color,title,body,cta},i)=>(
                 <div key={i} className="rounded-2xl border border-gray-100 bg-white p-7 flex flex-col gap-4 hover:-translate-y-1 transition-transform duration-300">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{background:`${color}12`}}>
@@ -483,7 +483,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* ╔══════════════════════════════════════════════════════╗
-            §3  STEPS — tabbed
+            §3  STEPS - tabbed
         ╚══════════════════════════════════════════════════════╝ */}
         <section ref={stepsRef.ref} className="py-24 bg-[#FAFAF9] relative overflow-hidden">
           <div className="absolute right-0 top-0 w-80 h-80 opacity-20 dot-bg pointer-events-none"/>
@@ -542,35 +542,35 @@ export default function HowItWorksPage() {
                         <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-orange-500" style={{animation:"ping 1.5s cubic-bezier(0,0,.2,1) infinite"}}/>
                         <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-orange-500"/>
                       </div>
-                      <p className="font-display font-black text-white text-base">Instant matching</p>
+                      <p className="font-display font-black text-white text-base">Smart matching</p>
                     </div>
                     <p className="text-white/50 text-xs font-display leading-relaxed">
-                      The moment a gig is posted, our matching engine runs. No manual review delay. No 48-hour wait. Talent appear in your shortlist <strong className="text-white/80">within seconds</strong> of posting.
+                      Once a gig is posted, the platform starts surfacing relevant talent based on profile and gig data. You can then review profiles, proposals, and messages before deciding who to hire.
                     </p>
                   </div>
                 </div>
 
-                {/* fee preview — only show for talent tab */}
+                {/* fee preview - only show for talent tab */}
                 {activeTab === "talent" && <FeeCalculator />}
 
-                {/* what happens after — both tabs */}
+                {/* what happens after - both tabs */}
                 <div className="rounded-2xl border border-gray-100 bg-white p-6">
                   <p className="font-mono text-[10px] text-orange-500 uppercase tracking-[.2em] mb-5">
                     {activeTab === "client" ? "What you never have to worry about" : "What changeworker handles for you"}
                   </p>
                   <div className="space-y-3">
                     {(activeTab === "client" ? [
-                      "Vetting talent credentials",
-                      "Chasing unpaid invoices",
-                      "Dispute resolution",
-                      "Contract management",
-                      "Payment processing",
+                      "Reviewing every profile manually",
+                      "Managing delivery in scattered tools",
+                      "Tracking milestones by email",
+                      "Losing the workspace history",
+                      "Handling reviews off-platform",
                     ] : [
-                      "Finding clients yourself",
-                      "Cold pitching and proposals",
-                      "Getting paid on time",
-                      "Contract enforcement",
-                      "Dispute mediation",
+                      "Keeping work scattered across channels",
+                      "Losing track of submissions",
+                      "Manually tracking approvals",
+                      "Rebuilding your reputation each time",
+                      "Managing delivery records alone",
                     ]).map((item, i) => (
                       <div key={i} className="flex items-center gap-3">
                         <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
@@ -587,7 +587,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* ╔══════════════════════════════════════════════════════╗
-            §4  SDG SECTION — full-width grid + marquee
+            §4  SDG SECTION - full-width grid + marquee
         ╚══════════════════════════════════════════════════════╝ */}
         <section ref={sdgRef.ref} className="py-24 bg-white relative overflow-hidden">
           <div className="anim-o1 absolute w-[500px] h-[500px] rounded-full bg-orange-50 blur-3xl -right-20 top-0 pointer-events-none"/>
@@ -632,7 +632,7 @@ export default function HowItWorksPage() {
 
             {/* SDG GRID */}
             <div className={`${sdgRef.inView?"reveal":"opacity-0"}`} style={{"--d":".2s"} as React.CSSProperties}>
-              <p className="font-mono text-[10px] text-gray-400 uppercase tracking-[.22em] mb-5">All 17 SDGs — hover to explore</p>
+              <p className="font-mono text-[10px] text-gray-400 uppercase tracking-[.22em] mb-5">All 17 SDGs - hover to explore</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
               {SDGS.map((label, i) => (
@@ -693,7 +693,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* ╔══════════════════════════════════════════════════════╗
-            §6  FEES — transparent breakdown
+            §6  FEES - transparent breakdown
         ╚══════════════════════════════════════════════════════╝ */}
         <section ref={feesRef.ref} className="py-24 bg-white relative overflow-hidden">
           <div className="absolute right-0 top-0 w-72 h-72 opacity-20 dot-bg pointer-events-none"/>
@@ -712,8 +712,8 @@ export default function HowItWorksPage() {
                       <TbCurrencyNaira size={20} className="text-orange-600"/>
                     </div>
                     <div>
-                      <p className="font-display font-black text-gray-900 text-base mb-1">10% platform fee — from the talent's payout</p>
-                      <p className="text-gray-600 text-sm font-display leading-relaxed">Our fee is deducted from the talent's earnings. Organizations pay exactly the agreed gig rate — no markups, no hidden charges, no platform surcharge on your invoice.</p>
+                      <p className="font-display font-black text-gray-900 text-base mb-1">10% platform fee on completed projects</p>
+                      <p className="text-gray-600 text-sm font-display leading-relaxed">changeworker uses a flat 10% platform fee. We keep the pricing simple and avoid hidden subscription or listing charges.</p>
                     </div>
                   </div>
                   <div className="flex gap-4 p-5 rounded-2xl bg-emerald-50 border border-emerald-100">
@@ -722,7 +722,7 @@ export default function HowItWorksPage() {
                     </div>
                     <div>
                       <p className="font-display font-black text-gray-900 text-base mb-1">No subscription. No listing fee.</p>
-                      <p className="text-gray-600 text-sm font-display leading-relaxed">Registration is free for everyone. We only earn when a gig is successfully completed. Our incentive is aligned with yours — your success is our success.</p>
+                      <p className="text-gray-600 text-sm font-display leading-relaxed">Registration is free for everyone. We only earn when a gig is successfully completed. Our incentive is aligned with yours - your success is our success.</p>
                     </div>
                   </div>
                   <div className="flex gap-4 p-5 rounded-2xl bg-indigo-50 border border-indigo-100">
@@ -730,8 +730,8 @@ export default function HowItWorksPage() {
                       <FiShield size={18} className="text-indigo-600"/>
                     </div>
                     <div>
-                      <p className="font-display font-black text-gray-900 text-base mb-1">The fee covers escrow, matching & support</p>
-                      <p className="text-gray-600 text-sm font-display leading-relaxed">The 10% covers: instant talent matching, identity & skills vetting, payment processing, escrow management, dispute resolution, and platform support for both parties.</p>
+                      <p className="font-display font-black text-gray-900 text-base mb-1">The fee supports the core platform flow</p>
+                      <p className="text-gray-600 text-sm font-display leading-relaxed">The 10% supports matching, profile discovery, payment flows, workspace delivery, reviews, disputes, and ongoing platform support for both sides.</p>
                     </div>
                   </div>
                 </div>
@@ -796,7 +796,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* ╔══════════════════════════════════════════════════════╗
-            §8  COMPARISON — changeworker vs generic platforms
+            §8  COMPARISON - changeworker vs generic platforms
         ╚══════════════════════════════════════════════════════╝ */}
         <section className="py-24 bg-white relative overflow-hidden">
           <div className="absolute left-0 bottom-0 w-72 h-72 opacity-15 dot-bg pointer-events-none"/>
@@ -824,10 +824,10 @@ export default function HowItWorksPage() {
                 </div>
               </div>
               {[
-                ["Impact sector focus","SDG-aligned, sector-specific","Generic — any industry"],
+                ["Impact sector focus","SDG-aligned, sector-specific","Generic - any industry"],
                 ["Talent vetting","Personal vetting + verification","Self-declared, unverified"],
                 ["Matching speed","Instant on gig post","Browse & bid (days/weeks)"],
-                ["Fee structure","10% from talent payout","5–20% from both sides"],
+                ["Fee structure","10% flat platform fee","5–20% varies"],
                 ["Payment protection","Escrow on every gig","Optional / inconsistent"],
                 ["Dispute resolution","In-house mediation team","Automated, impersonal"],
                 ["Nigeria-native","₦ pricing, local context","USD-first, foreign UX"],
@@ -919,7 +919,7 @@ export default function HowItWorksPage() {
             <div className={`flex flex-wrap justify-center gap-3 ${ctaRef.inView?"reveal":"opacity-0"}`} style={{"--d":".48s"} as React.CSSProperties}>
               {[
                 {icon:FiCheckCircle,text:"Free to register"},
-                {icon:FiZap,text:"Matched instantly"},
+                {icon:FiZap,text:"Smart matching"},
                 {icon:FiLock,text:"Escrow on every gig"},
                 {icon:FiGlobe,text:"SDG-aligned"},
               ].map(({icon:Icon,text})=>(

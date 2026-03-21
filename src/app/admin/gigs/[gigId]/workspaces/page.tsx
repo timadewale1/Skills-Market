@@ -1,16 +1,15 @@
 import Link from "next/link"
-import { getAdminDb } from "@/lib/firebaseAdmin"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import AdminPageHeader from "@/components/admin/AdminPageHeader"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { getAdminDb } from "@/lib/firebaseAdmin"
+
 export const dynamic = "force-dynamic"
 
 async function getWorkspacesForGig(gigId: string) {
   const db = getAdminDb()
   const snap = await db.collection("workspaces").where("gigId", "==", gigId).get()
-  return snap.docs.map((doc: any) => ({
-    id: doc.id,
-    ...doc.data(),
-  }))
+  return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
 }
 
 async function getGigTitle(gigId: string) {
@@ -19,89 +18,90 @@ async function getGigTitle(gigId: string) {
   return snap.data()?.title || "Gig"
 }
 
-function statusBadge(status?: string) {
-  if (status?.includes("active")) return <Badge className="bg-green-100 text-green-900">Active</Badge>
-  if (status?.includes("completed")) return <Badge className="bg-blue-100 text-blue-900">Completed</Badge>
-  if (status?.includes("waiting")) return <Badge className="bg-orange-100 text-orange-900">Waiting Payment</Badge>
-  return <Badge className="bg-gray-100 text-gray-900">{status || "Workspace"}</Badge>
-}
-
-export default async function AdminGigWorkspacesPage({ params }: { params: { gigId: string } }) {
-  const { gigId } = params
-  const workspaces: any = await getWorkspacesForGig(gigId)
+export default async function AdminGigWorkspacesPage({
+  params,
+}: {
+  params: Promise<{ gigId: string }>
+}) {
+  const { gigId } = await params
+  const workspaces: any[] = await getWorkspacesForGig(gigId)
   const gigTitle = await getGigTitle(gigId)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <Link href={`/admin/gigs/${gigId}`} className="text-blue-600 hover:underline mb-6 inline-block">
-          ← Back to {gigTitle}
-        </Link>
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Gig workspaces"
+        title={`Workspaces for ${gigTitle}`}
+        description="Track every workspace created from this gig so admin can follow hiring, delivery, and payout progress from one place."
+        actions={
+          <Link
+            href={`/admin/gigs/${gigId}`}
+            className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+          >
+            Back to gig
+          </Link>
+        }
+        stats={[
+          { label: "Workspaces", value: workspaces.length },
+          { label: "Gig", value: gigTitle },
+          { label: "Scope", value: "Single gig" },
+          { label: "Latest", value: "Realtime" },
+        ]}
+      />
 
-        <h1 className="text-3xl font-extrabold text-gray-900">Workspaces for "{gigTitle}"</h1>
-        <p className="text-gray-600 mt-2">Manage all active workspaces for this gig</p>
-
-        <div className="mt-8 space-y-4">
-          {workspaces.length === 0 ? (
-            <Card className="rounded-xl">
-              <CardContent className="p-8 text-center text-gray-600">
-                No workspaces found
-              </CardContent>
-            </Card>
-          ) : (
-            workspaces.map((w: any) => (
-              <Card key={w.id} className="rounded-xl hover:shadow-md transition">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap mb-3">
-                        <h3 className="text-lg font-extrabold text-gray-900">{w.gigTitle || "Workspace"}</h3>
-                        {statusBadge(w.status)}
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500 font-semibold">Talent</span>
-                          <Link href={`/admin/talents/${w.talentUid}`} className="text-blue-600 hover:underline block">
-                            {w.talentName || w.talentUid}
-                          </Link>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 font-semibold">Client</span>
-                          <Link href={`/admin/clients/${w.clientUid}`} className="text-blue-600 hover:underline block">
-                            {w.clientName || w.clientUid}
-                          </Link>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 font-semibold">Status</span>
-                          <p className="text-gray-900 font-semibold">{w.status || "N/A"}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 font-semibold">Created</span>
-                          <p className="text-gray-900 font-semibold">
-                            {w.createdAt?.toDate?.().toLocaleDateString() || "N/A"}
-                          </p>
-                        </div>
-                      </div>
+      <div className="space-y-4">
+        {workspaces.length === 0 ? (
+          <Card className="rounded-[1.75rem] border-0 shadow-sm">
+            <CardContent className="p-10 text-center text-gray-600">No workspaces found.</CardContent>
+          </Card>
+        ) : (
+          workspaces.map((workspace) => (
+            <Card key={workspace.id} className="rounded-[1.75rem] border-0 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-lg font-extrabold text-gray-900">
+                        {workspace.gigTitle || workspace.id}
+                      </h2>
+                      <Badge className="bg-orange-50 text-[var(--primary)] hover:bg-orange-50">
+                        {workspace.status || "unknown"}
+                      </Badge>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/workspaces/${w.id}`}
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition text-sm"
-                      >
-                        View
-                      </Link>
-                      <button className="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm">
-                        Delete
-                      </button>
+                    <div className="mt-4 grid gap-4 text-sm md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <div className="font-semibold text-gray-500">Talent</div>
+                        <div className="mt-1 text-gray-900">{workspace.talentName || workspace.talentUid || "N/A"}</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-500">Client</div>
+                        <div className="mt-1 text-gray-900">{workspace.clientName || workspace.clientUid || "N/A"}</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-500">Status</div>
+                        <div className="mt-1 text-gray-900">{workspace.status || "N/A"}</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-500">Created</div>
+                        <div className="mt-1 text-gray-900">
+                          {workspace.createdAt?.toDate?.().toLocaleDateString() || "N/A"}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+
+                  <Link
+                    href={`/admin/workspaces/${workspace.id}`}
+                    className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    View workspace
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   )

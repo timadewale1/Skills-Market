@@ -23,6 +23,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AvatarUploader from "@/components/profile/parts/AvatarUploader"
 import NotificationBell from "@/components/NotificationBell"
+import { clearAuthSession } from "@/lib/authSession"
 
 
 type Role = "talent" | "client" | null
@@ -73,6 +74,7 @@ export default function AuthNavbar() {
   const handleLogout = async () => {
     try {
       await signOut(auth)
+      clearAuthSession()
       window.localStorage.removeItem("sm_role")
       toast.success("Logged out")
       router.push("/")

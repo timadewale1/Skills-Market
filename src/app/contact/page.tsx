@@ -149,10 +149,10 @@ const CHANNELS = [
 
 const FAQS = [
   { q: "How quickly will I get a response?",           a: "Email enquiries receive a response within 24 hours on business days. WhatsApp support is available Monday to Friday, 9am–6pm WAT. Urgent platform issues are prioritised." },
-  { q: "I'm having trouble with a payment — help?",    a: "Payment issues are our highest-priority support category. Email disputes@changeworker.ng with your transaction reference and we'll investigate within 2 hours." },
+  { q: "I'm having trouble with a payment - help?",    a: "Payment issues are our highest-priority support category. Email disputes@changeworker.ng with your transaction reference and we'll investigate within 2 hours." },
   { q: "Can I schedule a demo for my organization?",   a: "Absolutely. Select 'Partnership or collaboration' in the contact form and mention you'd like a demo. We'll set up a 30-minute walk-through with a team member." },
-  { q: "I want to be a vetted freelancer — how?",      a: "Click 'Find Work' on the homepage and complete the freelancer application. Our team reviews all applications personally and responds within 3 business days." },
-  { q: "Is changeworker available outside Nigeria?",   a: "Currently we serve organizations and freelancers within Nigeria. We're planning expansion to other African markets — use this form to register your interest." },
+  { q: "I want to be a vetted freelancer - how?",      a: "Click 'Find Work' on the homepage and complete the freelancer application. Our team reviews all applications personally and responds within 3 business days." },
+  { q: "Is changeworker available outside Nigeria?",   a: "Currently we serve organizations and freelancers within Nigeria. We're planning expansion to other African markets - use this form to register your interest." },
 ]
 
 const OFFICES = [
@@ -614,7 +614,7 @@ export default function ContactPage() {
                             reason === "support"   ? "Describe the issue you're experiencing. Include any error messages, account details, or transaction references..." :
                             reason === "partner"   ? "Tell us about your organisation and what type of partnership you have in mind..." :
                             reason === "press"     ? "Share your publication and the angle or story you're exploring..." :
-                            "How can we help you? Don't be shy — we love hearing from our community."
+                            "How can we help you? Don't be shy - we love hearing from our community."
                           }
                           value={message}
                           onChange={e => {

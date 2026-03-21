@@ -221,9 +221,9 @@ function badgeForStatus(status?: string) {
 }
 
 function tsToText(v: any) {
-  if (!v) return "—"
+  if (!v) return "-"
   if (typeof v?.toDate === "function") return v.toDate().toLocaleString()
-  return "—"
+  return "-"
 }
 
 /** Image compression for talent uploads (client-side). */
@@ -1454,7 +1454,7 @@ const unsubSession = onSnapshot(
         autoApproveAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000),
         updatedAt: serverTimestamp(),
       })
-      toast.success("Payout requested — client has 24h to review")
+      toast.success("Payout requested - client has 24h to review")
     } catch (e: any) {
       console.error(e)
       toast.error(e?.message || "Failed to request payout")
@@ -2754,7 +2754,7 @@ const unsubSession = onSnapshot(
 
                           <div className="mt-3 flex items-center justify-between text-sm">
                             <div className="text-gray-600 font-semibold">Latest payout status</div>
-                            <div className="font-extrabold">{latestPayout?.status || "—"}</div>
+                            <div className="font-extrabold">{latestPayout?.status || "-"}</div>
                           </div>
 
                           {latestPayout?.status === "paid" ? (
@@ -2934,7 +2934,7 @@ const unsubSession = onSnapshot(
                     <CardContent className="space-y-3 text-sm text-gray-700">
                       <div className="flex items-center justify-between">
                         <div className="text-gray-500 font-semibold">Status</div>
-                        <div className="font-extrabold">{agreement?.status || "—"}</div>
+                        <div className="font-extrabold">{agreement?.status || "-"}</div>
                       </div>
 
                       <Separator />

@@ -16,6 +16,10 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Eye, EyeOff } from "lucide-react"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
+import {
+  ensureBrowserSessionPersistence,
+  markAuthSession,
+} from "@/lib/authSession"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -29,7 +33,9 @@ export default function SignupPage() {
 
     setLoading(true)
     try {
+      await ensureBrowserSessionPersistence()
       const res = await createUserWithEmailAndPassword(auth, email, password)
+      markAuthSession(res.user.uid)
       await sendEmailVerification(res.user)
 
       // ✅ Create stub profile doc
@@ -74,8 +80,10 @@ export default function SignupPage() {
   const handleGoogleSignup = async () => {
     setLoading(true)
     try {
+      await ensureBrowserSessionPersistence()
       const provider = new GoogleAuthProvider()
       const res = await signInWithPopup(auth, provider)
+      markAuthSession(res.user.uid)
 
       // ✅ Create stub profile doc
       await setDoc(

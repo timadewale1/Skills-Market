@@ -1,108 +1,134 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createUserWithEmailAndPassword } from "firebase/auth"
-import { auth, db } from "@/lib/firebase"
-import { doc, setDoc } from "firebase/firestore"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Eye, EyeOff } from "lucide-react"
+import { createUserWithEmailAndPassword } from "firebase/auth"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { auth, db } from "@/lib/firebase"
+import Button from "@/components/ui/Button"
+import AdminAuthShell from "@/components/admin/AdminAuthShell"
 
-export default function AdminSignup() {
+export default function AdminSignupPage() {
   const router = useRouter()
+  const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  async function signup() {
+  const handleSignup = async () => {
+    if (!fullName || !email || !password) {
+      setError("Enter your name, admin email, and password.")
+      return
+    }
+
     try {
       setLoading(true)
       setError("")
+
       const cred = await createUserWithEmailAndPassword(auth, email, password)
-      await setDoc(doc(db, "users", cred.user.uid), {
-        name,
-        email,
-        role: "admin",
-        createdAt: new Date(),
-      })
+      await setDoc(
+        doc(db, "users", cred.user.uid),
+        {
+          uid: cred.user.uid,
+          fullName,
+          email,
+          role: "admin",
+          onboardingComplete: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      )
+
       router.push("/admin/dashboard")
-    } catch (e: any) {
-      setError(e.message || "Signup failed")
+    } catch (err: any) {
+      setError(err?.message || "Admin signup failed")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-      <Card className="w-full max-w-md rounded-xl shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 rounded-t-xl">
-          <CardTitle className="text-2xl font-extrabold text-gray-900">Create Admin Account</CardTitle>
-          <p className="text-sm text-gray-600 mt-1">Register a new admin user</p>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
+    <AdminAuthShell
+      title="Create an admin account for platform operations."
+      subtitle="Set up the people who will review verification, oversee disputes, monitor transactions, and keep the marketplace healthy."
+      eyebrow="Admin onboarding"
+    >
+      <div>
+        <h2 className="text-2xl font-extrabold text-gray-900">Admin signup</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Register an internal operator account for changeworker administration.
+        </p>
+      </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Full Name
-            </label>
-            <input
-              placeholder="John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
+      <div className="mt-6 space-y-4">
+        {error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </div>
+        ) : null}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Full name</label>
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Platform operator name"
+            className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-[var(--primary)]"
+          />
+        </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Password
-            </label>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Email address</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="admin@changeworker.ng"
+            className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-[var(--primary)]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Password</label>
+          <div className="relative">
             <input
-              type="password"
-              placeholder="••••••••"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              placeholder="Create a strong password"
+              className="w-full rounded-2xl border px-4 py-3 pr-11 text-sm outline-none transition focus:border-[var(--primary)]"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+              aria-label="Toggle password visibility"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
+        </div>
 
-          <button
-            onClick={signup}
-            disabled={loading || !name || !email || !password}
-            className="w-full py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Creating..." : "Create Admin"}
-          </button>
+        <Button
+          onClick={handleSignup}
+          disabled={loading || !fullName || !email || !password}
+          className="w-full"
+        >
+          {loading ? "Creating admin account..." : "Create admin account"}
+        </Button>
+      </div>
 
-          <p className="text-center text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link href="/admin/login" className="text-green-600 hover:underline font-semibold">
-              Sign In
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+      <div className="mt-6 flex items-center justify-between text-sm text-gray-600">
+        <span>Already have access?</span>
+        <Link href="/admin/login" className="font-semibold text-[var(--primary)]">
+          Sign in
+        </Link>
+      </div>
+    </AdminAuthShell>
   )
 }

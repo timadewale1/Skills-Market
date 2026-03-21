@@ -3,8 +3,6 @@
 export const dynamic = "force-dynamic"
 
 import { useEffect, useMemo, useState } from "react"
-import RequireAdmin from "@/components/admin/RequireAdmin"
-import AdminNavbar from "@/components/admin/AdminNavbar"
 import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where, doc, updateDoc, deleteDoc } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,10 +12,9 @@ import {
   ShieldCheck,
   X,
   Search as SearchIcon,
-  Edit,
+  Eye,
   Ban,
   CheckCircle,
-  AlertTriangle,
 } from "lucide-react"
 import TalentFilters, { TalentFilterState } from "@/components/talent/TalentFilters"
 import Link from "next/link"
@@ -76,7 +73,7 @@ export default function AdminTalentsPage() {
       const rows: TalentRow[] = snap.docs.map((docx) => {
         const d: any = docx.data()
         return {
-          uid: d.uid,
+          uid: d.uid || docx.id,
           slug: d.slug,
           fullName: d.fullName || "Unnamed Talent",
           location: d.location || "",
@@ -276,9 +273,7 @@ export default function AdminTalentsPage() {
   }
 
   return (
-    <RequireAdmin>
-      <AdminNavbar />
-
+    <>
       <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)]">
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* HEADER */}
@@ -286,7 +281,7 @@ export default function AdminTalentsPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold">Manage Talents</h1>
               <p className="text-gray-600 mt-1 text-sm">
-                Search, filter, and manage talent profiles — verify, disable, or edit details.
+                Search, filter, and manage talent profiles - verify, disable, or edit details.
               </p>
             </div>
 
@@ -376,7 +371,7 @@ export default function AdminTalentsPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap mb-1">
                               <Link
-                                href={`/admin/talents/${t.slug || t.uid}`}
+                                href={`/admin/talents/${t.uid}`}
                                 className="font-extrabold text-gray-900 hover:text-[var(--primary)] transition"
                               >
                                 {t.fullName}
@@ -433,11 +428,11 @@ export default function AdminTalentsPage() {
 
                         <div className="flex flex-col gap-2">
                           <Link
-                            href={`/admin/talents/${t.slug || t.uid}`}
+                            href={`/admin/talents/${t.uid}`}
                             className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold hover:shadow-sm transition"
                           >
-                            <Edit size={14} />
-                            Edit
+                            <Eye size={14} />
+                            View talent
                           </Link>
 
                           <div className="flex flex-col gap-1">
@@ -536,6 +531,6 @@ export default function AdminTalentsPage() {
           </div>
         </div>
       )}
-    </RequireAdmin>
+    </>
   )
 }

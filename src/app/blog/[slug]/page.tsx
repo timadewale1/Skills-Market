@@ -10,7 +10,7 @@ import {
 } from "react-icons/fi"
 import { HiSparkles } from "react-icons/hi"
 
-/* props — in Next.js this would come from params */
+/* props - in Next.js this would come from params */
 interface BlogPostProps { slug?: string }
 
 function useScrollY() {
@@ -88,7 +88,7 @@ function renderSection(s: Section, i: number, accentColor: string) {
           <p className="text-gray-700 text-lg italic leading-relaxed mb-3" style={{ fontFamily: "'Instrument Serif', serif" }}>
             "{s.content}"
           </p>
-          {s.author && <cite className="fm text-xs text-gray-400 not-italic">— {s.author}</cite>}
+          {s.author && <cite className="fm text-xs text-gray-400 not-italic">- {s.author}</cite>}
         </blockquote>
       )
     case "list":

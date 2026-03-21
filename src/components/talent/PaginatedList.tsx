@@ -80,7 +80,7 @@ export default function TalentCard({
 
                   <span className="inline-flex items-center gap-1">
                     <Star size={14} className="text-[var(--primary)]" />
-                    <span className="font-semibold">{avg ? avg.toFixed(1) : "—"}</span>
+                    <span className="font-semibold">{avg ? avg.toFixed(1) : "-"}</span>
                     <span>({count || 0})</span>
                   </span>
 
@@ -121,7 +121,7 @@ export default function TalentCard({
               <div className="text-right">
                 <div className="text-sm text-gray-500 font-semibold">Rate</div>
                 <div className="text-xl font-extrabold">
-                  {t.hourlyRate != null ? `₦${Number(t.hourlyRate).toLocaleString()}/hr` : "—"}
+                  {t.hourlyRate != null ? `₦${Number(t.hourlyRate).toLocaleString()}/hr` : "-"}
                 </div>
               </div>
             </div>

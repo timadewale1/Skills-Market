@@ -1,342 +1,372 @@
 "use client"
 
+export const dynamic = "force-dynamic"
+
 import { useEffect, useMemo, useState } from "react"
-import RequireAdmin from "@/components/admin/RequireAdmin"
-import AdminNavbar from "@/components/admin/AdminNavbar"
+import Link from "next/link"
+import { motion, animate } from "framer-motion"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
 import { doc, getDoc } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import AdminPageHeader from "@/components/admin/AdminPageHeader"
 import {
   Users,
   Briefcase,
-  MessageSquare,
-  TrendingUp,
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
+  FolderKanban,
   AlertTriangle,
   Wallet,
   BarChart3,
+  Bell,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react"
-import Link from "next/link"
-import { motion, animate } from "framer-motion"
 
 type AdminDoc = {
   fullName?: string
   email?: string
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 10 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: 0.05 * i, duration: 0.35 },
-  }),
+type WellnessCheck = {
+  key: string
+  label: string
+  status: "ok" | "warning" | "error"
+  detail: string
 }
 
-// gentle floating animation (subtle "alive" movement)
-const floaty = {
-  animate: {
-    y: [0, -4, 0],
-  },
-  transition: {
-    duration: 3.2,
-    repeat: Infinity,
-    ease: "easeInOut" as const,
-  },
+type WellnessState = {
+  status: "healthy" | "watch" | "degraded" | "error"
+  checkedAt?: string
+  checks: WellnessCheck[]
 }
 
-export default function AdminDashboard() {
+type QuickLink = {
+  title: string
+  desc: string
+  href: string
+  icon: React.ElementType
+}
+
+const quickLinks: QuickLink[] = [
+  { title: "Review users", desc: "Check new accounts, verification, and role-level issues.", href: "/admin/users", icon: Users },
+  { title: "Manage talents", desc: "Handle KYC, profile quality, and delivery-side oversight.", href: "/admin/talents", icon: Users },
+  { title: "Manage clients", desc: "Review client organizations, gigs, and verification state.", href: "/admin/clients", icon: Users },
+  { title: "Monitor gigs", desc: "Inspect open opportunities, posting quality, and client activity.", href: "/admin/gigs", icon: Briefcase },
+  { title: "Review proposals", desc: "Follow submission quality and acceptance flow across gigs.", href: "/admin/proposals", icon: Briefcase },
+  { title: "Track workspaces", desc: "Follow active deliveries, approvals, and payout states.", href: "/admin/workspaces", icon: FolderKanban },
+  { title: "Read messages", desc: "Open thread-level conversation context for support and disputes.", href: "/admin/messages", icon: Bell },
+  { title: "Resolve disputes", desc: "Handle platform escalations tied to workspace history.", href: "/admin/disputes", icon: AlertTriangle },
+  { title: "Review transactions", desc: "Track funding, payout release, and platform fee revenue.", href: "/admin/transactions", icon: Wallet },
+  { title: "Open wallets", desc: "Inspect client escrow exposure and talent balances.", href: "/admin/wallets", icon: Wallet },
+  { title: "Check reviews", desc: "Read peer reviews and reputation signals.", href: "/admin/reviews", icon: BarChart3 },
+  { title: "Analytics", desc: "Follow users, gigs, workspaces, volume, and revenue.", href: "/admin/analytics", icon: BarChart3 },
+  { title: "Notifications", desc: "Check admin alerts and linked operational records.", href: "/admin/notifications", icon: Bell },
+  { title: "Reports", desc: "Jump into reporting and trend snapshots.", href: "/admin/reports", icon: BarChart3 },
+  { title: "Settings", desc: "Review admin-side configuration controls.", href: "/admin/settings", icon: ShieldCheck },
+]
+
+function formatNaira(value: number) {
+  return `N${value.toLocaleString()}`
+}
+
+export default function AdminDashboardPage() {
   const { user } = useAuth()
   const [profile, setProfile] = useState<AdminDoc | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [usersCount, setUsersCount] = useState(0)
+  const [gigsCount, setGigsCount] = useState(0)
+  const [workspacesCount, setWorkspacesCount] = useState(0)
+  const [disputesCount, setDisputesCount] = useState(0)
+  const [wellness, setWellness] = useState<WellnessState>({
+    status: "watch",
+    checks: [],
+  })
 
-  // Animated stats (count-up)
-  const [statA, setStatA] = useState(0)
-  const [statB, setStatB] = useState(0)
-  const [statC, setStatC] = useState(0)
-  const [statD, setStatD] = useState(0)
+  const loadWellness = async () => {
+    if (!user) return
+
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch("/api/admin/system-wellness", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setWellness({
+          status: data.status,
+          checkedAt: data.checkedAt,
+          checks: data.checks || [],
+        })
+      } else {
+        setWellness({
+          status: "error",
+          checks: [
+            {
+              key: "system_wellness",
+              label: "System wellness",
+              status: "error",
+              detail: data?.error || "Wellness check failed.",
+            },
+          ],
+        })
+      }
+    } catch (error: any) {
+      setWellness({
+        status: "error",
+        checks: [
+          {
+            key: "system_wellness",
+            label: "System wellness",
+            status: "error",
+            detail: error?.message || "Wellness check failed.",
+          },
+        ],
+      })
+    }
+  }
 
   useEffect(() => {
     const run = async () => {
       if (!user?.uid) return
-      setLoading(true)
 
-      const snap = await getDoc(doc(db, "users", user.uid))
-      const data = (snap.data() as any) || null
+      const [profileSnap, usersSnap, gigsSnap, workspacesSnap, disputesSnap] =
+        await Promise.all([
+          getDoc(doc(db, "users", user.uid)),
+          getDoc(doc(db, "stats", "users")),
+          getDoc(doc(db, "stats", "gigs")),
+          getDoc(doc(db, "stats", "workspaces")),
+          getDoc(doc(db, "stats", "disputes")),
+        ])
 
-      setProfile(data)
-      setLoading(false)
+      setProfile((profileSnap.data() as AdminDoc) || null)
 
-      // Load admin stats
-      const usersSnap = await getDoc(doc(db, "stats", "users"))
-      const gigsSnap = await getDoc(doc(db, "stats", "gigs"))
-      const workspacesSnap = await getDoc(doc(db, "stats", "workspaces"))
-      const disputesSnap = await getDoc(doc(db, "stats", "disputes"))
+      const nextUsers = usersSnap.exists() ? Number(usersSnap.data()?.count || 0) : 0
+      const nextGigs = gigsSnap.exists() ? Number(gigsSnap.data()?.count || 0) : 0
+      const nextWorkspaces = workspacesSnap.exists()
+        ? Number(workspacesSnap.data()?.count || 0)
+        : 0
+      const nextDisputes = disputesSnap.exists()
+        ? Number(disputesSnap.data()?.count || 0)
+        : 0
 
-      const usersCount = usersSnap.exists() ? usersSnap.data()?.count || 0 : 0
-      const gigsCount = gigsSnap.exists() ? gigsSnap.data()?.count || 0 : 0
-      const workspacesCount = workspacesSnap.exists() ? workspacesSnap.data()?.count || 0 : 0
-      const disputesCount = disputesSnap.exists() ? disputesSnap.data()?.count || 0 : 0
+      animate(0, nextUsers, { duration: 0.7, onUpdate: (value) => setUsersCount(Math.round(value)) })
+      animate(0, nextGigs, { duration: 0.8, onUpdate: (value) => setGigsCount(Math.round(value)) })
+      animate(0, nextWorkspaces, {
+        duration: 0.9,
+        onUpdate: (value) => setWorkspacesCount(Math.round(value)),
+      })
+      animate(0, nextDisputes, {
+        duration: 1,
+        onUpdate: (value) => setDisputesCount(Math.round(value)),
+      })
 
-      // count-up animations
-      animate(0, usersCount, { duration: 0.8, onUpdate: (v) => setStatA(Math.round(v)) })
-      animate(0, gigsCount, { duration: 0.9, onUpdate: (v) => setStatB(Math.round(v)) })
-      animate(0, workspacesCount, { duration: 1.0, onUpdate: (v) => setStatC(Math.round(v)) })
-      animate(0, disputesCount, { duration: 1.1, onUpdate: (v) => setStatD(Math.round(v)) })
+      await loadWellness()
     }
 
-    run()
+    void run()
   }, [user?.uid])
 
-  const headline = useMemo(() => {
-    if (!profile) return "Admin Dashboard"
-    return `Welcome, ${profile.fullName?.split(" ")[0] || "Admin"}`
-  }, [profile])
+  const adminName = useMemo(() => {
+    return profile?.fullName?.split(" ")[0] || "Admin"
+  }, [profile?.fullName])
 
-  const sub = useMemo(() => {
-    return "Monitor platform activity, manage users, and oversee operations."
-  }, [])
+  const wellnessTone = {
+    healthy: {
+      chip: "bg-emerald-50 text-emerald-700",
+      dot: "bg-emerald-500",
+      title: "Healthy",
+    },
+    watch: {
+      chip: "bg-amber-50 text-amber-700",
+      dot: "bg-amber-500",
+      title: "Watch",
+    },
+    degraded: {
+      chip: "bg-orange-50 text-orange-700",
+      dot: "bg-orange-500",
+      title: "Degraded",
+    },
+    error: {
+      chip: "bg-red-50 text-red-700",
+      dot: "bg-red-500",
+      title: "Error",
+    },
+  }[wellness.status]
 
-  const primaryActions = [
-    {
-      title: "Manage Users",
-      desc: "View, ban, verify, and change user roles.",
-      href: "/admin/users",
-      icon: Users,
-    },
-    {
-      title: "Review Disputes",
-      desc: "Resolve payment disputes and conflicts.",
-      href: "/admin/disputes",
-      icon: AlertTriangle,
-    },
-    {
-      title: "Platform Analytics",
-      desc: "View revenue, user growth, and metrics.",
-      href: "/admin/analytics",
-      icon: BarChart3,
-    },
-  ]
+  const keyChecks = wellness.checks.slice(0, 4)
 
   return (
-    <RequireAdmin>
-      <AdminNavbar />
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Admin overview"
+        title={`Welcome back, ${adminName}`}
+        description="Stay on top of the operating flow across users, gigs, workspaces, disputes, notifications, and analytics."
+        stats={[
+          { label: "Users", value: usersCount },
+          { label: "Gigs", value: gigsCount },
+          { label: "Workspaces", value: workspacesCount },
+          { label: "Open disputes", value: disputesCount },
+        ]}
+      />
 
-      <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)]">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Header */}
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={fadeUp}
-            custom={0}
-            className="flex items-start justify-between gap-4"
-          >
-            <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-                {headline}
-              </h1>
-              <p className="text-gray-600 mt-2">{sub}</p>
-            </div>
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+        <Card className="rounded-[1.75rem] border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-extrabold">Priority operations</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            {quickLinks.map((item, index) => {
+              const Icon = item.icon
+              return (
+                <motion.div
+                  key={item.href}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.25 }}
+                >
+                  <Link
+                    href={item.href}
+                    className="group block rounded-[1.5rem] border bg-[var(--secondary)] p-5 transition hover:-translate-y-0.5 hover:border-orange-200 hover:bg-white"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-[var(--primary)]">
+                        <Icon size={18} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-extrabold text-gray-900 transition group-hover:text-[var(--primary)]">
+                          {item.title}
+                        </div>
+                        <p className="mt-1 text-sm leading-6 text-gray-600">{item.desc}</p>
+                      </div>
+                      <ArrowRight size={18} className="text-gray-400 transition group-hover:text-[var(--primary)]" />
+                    </div>
+                  </Link>
+                </motion.div>
+              )
+            })}
+          </CardContent>
+        </Card>
 
-            {/* Admin badge (pulse ring) */}
-            <div className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full border bg-white relative">
-              <motion.span
-                aria-hidden
-                className="absolute -left-1 -top-1 h-3 w-3 rounded-full bg-[var(--primary)]"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <ShieldCheck size={16} className="text-[var(--primary)]" />
-              <span className="text-gray-700">Admin Console • changeworker</span>
-            </div>
-          </motion.div>
-
-          {/* Trust strip */}
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={fadeUp}
-            custom={1}
-            className="mt-4"
-          >
-            <div className="bg-white border rounded-2xl px-4 py-3 flex items-center gap-3 text-sm text-gray-700">
-              <motion.div
-                className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center"
-                {...floaty}
-              >
-                <ShieldCheck className="text-[var(--primary)]" size={18} />
-              </motion.div>
-
-              <div className="flex-1">
-                <span className="font-extrabold text-gray-900">Platform Administration</span>{" "}
-                — Monitor user activity, resolve disputes, and maintain platform integrity.
+        <div className="space-y-4">
+          <Card className="rounded-[1.75rem] border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-[var(--primary)]">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500">
+                    Platform health
+                  </div>
+                  <div className="text-xl font-extrabold text-gray-900">{wellnessTone.title}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadWellness()
+                  }}
+                  className="ml-auto rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+                >
+                  Refresh
+                </button>
               </div>
-
-              <div className="hidden md:block text-xs font-semibold text-gray-600">
-                Admin Mode
+              <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] ${wellnessTone.chip}`}>
+                <span className={`h-2.5 w-2.5 rounded-full ${wellnessTone.dot}`} />
+                {wellnessTone.title}
               </div>
-            </div>
-          </motion.div>
-
-          {/* Stat cards */}
-          <motion.div
-            initial="hidden"
-            animate="show"
-            className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4"
-          >
-            <StatCard
-              i={0}
-              icon={<Users className="text-[var(--primary)]" size={18} />}
-              title="Total Users"
-              value={statA}
-              hint="Registered users"
-            />
-            <StatCard
-              i={1}
-              icon={<Briefcase className="text-[var(--primary)]" size={18} />}
-              title="Active Gigs"
-              value={statB}
-              hint="Posted opportunities"
-            />
-            <StatCard
-              i={2}
-              icon={<Wallet className="text-[var(--primary)]" size={18} />}
-              title="Workspaces"
-              value={statC}
-              hint="Active projects"
-            />
-            <StatCard
-              i={3}
-              icon={<AlertTriangle className="text-[var(--primary)]" size={18} />}
-              title="Open Disputes"
-              value={statD}
-              hint="Require resolution"
-            />
-          </motion.div>
-
-          {/* Quick actions */}
-          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <motion.div
-              initial="hidden"
-              animate="show"
-              variants={fadeUp}
-              custom={2}
-              className="lg:col-span-2"
-            >
-              <Card className="rounded-2xl">
-                <CardHeader>
-                  <CardTitle className="text-base font-extrabold">
-                    Quick actions
-                  </CardTitle>
-                </CardHeader>
-
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {primaryActions.map((a) => {
-                    const Icon = a.icon
-                    return (
-                      <motion.div
-                        key={a.title}
-                        whileHover={{ y: -4 }}
-                        transition={{ type: "spring", stiffness: 240, damping: 18 }}
+              <p className="mt-4 text-sm leading-7 text-gray-600">
+                This check reads the live admin environment and core services so admins can quickly see whether Firebase admin access, Firestore reads, notifications, and payment configuration are in a good state.
+              </p>
+              <div className="mt-4 space-y-2">
+                {keyChecks.map((check) => (
+                  <div key={check.key} className="rounded-2xl border bg-[var(--secondary)] px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-semibold text-gray-900">{check.label}</div>
+                      <span
+                        className={[
+                          "rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]",
+                          check.status === "ok"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : check.status === "warning"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-red-50 text-red-700",
+                        ].join(" ")}
                       >
-                        <Link
-                          href={a.href}
-                          className="group block rounded-2xl border bg-white p-4 hover:shadow-md transition"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center">
-                              <Icon className="text-[var(--primary)]" size={18} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-extrabold text-gray-900 group-hover:text-[var(--primary)] transition">
-                                {a.title}
-                              </div>
-                              <div className="text-sm text-gray-600 mt-1">
-                                {a.desc}
-                              </div>
-                            </div>
-                            <ArrowRight
-                              className="text-gray-400 group-hover:text-[var(--primary)] transition"
-                              size={18}
-                            />
-                          </div>
-                        </Link>
-                      </motion.div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-            </motion.div>
+                        {check.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs leading-6 text-gray-600">{check.detail}</div>
+                  </div>
+                ))}
+              </div>
+              {wellness.checkedAt ? (
+                <div className="mt-3 text-xs text-gray-500">
+                  Checked at {new Date(wellness.checkedAt).toLocaleString()}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
 
-            <motion.div
-              variants={fadeUp}
-              custom={5}
-              whileHover={{ y: -4 }}
-              transition={{ type: "spring", stiffness: 240, damping: 18 }}
-            >
-              <Card className="rounded-2xl hover:shadow-md transition">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <motion.div
-                      className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center"
-                      animate={{ scale: [1, 1.04, 1] }}
-                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <TrendingUp className="text-[var(--primary)]" size={18} />
-                    </motion.div>
-                    <div className="text-2xl font-extrabold">Platform</div>
-                  </div>
-                  <div className="mt-3 font-extrabold">Health Status</div>
-                  <div className="text-sm text-gray-600 mt-1">All systems operational</div>
-                  <div className="mt-3 flex items-center gap-2 text-xs text-green-600 font-semibold">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    Online
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
+          <Card className="rounded-[1.75rem] border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-extrabold">Admin shortcuts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                {
+                  href: "/admin/notifications",
+                  label: "Notifications",
+                  detail: "See platform alerts and review queues.",
+                  icon: Bell,
+                },
+                {
+                  href: "/admin/transactions",
+                  label: "Transactions",
+                  detail: `Follow platform money flow, workspace funding, and platform earnings from ${formatNaira(0)} upward.`,
+                  icon: Wallet,
+                },
+                {
+                  href: "/admin/analytics",
+                  label: "Analytics",
+                  detail: "Check trend lines and operating metrics.",
+                  icon: BarChart3,
+                },
+                {
+                  href: "/admin/messages",
+                  label: "Messages",
+                  detail: "Open thread-level conversation records.",
+                  icon: Bell,
+                },
+                {
+                  href: "/admin/wallets",
+                  label: "Wallets",
+                  detail: "Inspect client escrow and talent balances.",
+                  icon: Wallet,
+                },
+              ].map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-start gap-3 rounded-2xl border bg-[var(--secondary)] px-4 py-4 transition hover:border-orange-200 hover:bg-white"
+                  >
+                    <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[var(--primary)]">
+                      <Icon size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900">{item.label}</div>
+                      <div className="text-sm leading-6 text-gray-600">{item.detail}</div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </RequireAdmin>
-  )
-}
-
-function StatCard({
-  i,
-  icon,
-  title,
-  value,
-  hint,
-}: {
-  i: number
-  icon: React.ReactNode
-  title: string
-  value: number
-  hint: string
-}) {
-  return (
-    <motion.div variants={fadeUp} custom={i + 1} whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}>
-      <Card className="rounded-2xl hover:shadow-md transition">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <motion.div
-              className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center"
-              animate={{ rotate: [0, 2, 0] }}
-              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-            >
-              {icon}
-            </motion.div>
-            <div className="text-2xl font-extrabold">{value}</div>
-          </div>
-          <div className="mt-3 font-extrabold">{title}</div>
-          <div className="text-sm text-gray-600 mt-1">{hint}</div>
-        </CardContent>
-      </Card>
-    </motion.div>
+    </div>
   )
 }

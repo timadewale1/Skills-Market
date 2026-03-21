@@ -86,7 +86,7 @@ const fadeUp = {
 }
 
 function money(n?: number | null) {
-  if (n === null || n === undefined) return "—"
+  if (n === null || n === undefined) return "-"
   return `₦${Number(n).toLocaleString()}`
 }
 
@@ -171,10 +171,10 @@ export default function GigDetailsPage() {
   }, [id])
 
   const budgetLabel = useMemo(() => {
-    if (!gig) return "—"
+    if (!gig) return "-"
     if (gig.budgetType === "hourly") return `${money(gig.hourlyRate)}/hr`
     if (gig.budgetType === "fixed") return `${money(gig.fixedBudget)} fixed`
-    return "—"
+    return "-"
   }, [gig])
 
   const isOwner = useMemo(() => {
@@ -261,7 +261,7 @@ export default function GigDetailsPage() {
 
                       <span className="inline-flex items-center gap-2 font-semibold">
                         <MapPin size={16} className="text-[var(--primary)]" />
-                        {gig.workMode === "Remote" ? "Remote" : gig.location || "—"}
+                        {gig.workMode === "Remote" ? "Remote" : gig.location || "-"}
                       </span>
 
                       <span className="text-gray-400">•</span>
@@ -295,7 +295,7 @@ export default function GigDetailsPage() {
                         <CardTitle className="text-base font-extrabold">Gig description</CardTitle>
                       </CardHeader>
                       <CardContent className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {gig.description || "—"}
+                        {gig.description || "-"}
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -316,7 +316,7 @@ export default function GigDetailsPage() {
                             </span>
                           ))
                         ) : (
-                          <div className="text-sm text-gray-600">—</div>
+                          <div className="text-sm text-gray-600">-</div>
                         )}
                       </CardContent>
                     </Card>
@@ -405,20 +405,20 @@ export default function GigDetailsPage() {
 
                         <div className="flex items-center justify-between">
                           <span className="text-gray-500 font-semibold">Work mode</span>
-                          <span className="font-extrabold">{gig.workMode || "—"}</span>
+                          <span className="font-extrabold">{gig.workMode || "-"}</span>
                         </div>
 
                         <div className="flex items-center justify-between">
                           <span className="text-gray-500 font-semibold">Duration</span>
                           <span className="font-extrabold inline-flex items-center gap-2">
                             <Clock size={14} className="text-[var(--primary)]" />
-                            {gig.duration || "—"}
+                            {gig.duration || "-"}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between">
                           <span className="text-gray-500 font-semibold">Experience</span>
-                          <span className="font-extrabold">{gig.experienceLevel || "—"}</span>
+                          <span className="font-extrabold">{gig.experienceLevel || "-"}</span>
                         </div>
 
                         <Separator />
@@ -435,7 +435,7 @@ export default function GigDetailsPage() {
 
                         <div className="space-y-2">
                           <div className="text-gray-500 font-semibold">Client</div>
-                          <div className="font-extrabold">{gig.clientOrgName || gig.clientName || "—"}</div>
+                          <div className="font-extrabold">{gig.clientOrgName || gig.clientName || "-"}</div>
                         </div>
                       </CardContent>
                     </Card>
@@ -460,7 +460,7 @@ export default function GigDetailsPage() {
                             </span>
                           ))
                         ) : (
-                          <div className="text-sm text-gray-600">—</div>
+                          <div className="text-sm text-gray-600">-</div>
                         )}
                       </CardContent>
                     </Card>

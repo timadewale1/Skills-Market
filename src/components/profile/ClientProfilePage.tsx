@@ -50,7 +50,7 @@ export default function ClientProfilePage() {
   const [userDoc, setUserDoc] = useState<any>(null)
 
   const [orgName, setOrgName] = useState("Organization")
-  const [location, setLocation] = useState("—")
+  const [location, setLocation] = useState("-")
   const [photoUrl, setPhotoUrl] = useState("")
   const [verified, setVerified] = useState(false)
 
@@ -165,7 +165,7 @@ export default function ClientProfilePage() {
         setSelectedSdgs(data?.sdgTags || [])
 
         setOrgName(data?.client?.orgName || "Organization")
-        setLocation(data.location || "—")
+        setLocation(data.location || "-")
         setPhotoUrl(data.photoUrl || "")
         setVerified(Boolean(data?.orgKyc?.status === "verified"))
 
@@ -240,7 +240,7 @@ export default function ClientProfilePage() {
               <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                 <Star size={14} className="text-[var(--primary)]" />
                 <span className="font-semibold">
-                  {ratingAvg ? ratingAvg.toFixed(1) : "—"}
+                  {ratingAvg ? ratingAvg.toFixed(1) : "-"}
                 </span>
                 <span>({ratingCount || 0})</span>
               </div>
@@ -310,7 +310,7 @@ export default function ClientProfilePage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="text-xs font-semibold text-gray-500">About</div>
-                      <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{about || "—"}</div>
+                      <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{about || "-"}</div>
                     </div>
                     <button
                       onClick={() => setEditAboutOpen(true)}

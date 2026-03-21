@@ -39,7 +39,7 @@ type GigRow = {
 }
 
 function money(n?: number | null) {
-  if (!n) return "—"
+  if (!n) return "-"
   return `₦${Number(n).toLocaleString()}`
 }
 
@@ -135,7 +135,7 @@ export default function PublicClientProfilePage() {
 
                       <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                         <Star size={14} className="text-[var(--primary)]" />
-                        <span className="font-semibold">{ratingAvg ? ratingAvg.toFixed(1) : "—"}</span>
+                        <span className="font-semibold">{ratingAvg ? ratingAvg.toFixed(1) : "-"}</span>
                         <span>({ratingCount || 0})</span>
                       </div>
 
@@ -181,7 +181,7 @@ export default function PublicClientProfilePage() {
                           </span>
                         ))
                       ) : (
-                        <div className="text-sm text-gray-600">—</div>
+                        <div className="text-sm text-gray-600">-</div>
                       )}
                     </div>
                   </div>
@@ -197,7 +197,7 @@ export default function PublicClientProfilePage() {
                           </span>
                         ))
                       ) : (
-                        <div className="text-sm text-gray-600">—</div>
+                        <div className="text-sm text-gray-600">-</div>
                       )}
                     </div>
                   </div>

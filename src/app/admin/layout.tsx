@@ -11,18 +11,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isAuthPage = pathname === "/admin/login" || pathname === "/admin/signup"
 
   if (isAuthPage) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {children}
-      </div>
-    )
+    return children
   }
 
   return (
     <RequireAdmin>
       <AdminNavbar />
-      <main className="max-w-7xl mx-auto p-6">
+      <main className="min-h-[calc(100vh-73px)] bg-[var(--secondary)]">
+        <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8">
         {children}
+        </div>
       </main>
     </RequireAdmin>
   )

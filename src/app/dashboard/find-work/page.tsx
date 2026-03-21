@@ -111,14 +111,14 @@ const APPLICANTS_FILTERS = [
 ] as const
 
 function money(n?: number | null) {
-  if (n === null || n === undefined) return "—"
+  if (n === null || n === undefined) return "-"
   return `₦${Number(n).toLocaleString()}`
 }
 
 function budgetLabel(g: Gig) {
   if (g.budgetType === "hourly") return `${money(g.hourlyRate)}/hr`
   if (g.budgetType === "fixed") return `${money(g.fixedBudget)} fixed`
-  return "—"
+  return "-"
 }
 
 function toDate(ts: any): Date | null {
@@ -131,7 +131,7 @@ function toDate(ts: any): Date | null {
 
 function timeAgo(ts: any) {
   const d = toDate(ts)
-  if (!d) return "—"
+  if (!d) return "-"
   const diffMs = Date.now() - d.getTime()
   const sec = Math.floor(diffMs / 1000)
   if (sec < 10) return "just now"
@@ -702,7 +702,7 @@ return [g.id, snap.size] as const
                                       <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                                         <span className="inline-flex items-center gap-1">
                                           <MapPin size={14} />
-                                          {g.workMode === "Remote" ? "Remote" : g.location || "—"}
+                                          {g.workMode === "Remote" ? "Remote" : g.location || "-"}
                                         </span>
                                         <span className="mx-1">•</span>
                                         <span>
@@ -791,7 +791,7 @@ return [g.id, snap.size] as const
 
                                     <span className="inline-flex items-center gap-2 font-semibold">
                                       <MapPin size={16} className="text-[var(--primary)]" />
-                                      {g.workMode === "Remote" ? "Remote" : g.location || "—"}
+                                      {g.workMode === "Remote" ? "Remote" : g.location || "-"}
                                     </span>
 
                                     <span className="text-gray-400">•</span>

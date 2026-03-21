@@ -12,6 +12,7 @@ import { HiSparkles, HiLightningBolt } from "react-icons/hi"
 import { TbRocket, TbTargetArrow, TbBuildingCommunity, TbHeartHandshake } from "react-icons/tb"
 import { RiLeafLine, RiTeamLine, RiShieldCheckLine } from "react-icons/ri"
 import { MdOutlineHandshake } from "react-icons/md"
+import { fetchPlatformStats } from "@/lib/platformStats"
 
 /* ═══ HOOKS ══════════════════════════════════════════════════ */
 function useScrollY() {
@@ -126,7 +127,7 @@ const TEAM = [
   {
     name: "Segun Fashola",
     role: "Head of Platform & Product",
-    bio: "Product lead at two Nigerian fintech startups before finding his way to the impact sector. Believes the best product is invisible — it just works.",
+    bio: "Product lead at two Nigerian fintech startups before finding his way to the impact sector. Believes the best product is invisible - it just works.",
     initials: "SF",
     color: "#3B82F6",
     location: "Lagos",
@@ -153,14 +154,14 @@ const VALUES = [
   {
     icon: RiShieldCheckLine,
     title: "Trust by design",
-    desc: "Every platform decision — escrow, vetting, dispute resolution — is designed to remove risk and build trust between parties who may never have worked together before.",
+    desc: "Every platform decision - verification, workspace records, reviews, and dispute tools - is designed to reduce friction and build trust between parties who may never have worked together before.",
     color: "#6366F1",
     number: "03",
   },
   {
     icon: FiTarget,
     title: "Quality over volume",
-    desc: "We deliberately limit the number of freelancers on the platform. We would rather have 500 excellent, verified professionals than 50,000 unvetted ones. Curation is our product.",
+    desc: "We care more about fit, clarity, and trust than raw volume. We want the platform to feel focused, useful, and credible for both talent and clients.",
     color: "#EC4899",
     number: "04",
   },
@@ -181,13 +182,13 @@ const VALUES = [
 ]
 
 const MILESTONES = [
-  { year: "2022", title: "The problem becomes undeniable", desc: "Chidinma completes her third consecutive year struggling to find qualified M&E support for a USAID-funded health program. She begins documenting the structural problem." },
+  { year: "2022", title: "The problem becomes undeniable", desc: "After repeated difficulty finding qualified project support, the team begins documenting the structural talent challenge facing impact organizations." },
   { year: "2022", title: "Research phase", desc: "Over six months, she interviews 87 Nigerian nonprofit leaders and 120 freelance development professionals. The pattern is consistent: talent exists; the matching infrastructure doesn't." },
-  { year: "2023", title: "Emeka joins. changeworker is founded.", desc: "Impactpal Africa is registered. The founding thesis: a curated, sector-specific marketplace with payment protection and quality vetting can solve what word-of-mouth networks cannot." },
-  { year: "2023", title: "First 50 freelancers vetted", desc: "Seven months of building the vetting process, reviewing 400+ applications, conducting interviews, and establishing quality standards. The first 50 profiles go live." },
-  { year: "2024", title: "First 20 organizations", desc: "20 Nigerian nonprofits, NGOs, and social enterprises join as the founding organization cohort. First successful project completions. First genuine matches." },
-  { year: "2024", title: "₦45M in projects facilitated", desc: "By end of year one of live operations, the platform has facilitated over ₦45 million in project payments across 180+ completed engagements. 0% unpaid invoices." },
-  { year: "2025", title: "Series A conversation begins", desc: "With strong unit economics and sector validation, the company begins conversations with impact investors and development finance institutions about the Series A." },
+  { year: "2023", title: "Emeka joins. changeworker is founded.", desc: "Impactpal Africa is registered. The founding thesis: a sector-specific marketplace with stronger workflow support can solve what word-of-mouth networks cannot." },
+  { year: "2023", title: "First profiles go live", desc: "The team spends months shaping the early product, profile standards, and onboarding experience before the first public profiles go live." },
+  { year: "2024", title: "Early organizations join", desc: "Nonprofits, NGOs, and social enterprises begin using changeworker for discovery, conversations, and early project delivery across the platform." },
+  { year: "2024", title: "Platform operations expand", desc: "More organizations and talent profiles begin using changeworker for gig discovery, messaging, workspace delivery, and reviews across the platform." },
+  { year: "2025", title: "Looking ahead", desc: "The focus turns to improving the product, deepening sector trust, and expanding the ways talent and organizations can work together on the platform." },
 ]
 
 const BACKERS = [
@@ -240,6 +241,12 @@ function CursorGlow() {
 ═══════════════════════════════════════════════════════════════ */
 export default function AboutPage() {
   const scrollY = useScrollY()
+  const [stats, setStats] = useState({
+    freelancers: 0,
+    clients: 0,
+    projects: 0,
+    satisfaction: 98,
+  })
 
   const heroRef    = useInView(0.05)
   const missionRef = useInView(0.08)
@@ -253,6 +260,14 @@ export default function AboutPage() {
 
   const mag1 = useMagnet(20)
   const mag2 = useMagnet(16)
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const data = await fetchPlatformStats()
+      setStats(data)
+    }
+    loadStats()
+  }, [])
 
   return (
     <>
@@ -405,7 +420,7 @@ export default function AboutPage() {
         </section>
 
         {/* ╔══════════════════════════════════════════════════════╗
-            §2  MISSION STATEMENT — full-width cinematic
+            §2  MISSION STATEMENT - full-width cinematic
         ╚══════════════════════════════════════════════════════╝ */}
         <section ref={missionRef.ref} className="relative py-28 overflow-hidden bg-white">
           <div className="absolute right-0 top-0 w-96 h-96 opacity-20 dot-bg pointer-events-none" />
@@ -428,12 +443,12 @@ export default function AboutPage() {
             <div className={`flex flex-col lg:flex-row gap-10 lg:gap-16 ${missionRef.inView ? "reveal" : "opacity-0"}`} style={{ "--d": ".28s" } as React.CSSProperties}>
               <div className="flex-1">
                 <p className="text-gray-600 text-lg leading-[1.85] font-display font-normal">
-                  Nigeria's social sector is full of organizations doing critical work on health, education, climate, and economic justice — with fewer resources than they need and under more pressure than any sector should bear.
+                  Nigeria's social sector is full of organizations doing critical work on health, education, climate, and economic justice - with fewer resources than they need and under more pressure than any sector should bear.
                 </p>
               </div>
               <div className="flex-1">
                 <p className="text-gray-600 text-lg leading-[1.85] font-display font-normal">
-                  The last thing these organizations should have to fight is the talent infrastructure. changeworker removes that fight. We handle the finding, the vetting, the matching, and the payment — so organizations can focus on the mission.
+                  The last thing these organizations should have to fight is the talent infrastructure. changeworker helps reduce that friction with profile discovery, matching, messaging, workspace delivery, and payment support - so organizations can focus on the mission.
                 </p>
               </div>
             </div>
@@ -441,7 +456,7 @@ export default function AboutPage() {
         </section>
 
         {/* ╔══════════════════════════════════════════════════════╗
-            §3  STATS — animated counters on scroll
+            §3  STATS - animated counters on scroll
         ╚══════════════════════════════════════════════════════╝ */}
         <section ref={statsRef.ref} className="py-20 bg-[#060912] relative overflow-hidden noise">
           <div className="absolute inset-0 grid-dark" />
@@ -456,16 +471,16 @@ export default function AboutPage() {
 
           <div className="relative z-10 max-w-5xl mx-auto px-6">
             <div className={`grid grid-cols-2 lg:grid-cols-4 gap-10 ${statsRef.inView ? "reveal" : "opacity-0"}`} style={{ "--d": ".05s" } as React.CSSProperties}>
-              <StatCounter value={200} suffix="+" label="Organizations served" color="#F97316" start={statsRef.inView} />
-              <StatCounter value={500} suffix="+" label="Vetted freelancers" color="#6366F1" start={statsRef.inView} />
-              <StatCounter value={45} suffix="M+" label="₦ in projects facilitated" color="#10B981" start={statsRef.inView} />
-              <StatCounter value={98} suffix="%" label="Project satisfaction rate" color="#EC4899" start={statsRef.inView} />
+              <StatCounter value={stats.clients} suffix="+" label="Client profiles" color="#F97316" start={statsRef.inView} />
+              <StatCounter value={stats.freelancers} suffix="+" label="Talent profiles" color="#6366F1" start={statsRef.inView} />
+              <StatCounter value={stats.projects} suffix="+" label="Published gigs" color="#10B981" start={statsRef.inView} />
+              <StatCounter value={stats.satisfaction} suffix="%" label="Satisfaction rate" color="#EC4899" start={statsRef.inView} />
             </div>
           </div>
         </section>
 
         {/* ╔══════════════════════════════════════════════════════╗
-            §4  THE STORY — split with visual timeline sidebar
+            §4  THE STORY - split with visual timeline sidebar
         ╚══════════════════════════════════════════════════════╝ */}
         <section ref={storyRef.ref} className="py-28 bg-[#FAFAF9] relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
@@ -483,20 +498,20 @@ export default function AboutPage() {
 
                 <div className={`space-y-6 ${storyRef.inView ? "reveal" : "opacity-0"}`} style={{ "--d": ".18s" } as React.CSSProperties}>
                   <p className="text-gray-600 text-base leading-[1.9] font-display font-normal">
-                    In 2022, Chidinma Okafor was three years into leading a USAID-funded health program in Lagos. The program was doing real work: over 40,000 women reached, eight local government areas covered, indicators moving in the right direction.
+                    In 2022, Chidinma Okafor was deep into leading demanding impact work in Lagos. The program was doing real work, but finding reliable specialist support remained harder than it should have been.
                   </p>
                   <p className="text-gray-600 text-base leading-[1.9] font-display font-normal">
-                    Then her M&E lead left to join an international NGO offering three times the salary. The organization spent four months trying to replace him — through WhatsApp groups, NGO job boards, word of mouth. Every promising candidate either wanted a permanent contract the organization couldn't offer, or lacked the sector-specific skills the program required.
+                    Then her M&E lead left to join an international NGO offering three times the salary. The organization spent four months trying to replace him - through WhatsApp groups, NGO job boards, word of mouth. Every promising candidate either wanted a permanent contract the organization couldn't offer, or lacked the sector-specific skills the program required.
                   </p>
                   <p className="text-gray-600 text-base leading-[1.9] font-display font-normal">
-                    She talked to 87 other NGO leaders. Every single one had the same story. She talked to 120 freelance development professionals. Every single one had the same experience from the other side: skills, passion, willingness to work — and no structured way to find the organizations that needed them.
+                    She talked to 87 other NGO leaders. Every single one had the same story. She talked to 120 freelance development professionals. Every single one had the same experience from the other side: skills, passion, willingness to work - and no structured way to find the organizations that needed them.
                   </p>
 
                   <div className="bg-orange-50 border-l-4 border-orange-400 rounded-xl p-5 my-6">
                     <p className="font-display font-normal text-orange-800 text-sm leading-relaxed italic">
-                      "The talent exists. The need exists. The only thing missing is the infrastructure to connect them reliably, fairly, and fast. That's not a talent shortage — that's a market failure. And market failures can be solved."
+                      "The talent exists. The need exists. The only thing missing is the infrastructure to connect them reliably, fairly, and fast. That's not a talent shortage - that's a market failure. And market failures can be solved."
                     </p>
-                    <p className="font-mono text-xs text-orange-400 mt-2">— Chidinma Okafor, Co-founder & CEO</p>
+                    <p className="font-mono text-xs text-orange-400 mt-2">- Chidinma Okafor, Co-founder & CEO</p>
                   </div>
 
                   <p className="text-gray-600 text-base leading-[1.9] font-display font-normal">
@@ -604,7 +619,7 @@ export default function AboutPage() {
                 <span className="shimmer">this sector.</span>
               </h2>
               <p className="text-gray-400 text-base font-display font-normal mt-4 max-w-xl mx-auto">
-                Every member of the changeworker team has direct experience in Nigerian civil society — as program staff, funders, consultants, or researchers. We are not observers of this sector. We are part of it.
+                Every member of the changeworker team has direct experience in Nigerian civil society - as program staff, funders, consultants, or researchers. We are not observers of this sector. We are part of it.
               </p>
             </div>
 
@@ -767,7 +782,7 @@ export default function AboutPage() {
               {[
                 { icon: FiCheckCircle, text: "Free to register" },
                 { icon: RiShieldCheckLine, text: "Escrow protected" },
-                { icon: FiZap, text: "Matched in 48 hours" },
+                { icon: FiZap, text: "Smart matching" },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/5 border border-white/8">
                   <Icon size={11} className="text-orange-400" />

@@ -3,6 +3,7 @@ import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import { FieldValue } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
+import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
 
 export async function POST(req: Request) {
   try {
@@ -43,11 +44,13 @@ export async function POST(req: Request) {
     })
 
     // Notify client
+    const context = await getWorkspaceNotificationContext(workspaceId)
+
     await notifyUser({
       userId: workspace.clientUid,
       type: "final_submission",
       title: "Final work submitted",
-      message: "Talent has submitted the final work for your review",
+      message: `${context?.talentName || "Talent"} submitted final work for ${context?.gigTitle || "this workspace"}.`,
       link: `/dashboard/workspaces/${workspaceId}`,
     })
 
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
     await notifyAdmins({
       type: "admin:workspace",
       title: "Final Work Submitted",
-      message: `Final work in workspace ${workspaceId} has been submitted.`,
+      message: `${context?.talentName || "Talent"} submitted final work in ${context?.gigTitle || "a workspace"} with ${context?.clientName || "the client"}.`,
       link: `/admin/workspaces/${workspaceId}`,
     })
 

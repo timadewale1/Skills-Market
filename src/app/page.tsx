@@ -1,11 +1,13 @@
 "use client"
 
+import { lazy, Suspense } from "react"
 import Navbar from "@/components/layout/Navbar"
-import TestCarousel from "@/components/TestCarousel"
+const TestCarousel = lazy(() => import("@/components/TestCarousel"))
 import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
 import toast, { Toaster } from "react-hot-toast"
 import { useAuth } from "@/context/AuthContext"
+import { fetchPlatformStats } from "@/lib/platformStats"
 import {
   FiBriefcase, FiUsers, FiShield, FiZap, FiRepeat, FiGlobe,
   FiArrowRight, FiCheck, FiStar, FiChevronDown, FiMail,
@@ -19,7 +21,6 @@ import { HiSparkles, HiLightningBolt, HiGlobeAlt, HiCurrencyDollar } from "react
 import { MdOutlineHandshake, MdWorkspacePremium } from "react-icons/md"
 import { RiLeafLine, RiTeamLine } from "react-icons/ri"
 import { TbRocket, TbTargetArrow, TbBuildingCommunity } from "react-icons/tb"
-import { getDoc, doc } from "firebase/firestore"
 
 /* ═══ HOOKS ═══════════════════════════════════════════════════ */
 function useInView(threshold = 0.1) {
@@ -90,14 +91,14 @@ const SKILLS_DATA = [
 ]
 
 const FEATURES = [
-  { icon: FiZap,          color: "#F97316", bg: "rgba(249,115,22,.08)",  title: "48-hour matching",     body: "Post a project and receive 2–3 hand-picked, pre-vetted candidates within two business days. No scrolling, no guessing — we curate the perfect fit for your mission." },
-  { icon: FiShield,       color: "#6366F1", bg: "rgba(99,102,241,.08)",  title: "Sector-vetted talent", body: "Every freelancer passes a rigorous review. They understand nonprofit operations, donor reporting, and impact metrics — not just general freelancing." },
-  { icon: HiCurrencyDollar,color:"#10B981", bg: "rgba(16,185,129,.08)", title: "Budget-first design",  body: "Projects from ₦50k to ₦400k+. Transparent pricing, zero corporate markup. A flat 10% commission — no hidden fees, ever." },
-  { icon: FiRepeat,       color: "#EC4899", bg: "rgba(236,72,153,.08)",  title: "Rehire with one click",body: "Found your dream grant writer? Save them to your talent bench and bring them back for every future project in seconds." },
-  { icon: TbTargetArrow,  color: "#F59E0B", bg: "rgba(245,158,11,.08)",  title: "Escrow protection",    body: "Funds held until deliverables are approved. Both sides protected, both sides confident — trust built into every transaction." },
+  { icon: FiZap,          color: "#F97316", bg: "rgba(249,115,22,.08)",  title: "Smart matching",       body: "Post a gig, browse strong-fit talent, and let the platform surface relevant profiles by skills, SDG alignment, and work preferences." },
+  { icon: FiShield,       color: "#6366F1", bg: "rgba(99,102,241,.08)",  title: "Verified identity flow", body: "Talent and clients can complete profile and verification steps inside the platform before moving into deeper work flows." },
+  { icon: HiCurrencyDollar,color:"#10B981", bg: "rgba(16,185,129,.08)", title: "Budget-first design",  body: "Projects from N50k to N400k+. Transparent pricing, payment support, and a flat 10% platform fee with no hidden charges." },
+  { icon: FiRepeat,       color: "#EC4899", bg: "rgba(236,72,153,.08)",  title: "Save talent for later", body: "Shortlist strong profiles, save talent you want to revisit, and build repeat working relationships without starting from scratch." },
+  { icon: TbTargetArrow,  color: "#F59E0B", bg: "rgba(245,158,11,.08)",  title: "Escrow protection",    body: "Funds held until deliverables are approved. Both sides protected, both sides confident - trust built into every transaction." },
   { icon: HiGlobeAlt,     color: "#3B82F6", bg: "rgba(59,130,246,.08)",  title: "Built for Nigeria",    body: "Paystack integration, Naira-native pricing, and a community rooted in local NGO culture. Not a foreign product retrofitted for Africa." },
-  { icon: FiFilter,       color: "#8B5CF6", bg: "rgba(139,92,246,.08)",  title: "Curated, not searched",body: "We do the matching. You review three excellent options. No bidding wars, no racing to lowest price — quality over quantity, always." },
-  { icon: FiAward,        color: "#14B8A6", bg: "rgba(20,184,166,.08)",  title: "Quality guaranteed",   body: "Pre-vetted talent, milestone reviews, and a satisfaction guarantee. If the work doesn't meet the brief, we source a replacement." },
+  { icon: FiFilter,       color: "#8B5CF6", bg: "rgba(139,92,246,.08)",  title: "Curated discovery",   body: "Use filters, public profiles, proposals, and messaging to narrow quickly to the right fit instead of sorting through generic marketplaces." },
+  { icon: FiAward,        color: "#14B8A6", bg: "rgba(20,184,166,.08)",  title: "Structured delivery",  body: "Workspaces support milestones, final submissions, reviews, and dispute flows so delivery stays documented from start to finish." },
   { icon: RiTeamLine,     color: "#EF4444", bg: "rgba(239,68,68,.08)",   title: "Impact community",     body: "Access a growing network of professionals who chose purpose-driven careers. Referrals, collaborations, and peer learning built in." },
 ]
 
@@ -118,18 +119,18 @@ const PROFILES = [
 // ]
 
 const FAQS = [
-  { q: "How are freelancers vetted?",           a: "Every applicant goes through profile review, skills assessment, and reference checks. We verify nonprofit sector experience and evaluate work samples personally before approving anyone onto the platform." },
-  { q: "What does the 10% commission cover?",   a: "The fee covers matchmaking, profile vetting, payment processing, dispute resolution, and ongoing support. It's charged to the organization after successful project completion." },
-  { q: "How quickly will I get matched?",       a: "Organizations receive 2–3 candidate matches within 48 business hours of posting a verified project. Freelancers are notified of relevant matches in real time." },
-  { q: "What if I'm not satisfied?",            a: "We have a structured dispute resolution process. If deliverables don't meet the agreed brief, we facilitate a revision request or source a replacement candidate." },
-  { q: "Can I hire the same freelancer again?", a: "Absolutely. Save any freelancer to your talent bench and rehire with one click. Many organizations build ongoing relationships with 2–3 core freelancers." },
+  { q: "How are freelancers vetted?",           a: "Talent profiles are built inside the platform, matched against gig requirements, and can complete identity verification and public-profile setup before working with clients." },
+  { q: "What does the 10% commission cover?",   a: "The fee supports platform operations including matching, payments, workspace delivery flows, reviews, disputes, and ongoing product support." },
+  { q: "How quickly will I get matched?",       a: "Matching starts as soon as a gig is posted. Clients can browse surfaced talent, receive proposals, and move into messaging and workspace setup inside the app." },
+  { q: "What if I'm not satisfied?",            a: "Workspaces support milestone review, final approval, and dispute creation so both sides have a documented process if work needs clarification or resolution." },
+  { q: "Can I hire the same freelancer again?", a: "Yes. You can save talent profiles and return to them later when you want to start a new conversation or project." },
   { q: "What skills are available?",            a: "Currently: Grant Writing, M&E/MEAL, Project Management, Communications, Fundraising, Research, Data Analysis, Capacity Building, Strategic Planning, and Proposal Writing." },
 ]
 
 const TESTIMONIALS = [
   { q: "I needed a grant writer for 2 months but couldn't afford ₦400k/month. changeworker matched me with someone excellent who understood our constraints perfectly.", name: "Chioma O.",  role: "Executive Director",  org: "Youth NGO, Lagos",              color: "#F97316", stars: 5 },
   { q: "Tired of working for free 'for a good cause.' changeworker pays fairly and the orgs are genuinely mission-driven. Best decision for my freelance career.",         name: "Seun A.",   role: "M&E Specialist",      org: "Ibadan",                         color: "#6366F1", stars: 5 },
-  { q: "Used it once, recommended it to three colleagues the next week. The matching is scary accurate — they just understand nonprofit work in a way no other platform does.", name: "Funmi A.",  role: "Program Manager",     org: "Environmental NGO, Abuja",       color: "#10B981", stars: 5 },
+  { q: "Used it once, recommended it to three colleagues the next week. The matching is scary accurate - they just understand nonprofit work in a way no other platform does.", name: "Funmi A.",  role: "Program Manager",     org: "Environmental NGO, Abuja",       color: "#10B981", stars: 5 },
   { q: "Our proposal success rate jumped 40% after bringing in a changeworker grant writer. The ROI is undeniable even on a tight nonprofit budget.",                        name: "Kemi B.",   role: "Founder",             org: "HealthFirst Initiative",         color: "#EC4899", stars: 5 },
   { q: "Finally a platform that doesn't make you compete with 200 people. The curated matching is a complete game changer for finding quality impact work.",                 name: "Tunde M.", role: "Project Manager",      org: "Lagos",                          color: "#F59E0B", stars: 5 },
 ]
@@ -625,48 +626,13 @@ export default function Home() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { collection, getDocs, query, where, limit, orderBy, getDoc, doc } = await import('firebase/firestore')
+        const { collection, getDocs, query, where, limit, orderBy } = await import('firebase/firestore')
         const { db } = await import('@/lib/firebase')
         const { SDGS } = await import('@/data/sdgs')
 
-        // we wrap each Firestore call separately so we can log which one fails
-        let freelancersCount = 0
-        let clientsCount = 0
-        let projectsCount = 0
         let profiles: any[] = []
         let sdgDataArray: any[] = []
-
-        try {
-          // Get stats from public stats document first
-          const statsDoc = await getDoc(doc(db, 'publicStats', 'platform'))
-          if (statsDoc.exists()) {
-            const statsData = statsDoc.data() as any
-            freelancersCount = statsData.freelancers || 0
-            clientsCount = statsData.clients || 0
-            projectsCount = statsData.gigs || 0
-            console.log('Stats from publicStats:', { freelancersCount, clientsCount, projectsCount })
-          } else {
-            console.log('publicStats/platform document not found, counting from collections')
-            // Count from actual collections if publicStats doesn't exist
-            try {
-              const publicProfilesSnap = await getDocs(collection(db, 'publicProfiles'))
-              freelancersCount = publicProfilesSnap.docs.filter(doc => doc.data().role === 'talent').length
-              clientsCount = publicProfilesSnap.docs.filter(doc => doc.data().role === 'client').length
-            } catch (e) {
-              console.error('publicProfiles count failed', e)
-            }
-          }
-        } catch (e) {
-          console.error('publicStats query failed', e)
-        }
-
-        try {
-          // count gigs instead of workspaces for project total
-          const gigsSnap = await getDocs(collection(db, 'gigs'))
-          projectsCount = gigsSnap.size
-        } catch (e) {
-          console.error('gigs query failed', e)
-        }
+        const platformStats = await fetchPlatformStats()
 
         try {
           // Get featured profiles from publicProfiles
@@ -714,10 +680,10 @@ export default function Home() {
         }
 
         setStats({
-          freelancers: freelancersCount,
-          clients: clientsCount,
-          projects: projectsCount,
-          satisfaction: 98
+          freelancers: platformStats.freelancers,
+          clients: platformStats.clients,
+          projects: platformStats.projects,
+          satisfaction: platformStats.satisfaction
         })
         setSdgData(sdgDataArray)
         setFeaturedProfiles(profiles)
@@ -730,16 +696,16 @@ export default function Home() {
   }, [])
 
   const STEPS_ORG = [
-    { icon: FiEdit3,       label: "Post Brief",       desc: "Skills, budget & timeline — 5 minutes" },
-    { icon: FiSearch,      label: "We Match",         desc: "2–3 vetted candidates in 48hrs" },
-    { icon: FiUsers,       label: "Review Profiles",  desc: "Browse portfolios & rates" },
-    { icon: FiCheckCircle, label: "Hire & Start",     desc: "Instant notification to freelancer" },
+    { icon: FiEdit3,       label: "Post Brief",       desc: "Skills, budget & timeline - 5 minutes" },
+    { icon: FiSearch,      label: "Discover Talent",  desc: "Browse relevant profiles and proposals" },
+    { icon: FiUsers,       label: "Review Profiles",  desc: "Check portfolios, reviews & fit" },
+    { icon: FiCheckCircle, label: "Hire & Start",     desc: "Move into chat and workspace setup" },
   ]
   const STEPS_FL = [
     { icon: FiLayers,      label: "Build Profile",    desc: "Bio, skills & work samples" },
-    { icon: FiBell,        label: "Get Matched",      desc: "Real-time project notifications" },
-    { icon: FiHeart,       label: "Express Interest", desc: "One click — no bidding required" },
-    { icon: FiTrendingUp,  label: "Earn & Grow",      desc: "Deliver, get rated, repeat" },
+    { icon: FiBell,        label: "Find Work",        desc: "Browse gigs and relevant opportunities" },
+    { icon: FiHeart,       label: "Send Proposal",    desc: "Apply and start conversations" },
+    { icon: FiTrendingUp,  label: "Earn & Grow",      desc: "Deliver, get reviewed, withdraw" },
   ]
   const steps = tab === "org" ? STEPS_ORG : STEPS_FL
 
@@ -882,7 +848,7 @@ export default function Home() {
               </div>
 
               <p className={`text-white/40 text-lg leading-relaxed max-w-md font-display font-light ${heroRef.inView?"reveal":"opacity-0"}`} style={{"--d":".5s"} as React.CSSProperties}>
-                Connecting skilled Nigerian professionals with nonprofits and social enterprises — at the price that actually works.
+                Connecting skilled Nigerian professionals with nonprofits and social enterprises - at the price that actually works.
               </p>
 
               <div className={`flex flex-wrap gap-4 ${heroRef.inView?"reveal":"opacity-0"}`} style={{"--d":".62s"} as React.CSSProperties}>
@@ -902,7 +868,7 @@ export default function Home() {
               </div>
 
               <div className={`flex flex-wrap gap-6 ${heroRef.inView?"reveal":"opacity-0"}`} style={{"--d":".74s"} as React.CSSProperties}>
-                {[{icon:FiShield,t:"Pre-vetted talent"},{icon:FiZap,t:"48h matching"},{icon:FiGlobe,t:"Naira pricing"},{icon:FiHeart,t:"Impact focused"}].map(({icon:I,t})=>(
+                {[{icon:FiShield,t:"Verified profiles"},{icon:FiZap,t:"Smart matching"},{icon:FiGlobe,t:"Naira pricing"},{icon:FiHeart,t:"Impact focused"}].map(({icon:I,t})=>(
                   <div key={t} className="flex items-center gap-1.5">
                     <span className="text-orange-400"><I size={11}/></span><span className="text-white/30 text-xs tracking-wide">{t}</span>
                   </div>
@@ -953,7 +919,7 @@ export default function Home() {
                     <p className="text-white/28 text-[9px] font-mono">Exec Dir · NGO</p>
                   </div>
                 </div>
-                <p className="text-white/38 text-[10px] leading-relaxed italic mb-2.5">"Found an excellent grant writer in 48hrs. Actually delivers."</p>
+                <p className="text-white/38 text-[10px] leading-relaxed italic mb-2.5">"Found a strong grant writer quickly and managed the work smoothly on-platform."</p>
                 <div className="flex gap-0.5">
                   {[...Array(5)].map((_,i)=><span key={i} style={{color:"#FBBF24"}}><FiStar size={9}/></span>)}
                 </div>
@@ -978,7 +944,7 @@ export default function Home() {
               {/* badge */}
               <div className="anim-fy absolute bottom-28 right-0 px-3 py-2 rounded-full bg-indigo-500/15 border border-indigo-500/25 backdrop-blur-sm" style={{animationDelay:"2.3s"}}>
                 <span className="text-indigo-300 text-[10px] font-semibold font-display flex items-center gap-1.5">
-                  <FiZap size={10}/> 48h matching
+                  <FiZap size={10}/> smart matching
                 </span>
               </div>
             </div>
@@ -1034,7 +1000,7 @@ export default function Home() {
             Nonprofits shouldn't choose between mission and capability. Skilled professionals shouldn't choose between purpose and income. We built changeworker so nobody has to choose.
           </p>
           <div className={`grid grid-cols-3 gap-8 mt-16 max-w-xl mx-auto ${missionRef.inView?"reveal":"opacity-0"}`} style={{"--d":".52s"} as React.CSSProperties}>
-            {[{I:TbBuildingCommunity,l:"Clients",v:stats.clients,c:"#F97316"},{I:RiTeamLine,l:"Talents",v:stats.freelancers,c:"#6366F1"},{I:FiTrendingUp,l:"Gigs",v:stats.projects,c:"#10B981"}].map(({I,l,v,c})=>(
+            {[{I:TbBuildingCommunity,l:"Client Profiles",v:stats.clients,c:"#F97316"},{I:RiTeamLine,l:"Talent Profiles",v:stats.freelancers,c:"#6366F1"},{I:FiTrendingUp,l:"Published Gigs",v:stats.projects,c:"#10B981"}].map(({I,l,v,c})=>(
               <div key={l} className="flex flex-col items-center gap-2">
                 <span style={{color:c}}><I size={22}/></span>
                 <span className="font-display font-black text-3xl text-white">{v > 0 ? `${v}+` : v}</span>
@@ -1052,9 +1018,9 @@ export default function Home() {
         <div className="absolute right-0 top-0 w-80 h-80 opacity-35 dot-bg pointer-events-none"/>
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-10">
           {statsRef.inView && <>
-            <StatBox val={stats.freelancers} suf="+"  label="Vetted Freelancers" icon={FiUsers}           color="#F97316" delay=".1s" start/>
-            <StatBox val={stats.clients}  suf="+"  label="Impact Orgs Served" icon={TbBuildingCommunity}color="#6366F1" delay=".2s" start/>
-            <StatBox val={stats.projects} suf="+"  label="Projects Completed" icon={FiCheckCircle}      color="#10B981" delay=".3s" start/>
+            <StatBox val={stats.freelancers} suf="+"  label="Talent Profiles" icon={FiUsers}           color="#F97316" delay=".1s" start/>
+            <StatBox val={stats.clients}  suf="+"  label="Client Profiles" icon={TbBuildingCommunity}color="#6366F1" delay=".2s" start/>
+            <StatBox val={stats.projects} suf="+"  label="Published Gigs" icon={FiCheckCircle}      color="#10B981" delay=".3s" start/>
             <StatBox val={stats.satisfaction}  suf="%"  label="Satisfaction Rate"  icon={FiStar}             color="#EC4899" delay=".4s" start/>
           </>}
         </div>
@@ -1184,7 +1150,7 @@ export default function Home() {
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center py-8">
           <p className={`font-mono text-xs text-orange-400 uppercase tracking-[.3em] mb-6 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".0s"} as React.CSSProperties}>SDGs on the platform</p>
           <h2 className={`font-display text-5xl font-black text-white mb-14 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".1s"} as React.CSSProperties}>
-            {stats.freelancers > 0 ? `${stats.freelancers}+ professionals` : '200+ professionals'} across<br/><span className="shimmer">{sdgData.length > 0 ? `${sdgData.length} impact areas` : '12 impact disciplines'}</span>
+            {stats.freelancers > 0 ? `${stats.freelancers}+ talent profiles` : '200+ talent profiles'} across<br/><span className="shimmer">{sdgData.length > 0 ? `${sdgData.length} impact areas` : '12 impact disciplines'}</span>
           </h2>
           <div className={`flex flex-wrap justify-center gap-3 ${skillsRef.inView?"reveal":"opacity-0"}`} style={{"--d":".25s"} as React.CSSProperties}>
             {sdgData.length > 0 ? sdgData.map((s,i)=>(
@@ -1221,7 +1187,9 @@ export default function Home() {
             <span className="font-mono text-xs text-orange-500 uppercase tracking-[.25em] mb-4 block">What they say</span>
             <h2 className="font-display text-4xl font-black text-gray-900">People who get it,<br/><span className="shimmer">love it.</span></h2>
           </div>
-          <TestCarousel inView={testiRef.inView} testimonials={testimonials} />
+          <Suspense fallback={<div className="h-80 rounded-3xl bg-gray-100 animate-pulse" />}>
+            <TestCarousel inView={testiRef.inView} testimonials={testimonials} />
+          </Suspense>
         </div>
       </section>
 
@@ -1241,10 +1209,10 @@ export default function Home() {
                 The skills your<br/>mission needs.<br/><span className="shimmer">At last.</span>
               </h2>
               <p className="text-gray-600 leading-relaxed max-w-sm font-display font-normal mb-8 text-sm">
-                Stop turning down grants because you lack the staff. Access pre-vetted specialists for exactly how long you need them.
+                Stop turning down grants because you lack the staff. Access strong-fit specialists for exactly how long you need them.
               </p>
               <ul className="space-y-3 mb-10">
-                {[{I:FiDollarSign,t:"Budget ₦50k–₦400k+ per project"},{I:FiZap,t:"2–3 candidates in 48 hours"},{I:FiShield,t:"Sector-smart professionals only"},{I:FiRepeat,t:"No long-term commitments"}].map(({I,t})=>(
+                {[{I:FiDollarSign,t:"Budget N50k-N400k+ per project"},{I:FiZap,t:"Matching, proposals and messaging in-app"},{I:FiShield,t:"Verified profiles and reviews"},{I:FiRepeat,t:"No long-term commitments"}].map(({I,t})=>(
                   <li key={t} className="flex items-center gap-3 text-sm text-gray-700">
                     <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center shrink-0"><span className="text-orange-500"><I size={12}/></span></div>
                     {t}
@@ -1267,7 +1235,7 @@ export default function Home() {
                 Work that matters.<br/>Pay that doesn't<br/><span className="shimmer-indigo">insult you.</span>
               </h2>
               <p className="text-white/42 leading-relaxed max-w-sm font-display font-normal mb-8 text-sm">
-                The impact sector has always needed great talent. Now it can actually pay for it. Join a vetted community building Africa's social infrastructure.
+                The impact sector has always needed great talent. Now it can work with it more transparently. Join a growing community building Africa's social infrastructure.
               </p>
               <ul className="space-y-3 mb-10">
                 {[{I:FiTrendingUp,t:"Earn ₦50k–₦200k per project",c:"#6366F1"},{I:FiHeart,t:"Work with mission-aligned orgs",c:"#EC4899"},{I:FiFilter,t:"No cold-pitching or bidding wars",c:"#10B981"},{I:FiAward,t:"Build a portfolio that means something",c:"#F59E0B"}].map(({I,t,c})=>(
@@ -1304,7 +1272,7 @@ export default function Home() {
             {[
               ["Sector-specific vetting",true,false],
               ["Nonprofit budget-friendly",true,false],
-              ["Curated matching — no search",true,false],
+              ["Guided discovery and proposals",true,false],
               ["Nigerian payment integration",true,false],
               ["Impact org expertise",true,false],
               ["No bidding wars",true,false],
@@ -1469,3 +1437,6 @@ export default function Home() {
     </>
   )
 }
+
+
+
