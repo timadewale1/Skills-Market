@@ -37,7 +37,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Dispute not found" }, { status: 404 })
     }
 
-    if (dispute.clientId !== userId && dispute.talentId !== userId) {
+    const clientUid = dispute.clientUid || dispute.clientId
+    const talentUid = dispute.talentUid || dispute.talentId
+
+    if (clientUid !== userId && talentUid !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -79,7 +82,7 @@ export async function POST(req: Request) {
 
     await adminDb.collection("disputeEvidence").add({
       disputeId,
-      uploadedBy,
+      uploadedBy: userId,
       fileUrl: url,
       fileType: file.type,
       description,
@@ -93,7 +96,7 @@ export async function POST(req: Request) {
       })
 
     // Notify the other party
-    const otherUserId = dispute.clientId === userId ? dispute.talentId : dispute.clientId
+    const otherUserId = clientUid === userId ? talentUid : clientUid
     await notifyUser({
       userId: otherUserId,
       type: "evidence_uploaded",

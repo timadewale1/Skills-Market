@@ -21,6 +21,21 @@ service cloud.firestore {
         && request.auth.uid == get(/databases/$(database)/documents/gigs/$(gigId)).data.clientUid;
     }
 
+    function isWorkspaceParticipant(workspaceId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/workspaces/$(workspaceId))
+        && (
+          request.auth.uid == get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.clientUid
+          || request.auth.uid == get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.talentUid
+        );
+    }
+
+    function isDisputeParticipantById(disputeId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/disputes/$(disputeId))
+        && isWorkspaceParticipant(get(/databases/$(database)/documents/disputes/$(disputeId)).data.workspaceId);
+    }
+
     function kycStatusAllowed(oldStatus, newStatus) {
       return newStatus == oldStatus || newStatus == "pending";
     }
@@ -344,19 +359,39 @@ service cloud.firestore {
     match /disputes/{disputeId} {
       allow read: if isAdmin()
         || (
-          signedIn()
-          && exists(/databases/$(database)/documents/workspaces/$(resource.data.workspaceId))
-          && (
-            request.auth.uid == get(/databases/$(database)/documents/workspaces/$(resource.data.workspaceId)).data.clientUid
-            || request.auth.uid == get(/databases/$(database)/documents/workspaces/$(resource.data.workspaceId)).data.talentUid
-          )
+          isWorkspaceParticipant(resource.data.workspaceId)
         );
-      allow write: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.workspaceId is string
+        && request.resource.data.raisedBy == request.auth.uid
+        && isWorkspaceParticipant(request.resource.data.workspaceId);
+      allow update, delete: if isAdmin();
     }
 
     match /disputeMessages/{messageId} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
+      allow read: if isAdmin()
+        || (
+          resource.data.disputeId is string
+          && isDisputeParticipantById(resource.data.disputeId)
+        );
+      allow create: if signedIn()
+        && request.resource.data.disputeId is string
+        && request.resource.data.senderId == request.auth.uid
+        && isDisputeParticipantById(request.resource.data.disputeId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /disputeEvidence/{evidenceId} {
+      allow read: if isAdmin()
+        || (
+          resource.data.disputeId is string
+          && isDisputeParticipantById(resource.data.disputeId)
+        );
+      allow create: if signedIn()
+        && request.resource.data.disputeId is string
+        && request.resource.data.uploadedBy == request.auth.uid
+        && isDisputeParticipantById(request.resource.data.disputeId);
+      allow update, delete: if isAdmin();
     }
 
     match /payoutRevenue/{docId} {

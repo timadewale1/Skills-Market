@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
 import { useParams, useRouter } from "next/navigation"
 import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
@@ -39,6 +39,10 @@ import {
   FileSignature,
   Briefcase,
   Download,
+  Paperclip,
+  FileText,
+  ImageIcon,
+  X,
 } from "lucide-react"
 
 type Thread = {
@@ -60,14 +64,64 @@ type Msg = {
   fromUid: string
   text: string
   createdAt?: any
+  attachments?: MessageAttachment[]
 }
 type MsgMeta = {
   type?: string
   gigId?: string
 }
 
+type MessageAttachment = {
+  name: string
+  url: string
+  storagePath: string
+  contentType?: string
+  size?: number
+}
+
 // allow optional meta payload on messages (e.g. { type: 'gig', gigId })
 type MsgWithMeta = Msg & { meta?: MsgMeta }
+
+const MAX_MESSAGE_ATTACHMENTS = 5
+const MAX_MESSAGE_ATTACHMENT_SIZE_MB = 15
+
+function formatAttachmentSize(size?: number) {
+  if (!size || size <= 0) return ""
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function attachmentLooksLikeImage(contentType?: string, name?: string) {
+  if (contentType?.startsWith("image/")) return true
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || "")
+}
+
+async function uploadThreadAttachments(threadId: string, files: File[]) {
+  const uploaded: MessageAttachment[] = []
+
+  for (const file of files.slice(0, MAX_MESSAGE_ATTACHMENTS)) {
+    if (file.size > MAX_MESSAGE_ATTACHMENT_SIZE_MB * 1024 * 1024) {
+      throw new Error(`"${file.name}" is too large. Max ${MAX_MESSAGE_ATTACHMENT_SIZE_MB}MB per file.`)
+    }
+
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_")
+    const path = `threads/${threadId}/attachments/${Date.now()}_${safeName}`
+    const result = await uploadBytes(storageRef(storage, path), file, {
+      contentType: file.type || "application/octet-stream",
+    })
+    const url = await getDownloadURL(result.ref)
+
+    uploaded.push({
+      name: file.name,
+      url,
+      storagePath: path,
+      contentType: file.type || "application/octet-stream",
+      size: file.size,
+    })
+  }
+
+  return uploaded
+}
 
 type Agreement = {
   status: "draft" | "sent_to_talent" | "talent_declined" | "fully_signed" | "cancelled"
@@ -397,6 +451,7 @@ export default function ThreadPage() {
   const [thread, setThread] = useState<Thread | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState("")
+  const [pendingAttachments, setPendingAttachments] = useState<File[]>([])
   const [sending, setSending] = useState(false)
 
   const [agreement, setAgreement] = useState<Agreement | null>(null)
@@ -420,6 +475,7 @@ export default function ThreadPage() {
   const [metaPayload, setMetaPayload] = useState<MsgMeta | undefined>(undefined)
 
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null)
 
   // Inline doodle SVG background (no external file needed)
   const doodleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220">
@@ -469,13 +525,48 @@ export default function ThreadPage() {
     }
   }, [threadId, user?.uid])
 
+  const pickAttachments = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files || [])
+    if (!selected.length) return
+
+    const availableSlots = MAX_MESSAGE_ATTACHMENTS - pendingAttachments.length
+    if (availableSlots <= 0) {
+      toast.error(`You can only send up to ${MAX_MESSAGE_ATTACHMENTS} attachments at once.`)
+      event.target.value = ""
+      return
+    }
+
+    const nextFiles = selected.slice(0, availableSlots)
+    if (selected.length > availableSlots) {
+      toast.error(`Only ${MAX_MESSAGE_ATTACHMENTS} attachments can be sent at once.`)
+    }
+
+    const oversize = nextFiles.find((file) => file.size > MAX_MESSAGE_ATTACHMENT_SIZE_MB * 1024 * 1024)
+    if (oversize) {
+      toast.error(`"${oversize.name}" is larger than ${MAX_MESSAGE_ATTACHMENT_SIZE_MB}MB.`)
+      event.target.value = ""
+      return
+    }
+
+    setPendingAttachments((current) => [...current, ...nextFiles].slice(0, MAX_MESSAGE_ATTACHMENTS))
+    event.target.value = ""
+  }
+
+  const removePendingAttachment = (name: string, lastModified: number) => {
+    setPendingAttachments((current) =>
+      current.filter((file) => !(file.name === name && file.lastModified === lastModified))
+    )
+  }
+
   const sendMessage = async () => {
     if (!user?.uid || !threadId) return
     const t = text.trim()
-    if (!t) return
+    if (!t && pendingAttachments.length === 0) return
 
     setSending(true)
     try {
+      const uploadedAttachments =
+        pendingAttachments.length > 0 ? await uploadThreadAttachments(threadId, pendingAttachments) : []
       const token = await user.getIdToken()
       const response = await fetch("/api/messages/send", {
         method: "POST",
@@ -487,6 +578,7 @@ export default function ThreadPage() {
           threadId,
           text: t,
           meta: metaPayload,
+          attachments: uploadedAttachments,
         }),
       })
 
@@ -496,6 +588,7 @@ export default function ThreadPage() {
       }
 
       setText("")
+      setPendingAttachments([])
       setMetaPayload(undefined)
     } catch (e: any) {
       console.error(e)
@@ -898,7 +991,7 @@ export default function ThreadPage() {
       <div className="min-h-[calc(100vh-64px)] bg-[var(--secondary)]">
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
               <button
                 onClick={() => router.back()}
@@ -959,11 +1052,47 @@ export default function ThreadPage() {
                           <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                             <div className="max-w-[85%]">
                               <div
-                                className={`rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
+                                className={`rounded-2xl px-4 py-3 text-sm ${
                                   mine ? "bg-[var(--primary)] text-white" : "bg-white/90 text-gray-800 border"
                                 }`}
                               >
-                                {m.text}
+                                {m.text ? <div className="whitespace-pre-wrap break-words">{m.text}</div> : null}
+                                {m.attachments?.length ? (
+                                  <div className={`grid gap-2 ${m.text ? "mt-3" : ""}`}>
+                                    {m.attachments.map((attachment, index) => {
+                                      const imageLike = attachmentLooksLikeImage(attachment.contentType, attachment.name)
+                                      return (
+                                        <a
+                                          key={`${attachment.storagePath}-${index}`}
+                                          href={attachment.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className={`flex items-center gap-3 rounded-xl border px-3 py-2 transition ${
+                                            mine
+                                              ? "border-white/20 bg-white/10 hover:bg-white/15"
+                                              : "border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50"
+                                          }`}
+                                        >
+                                          <div
+                                            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                                              mine ? "bg-white/15 text-white" : "bg-orange-100 text-[var(--primary)]"
+                                            }`}
+                                          >
+                                            {imageLike ? <ImageIcon size={16} /> : <FileText size={16} />}
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <div className={`truncate text-sm font-bold ${mine ? "text-white" : "text-gray-900"}`}>
+                                              {attachment.name}
+                                            </div>
+                                            <div className={`text-xs ${mine ? "text-white/80" : "text-gray-500"}`}>
+                                              {formatAttachmentSize(attachment.size) || "Attachment"}
+                                            </div>
+                                          </div>
+                                        </a>
+                                      )
+                                    })}
+                                  </div>
+                                ) : null}
                               </div>
 
                               {/* Render a separate "View gig" button when message includes gig meta */}
@@ -987,21 +1116,65 @@ export default function ThreadPage() {
                   <Separator />
 
                   <div className="p-4 bg-white">
-                    <div className="flex gap-2">
+                    <input
+                      ref={attachmentInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={pickAttachments}
+                    />
+
+                    {pendingAttachments.length ? (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {pendingAttachments.map((file) => (
+                          <div
+                            key={`${file.name}-${file.lastModified}`}
+                            className="inline-flex max-w-full items-center gap-2 rounded-full border bg-[var(--secondary)] px-3 py-2 text-xs font-semibold text-gray-700"
+                          >
+                            <Paperclip size={14} className="shrink-0 text-[var(--primary)]" />
+                            <span className="truncate">{file.name}</span>
+                            <span className="text-gray-500">{formatAttachmentSize(file.size)}</span>
+                            <button
+                              type="button"
+                              onClick={() => removePendingAttachment(file.name, file.lastModified)}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-200 hover:text-gray-800"
+                              aria-label={`Remove ${file.name}`}
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <div className="flex flex-wrap items-center gap-2">
                       <Input
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         placeholder="Type a message…"
-                        className="rounded-2xl"
+                        className="min-w-0 flex-1 rounded-2xl"
                       />
                       <button
-                        disabled={sending}
+                        type="button"
+                        disabled={sending || pendingAttachments.length >= MAX_MESSAGE_ATTACHMENTS}
+                        onClick={() => attachmentInputRef.current?.click()}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border bg-white text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label="Attach files"
+                        title="Attach up to 5 files"
+                      >
+                        <Paperclip size={18} />
+                      </button>
+                      <button
+                        disabled={sending || (!text.trim() && pendingAttachments.length === 0)}
                         onClick={sendMessage}
                         className="rounded-2xl bg-[var(--primary)] text-white px-4 font-extrabold inline-flex items-center gap-2 disabled:opacity-60"
                       >
                         <Send size={16} />
                         Send
                       </button>
+                    </div>
+                    <div className="mt-2 text-xs font-medium text-gray-500">
+                      Attach up to {MAX_MESSAGE_ATTACHMENTS} files per message.
                     </div>
                   </div>
                 </CardContent>

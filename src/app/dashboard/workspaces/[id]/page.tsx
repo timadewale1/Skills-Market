@@ -30,7 +30,7 @@ import {
   getDocs,
 } from "firebase/firestore"
 
-import { ref as storageRef, uploadBytes, getDownloadURL, listAll } from "firebase/storage"
+import { ref as storageRef, uploadBytes, getBlob, getDownloadURL, listAll } from "firebase/storage"
 import { getFunctions, httpsCallable } from "firebase/functions"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -411,6 +411,32 @@ function getFileExtension(storagePath: string): string {
   return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "FILE"
 }
 
+function guessDownloadFileName(preferredName?: string, storagePath?: string) {
+  if (preferredName?.trim()) return preferredName.trim()
+  if (!storagePath) return `download_${Date.now()}`
+  const parts = storagePath.split("/")
+  return parts[parts.length - 1] || `download_${Date.now()}`
+}
+
+function inferRawStoragePath(previewPath?: string, explicitRawPath?: string, preferredName?: string) {
+  if (explicitRawPath?.trim()) return explicitRawPath.trim()
+  if (!previewPath?.includes("/previews/")) return previewPath
+  const basePath = previewPath.replace("/previews/", "/raw/").replace(/_preview\.jpg$/i, "")
+  const preferredExtension = preferredName?.includes(".") ? preferredName.split(".").pop() : ""
+  return preferredExtension ? `${basePath}.${preferredExtension}` : basePath
+}
+
+async function triggerBrowserDownload(blob: Blob, fileName: string) {
+  const blobUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = blobUrl
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1500)
+}
+
 function PreviewItem({
   storagePath,
   alt = "Preview",
@@ -437,10 +463,12 @@ function PreviewItem({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isZoomOpen, setIsZoomOpen] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const downloadStoragePath = inferRawStoragePath(storagePath, rawPath, alt)
 
   // Use provided fileType if available (from attachment data), otherwise derive from storagePath
   const fileType = actualFileType || getFileType(storagePath)
-  const fileExtension = getFileExtension(rawPath || storagePath)
+  const fileExtension = getFileExtension(downloadStoragePath || storagePath)
 
   useEffect(() => {
     if (!uid) {
@@ -485,6 +513,30 @@ function PreviewItem({
     }
   }, [storagePath, rawPath, uid, fileType, url, rawUrl, actualFileType])
 
+  const handleDownload = async () => {
+    try {
+      setDownloading(true)
+      const downloadName = guessDownloadFileName(alt, downloadStoragePath)
+      const blob = await getBlob(storageRef(storage, downloadStoragePath))
+      await triggerBrowserDownload(blob, downloadName)
+    } catch (downloadError) {
+      console.error("Failed to download file:", downloadError)
+      const fallbackUrl = resolvedRawUrl || signedUrl
+      if (fallbackUrl) {
+        const anchor = document.createElement("a")
+        anchor.href = fallbackUrl
+        anchor.download = guessDownloadFileName(alt, downloadStoragePath)
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+      } else {
+        toast.error("Unable to download this file right now.")
+      }
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   if (!uid) return <div className={`bg-gray-200 rounded-xl border animate-pulse ${className}`} />
   if (loading) return <div className={`bg-gray-200 rounded-xl border animate-pulse ${className}`} />
   if (error) return <div className={`bg-gray-100 rounded-xl border flex items-center justify-center text-xs text-gray-500 ${className}`}>{error}</div>
@@ -493,7 +545,7 @@ function PreviewItem({
   // ===== IMAGES =====
   if (fileType === "image") {
     return (
-      <>
+      <div className="space-y-2">
         <div
           className={`relative group cursor-pointer rounded-xl border overflow-hidden bg-gray-50 ${className}`}
           onClick={() => setIsZoomOpen(true)}
@@ -517,14 +569,27 @@ function PreviewItem({
             <img src={signedUrl} alt={alt} className="w-full h-auto max-h-[80vh] object-contain rounded-lg" />
           </DialogContent>
         </Dialog>
-      </>
+
+        {/* Download button for approved files */}
+        {!disableDownload && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-sm transition"
+          >
+            <Download className="w-4 h-4" />
+            {downloading ? "Downloading..." : "Download"}
+          </button>
+        )}
+      </div>
     )
   }
 
   // ===== VIDEOS =====
   if (fileType === "video") {
     return (
-      <>
+      <div className="space-y-2">
         <div
           className={`relative group cursor-pointer rounded-xl border overflow-hidden bg-black ${className}`}
           onClick={() => setIsZoomOpen(true)}
@@ -594,7 +659,20 @@ function PreviewItem({
             </div>
           </DialogContent>
         </Dialog>
-      </>
+
+        {/* Download button for approved files */}
+        {!disableDownload && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-sm transition"
+          >
+            <Download className="w-4 h-4" />
+            {downloading ? "Downloading..." : "Download"}
+          </button>
+        )}
+      </div>
     )
   }
 
@@ -644,22 +722,9 @@ function PreviewItem({
             </button>
             <div className="relative">
               <iframe
-                src={`${resolvedRawUrl || signedUrl}#toolbar=1&view=FitV`}
+                src={`${resolvedRawUrl || signedUrl}#toolbar=0&view=FitV`}
                 className="w-full h-[80vh] rounded-lg"
                 title={alt}
-                onLoad={(e) => {
-                  // Try to hide the download button from the PDF toolbar
-                  const iframeDoc = e.currentTarget.contentDocument || e.currentTarget.contentWindow?.document
-                  if (iframeDoc) {
-                    try {
-                      // Hide download button if accessible
-                      const downloadBtn = iframeDoc.querySelector('[id*="download"], button[title*="Download"], a[title*="Download"]')
-                      if (downloadBtn) (downloadBtn as HTMLElement).style.display = 'none'
-                    } catch (err) {
-                      console.log('Could not modify PDF toolbar - cross-origin iframe', err)
-                    }
-                  }
-                }}
               />
               {/* Watermark Overlay */}
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -675,20 +740,32 @@ function PreviewItem({
                 </div>
               </div>
             </div>
-            {!disableDownload && (
-              <div className="mt-4 text-center">
-                <a
-                  href={resolvedRawUrl || signedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
-                >
-                  Open full PDF →
-                </a>
-              </div>
-            )}
+        {!disableDownload && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-sm transition"
+          >
+            <Download className="w-4 h-4" />
+            {downloading ? "Downloading..." : "Download"}
+          </button>
+        )}
           </DialogContent>
         </Dialog>
+
+        {/* Download button below modal */}
+        {!disableDownload && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-sm transition mt-2"
+          >
+            <Download className="w-4 h-4" />
+            {downloading ? "Downloading..." : "Download"}
+          </button>
+        )}
       </>
     )
   }
@@ -708,10 +785,11 @@ function PreviewItem({
       )
     }
     return (
-      <a
-        href={signedUrl}
-        download
-        className={`flex items-center gap-3 p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 transition-colors ${className}`}
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={downloading}
+        className={`flex w-full items-center gap-3 p-4 rounded-xl border bg-gray-50 text-left hover:bg-gray-100 transition-colors disabled:opacity-60 ${className}`}
       >
         <FileText className="w-8 h-8 text-gray-600" />
         <div className="flex-1 min-w-0">
@@ -719,7 +797,7 @@ function PreviewItem({
           <p className="text-xs text-gray-500">{fileExtension}</p>
         </div>
         <Download className="w-5 h-5 text-gray-600" />
-      </a>
+      </button>
     )
   }
 
@@ -737,10 +815,11 @@ function PreviewItem({
     )
   }
   return (
-    <a
-      href={signedUrl}
-      download
-      className={`flex items-center gap-3 p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 transition-colors ${className}`}
+    <button
+      type="button"
+      onClick={handleDownload}
+      disabled={downloading}
+      className={`flex w-full items-center gap-3 p-4 rounded-xl border bg-gray-50 text-left hover:bg-gray-100 transition-colors disabled:opacity-60 ${className}`}
     >
       <File className="w-8 h-8 text-gray-600" />
       <div className="flex-1 min-w-0">
@@ -748,7 +827,7 @@ function PreviewItem({
         <p className="text-xs text-gray-500">{fileExtension}</p>
       </div>
       <Download className="w-5 h-5 text-gray-600" />
-    </a>
+    </button>
   )
 }
 
@@ -1844,7 +1923,7 @@ const unsubSession = onSnapshot(
           ) : (
             <>
               {/* Header */}
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <button
                     onClick={() => router.back()}
@@ -1875,11 +1954,11 @@ const unsubSession = onSnapshot(
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                   {canOpenChat && (
                     <Link
                       href={`/dashboard/messages/${ws.threadId}`}
-                      className="rounded-2xl border bg-white px-4 py-2 text-sm font-extrabold hover:shadow-sm transition inline-flex items-center gap-2"
+                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border bg-white px-4 py-2 text-sm font-extrabold transition hover:shadow-sm"
                     >
                       <MessageSquare size={16} />
                       Open chat
@@ -1889,7 +1968,7 @@ const unsubSession = onSnapshot(
                   {(ws?.gigId || thread?.gigId) && (
                     <Link
                       href={`/dashboard/find-work/${ws?.gigId || thread?.gigId}`}
-                      className="rounded-2xl bg-[var(--primary)] text-white px-4 py-2 text-sm font-extrabold hover:opacity-90 transition inline-flex items-center gap-2"
+                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl bg-[var(--primary)] px-4 py-2 text-sm font-extrabold text-white transition hover:opacity-90"
                     >
                       <Briefcase size={16} />
                       View gig
@@ -1900,7 +1979,7 @@ const unsubSession = onSnapshot(
                   {ws?.status === "completed" && finalWork?.status === "approved" && !hasAlreadyReviewed && (
                     <button
                       onClick={() => setReviewModalOpen(true)}
-                      className="rounded-2xl bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm font-extrabold text-yellow-700 hover:bg-yellow-100 transition inline-flex items-center gap-2"
+                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-extrabold text-yellow-700 transition hover:bg-yellow-100"
                     >
                       <Star size={16} />
                       Leave Review
@@ -1910,7 +1989,7 @@ const unsubSession = onSnapshot(
                   {hasAlreadyReviewed && ws?.status === "completed" && (
                     <button
                       onClick={loadExistingReview}
-                      className="rounded-2xl bg-blue-50 border border-blue-200 px-4 py-2 text-sm font-extrabold text-blue-700 hover:bg-blue-100 transition inline-flex items-center gap-2"
+                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-extrabold text-blue-700 transition hover:bg-blue-100"
                     >
                       <Star size={16} className="fill-blue-300 text-blue-300" />
                       View Review
@@ -2364,18 +2443,40 @@ const unsubSession = onSnapshot(
                                 {previewItems.length > 0 ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {previewItems.map((p, idx) => (
-                                      <PreviewImage key={idx} storagePath={p.storagePath!} alt="Preview" uid={user?.uid} disableDownload={isClient} rawPath={p.rawPath} url={p.url} rawUrl={p.rawUrl} actualFileType={p.fileType} />
+                                      <PreviewImage
+                                        key={idx}
+                                        storagePath={p.storagePath!}
+                                        alt={p.name || "Milestone deliverable"}
+                                        uid={user?.uid}
+                                        disableDownload={m.status !== "approved"}
+                                        rawPath={p.rawPath}
+                                        url={p.url}
+                                        rawUrl={p.rawUrl}
+                                        actualFileType={p.fileType}
+                                      />
                                     ))}
                                   </div>
                                 ) : fallback.length > 0 ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {fallback.map((p, idx) => (
-                                      <PreviewImage key={idx} storagePath={p} alt="Preview" uid={user?.uid} disableDownload={isClient} />
+                                      <PreviewImage
+                                        key={idx}
+                                        storagePath={p}
+                                        alt="Milestone deliverable"
+                                        uid={user?.uid}
+                                        disableDownload={m.status !== "approved"}
+                                      />
                                     ))}
                                   </div>
                                 ) : hasAnyFiles ? (
                                   <div className="rounded-2xl border bg-gray-50 p-3 text-xs text-gray-700 font-semibold">
                                     Files uploaded. Preview may take a few seconds (images) or be unavailable for non-image files.
+                                  </div>
+                                ) : null}
+
+                                {m.status !== "approved" && hasAnyFiles ? (
+                                  <div className="rounded-2xl border bg-blue-50 p-3 text-xs font-semibold text-blue-900">
+                                    Raw downloads unlock after the client approves this milestone.
                                   </div>
                                 ) : null}
 

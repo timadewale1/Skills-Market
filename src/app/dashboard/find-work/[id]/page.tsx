@@ -655,12 +655,14 @@ export default function TalentGigDetailsPage() {
                           {saved ? "Saved" : "Save gig"}
                         </button>
 
-                        <Link
-                          href="/dashboard/find-work"
-                          className="block text-center text-sm font-extrabold text-gray-700 hover:text-[var(--primary)] transition"
-                        >
-                          Back to gigs
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href="/dashboard/find-work"
+                            className="inline-flex items-center whitespace-nowrap rounded-2xl border bg-white px-4 py-2 text-sm font-extrabold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+                          >
+                            Back to gigs
+                          </Link>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -742,7 +744,7 @@ export default function TalentGigDetailsPage() {
 
                       <div>
                         <div className="text-sm font-extrabold">Attachments (optional)</div>
-                        <div className="mt-2 flex items-center gap-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                           <input
                             ref={fileRef}
                             type="file"
@@ -756,7 +758,7 @@ export default function TalentGigDetailsPage() {
                             type="button"
                             onClick={() => fileRef.current?.click()}
                             disabled={proposal ? !canEditProposal : false}
-                            className="rounded-2xl border bg-white px-4 py-2 text-sm font-extrabold hover:shadow-sm transition inline-flex items-center gap-2 disabled:opacity-60"
+                            className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border bg-white px-4 py-2 text-sm font-extrabold transition hover:shadow-sm disabled:opacity-60"
                           >
                             <Paperclip size={16} />
                             Add files

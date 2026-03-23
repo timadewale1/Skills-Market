@@ -31,20 +31,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Dispute not found" }, { status: 404 })
     }
 
-    if (dispute.clientId !== userId && dispute.talentId !== userId) {
+    const clientUid = dispute.clientUid || dispute.clientId
+    const talentUid = dispute.talentUid || dispute.talentId
+
+    if (clientUid !== userId && talentUid !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
     await adminDb.collection("disputeMessages").add({
       disputeId,
-      senderId,
-      message,
+      senderId: userId,
+      message: String(message).trim(),
       attachments: attachments || [],
       createdAt: FieldValue.serverTimestamp()
     })
 
     // Notify the other party
-    const otherUserId = dispute.clientId === userId ? dispute.talentId : dispute.clientId
+    const otherUserId = clientUid === userId ? talentUid : clientUid
     await notifyUser({
       userId: otherUserId,
       type: "dispute_message",

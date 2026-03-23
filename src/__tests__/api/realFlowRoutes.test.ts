@@ -129,7 +129,7 @@ describe("Real non-admin flow routes", () => {
   })
 
   describe("messages", () => {
-    it("rejects missing auth and sends a real thread message when authorized", async () => {
+    it("rejects missing auth and sends a real thread message with attachment metadata when authorized", async () => {
       const unauthorized = await sendMessage(
         {
           headers: { get: () => null },
@@ -161,8 +161,17 @@ describe("Real non-admin flow routes", () => {
       const response = await sendMessage(
         jsonRequest({
           threadId: "thread-1",
-          text: " Ready to start today ",
+          text: "",
           meta: { source: "chat" },
+          attachments: [
+            {
+              name: "brief.pdf",
+              url: "https://files.example/brief.pdf",
+              storagePath: "threads/thread-1/attachments/brief.pdf",
+              contentType: "application/pdf",
+              size: 12345,
+            },
+          ],
         }) as any
       )
 
@@ -170,13 +179,19 @@ describe("Real non-admin flow routes", () => {
       expect(messagesCollection.add).toHaveBeenCalledWith(
         expect.objectContaining({
           fromUid: "user-1",
-          text: "Ready to start today",
+          text: "",
           meta: { source: "chat" },
+          attachments: [
+            expect.objectContaining({
+              name: "brief.pdf",
+              storagePath: "threads/thread-1/attachments/brief.pdf",
+            }),
+          ],
         })
       )
       expect(threadRef.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          lastMessageText: "Ready to start today",
+          lastMessageText: "Sent 1 attachment",
           lastMessageBy: "user-1",
         })
       )

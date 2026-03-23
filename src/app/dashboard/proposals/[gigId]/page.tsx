@@ -315,7 +315,7 @@ export default function ProposalDetailPage() {
 
       <div className="min-h-[calc(100vh-64px)] bg-[var(--secondary)]">
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
               <button
                 onClick={() => router.back()}
@@ -352,7 +352,7 @@ export default function ProposalDetailPage() {
               </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex md:flex-wrap md:justify-end gap-2">
               <Button
                 variant="outline"
                 className="rounded-2xl"

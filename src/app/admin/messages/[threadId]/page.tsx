@@ -3,11 +3,23 @@ import AdminPageHeader from "@/components/admin/AdminPageHeader"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAdminDb } from "@/lib/firebaseAdmin"
 import { formatAdminDate } from "@/lib/adminData"
+import { ArrowLeft, FileText, ImageIcon, Download } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
 type PageProps = {
   params: Promise<{ threadId: string }>
+}
+
+function formatAttachmentSize(size?: number) {
+  if (!size || size <= 0) return ""
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function attachmentLooksLikeImage(contentType?: string, name?: string) {
+  if (contentType?.startsWith("image/")) return true
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || "")
 }
 
 async function getThreadDetail(threadId: string) {
@@ -48,8 +60,9 @@ export default async function AdminThreadDetailPage({ params }: PageProps) {
         actions={
           <Link
             href="/admin/messages"
-            className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
           >
+            <ArrowLeft size={16} />
             Back to messages
           </Link>
         }
@@ -86,6 +99,36 @@ export default async function AdminThreadDetailPage({ params }: PageProps) {
                   <div className="mt-2 whitespace-pre-wrap text-sm leading-7 text-gray-700">
                     {message.text || "No message body"}
                   </div>
+                  {message.attachments?.length ? (
+                    <div className="mt-3 grid gap-2">
+                      {message.attachments.map((attachment: any, index: number) => {
+                        const imageLike = attachmentLooksLikeImage(attachment.contentType, attachment.name)
+                        return (
+                          <a
+                            key={`${attachment.storagePath || attachment.url || attachment.name || "attachment"}-${index}`}
+                            href={attachment.url || "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-3 rounded-2xl border bg-[var(--secondary)] px-3 py-3 text-sm text-gray-900 transition hover:border-orange-200 hover:bg-orange-50"
+                          >
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-[var(--primary)]">
+                              {imageLike ? <ImageIcon size={16} /> : <FileText size={16} />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-bold">{attachment.name || "Attachment"}</div>
+                              <div className="text-xs font-medium text-gray-500">
+                                {formatAttachmentSize(attachment.size) || attachment.contentType || "Attachment"}
+                              </div>
+                            </div>
+                            <div className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-xs font-semibold text-gray-700">
+                              <Download size={14} />
+                              Open
+                            </div>
+                          </a>
+                        )
+                      })}
+                    </div>
+                  ) : null}
                 </div>
               )
             })
@@ -112,6 +155,19 @@ export default async function AdminThreadDetailPage({ params }: PageProps) {
               <div className="font-semibold text-gray-500">Scope of work</div>
               <div className="mt-1 whitespace-pre-wrap text-gray-700">{thread.agreement.terms?.scopeOfWork || "No scope saved."}</div>
             </div>
+            {thread.agreement.pdfUrl && (
+              <div className="md:col-span-2">
+                <div className="font-semibold text-gray-500">Agreement PDF</div>
+                <a
+                  href={thread.agreement.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-block rounded-lg bg-orange-50 px-4 py-2 text-sm font-semibold text-[var(--primary)] transition hover:bg-orange-100"
+                >
+                  View PDF
+                </a>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : null}

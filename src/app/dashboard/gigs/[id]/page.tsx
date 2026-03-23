@@ -542,12 +542,14 @@ export default function GigDetailsPage() {
                           </>
                         )}
 
-                        <Link
-                          href="/dashboard/gigs"
-                          className="block text-center text-sm font-extrabold text-gray-700 hover:text-[var(--primary)] transition"
-                        >
-                          Back to gigs
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href="/dashboard/gigs"
+                            className="inline-flex items-center whitespace-nowrap rounded-2xl border bg-white px-4 py-2 text-sm font-extrabold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+                          >
+                            Back to gigs
+                          </Link>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>

@@ -45,7 +45,7 @@ html,
 body {
   height: 100%;
   max-width: 100%;
-    overflow-x: hidden;
+  overflow-x: hidden;
 }
 
 @theme inline {
@@ -124,10 +124,56 @@ body {
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
+
+  :where(.flex > *, .grid > *, [class*="flex "] > *, [class*="grid "] > *) {
+    min-width: 0;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  img,
+  svg,
+  video,
+  canvas,
+  iframe,
+  table,
+  pre,
+  code {
+    max-width: 100%;
+  }
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  span,
+  label,
+  li,
+  td,
+  th,
+  dt,
+  dd {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  input,
+  textarea,
+  select {
+    max-width: 100%;
   }
 }

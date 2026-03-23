@@ -12,10 +12,12 @@ async function getDispute(id: string) {
   if (!doc.exists) return null
 
   const data = doc.data() as any
+  const clientUid = data.clientUid || data.clientId || null
+  const talentUid = data.talentUid || data.talentId || null
   const [workspaceSnap, clientSnap, talentSnap] = await Promise.all([
     data.workspaceId ? db.collection("workspaces").doc(data.workspaceId).get() : null,
-    data.clientId ? db.collection("users").doc(data.clientId).get() : null,
-    data.talentId ? db.collection("users").doc(data.talentId).get() : null,
+    clientUid ? db.collection("users").doc(clientUid).get() : null,
+    talentUid ? db.collection("users").doc(talentUid).get() : null,
   ])
 
   return {
@@ -96,13 +98,13 @@ export default async function DisputeResolvePage({
               <div>
                 <div className="font-semibold text-gray-500">Client</div>
                 <div className="mt-1 text-gray-900">
-                  {dispute.client?.fullName || dispute.client?.email || dispute.clientId || "N/A"}
+                  {dispute.client?.fullName || dispute.client?.email || dispute.clientUid || dispute.clientId || "N/A"}
                 </div>
               </div>
               <div>
                 <div className="font-semibold text-gray-500">Talent</div>
                 <div className="mt-1 text-gray-900">
-                  {dispute.talent?.fullName || dispute.talent?.email || dispute.talentId || "N/A"}
+                  {dispute.talent?.fullName || dispute.talent?.email || dispute.talentUid || dispute.talentId || "N/A"}
                 </div>
               </div>
             </div>
@@ -138,13 +140,13 @@ export default async function DisputeResolvePage({
                     View workspace
                   </Link>
                 ) : null}
-                {dispute.clientId ? (
-                  <Link href={`/admin/clients/${dispute.clientId}`} className="block rounded-2xl border bg-[var(--secondary)] px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-orange-200 hover:bg-white">
+                {(dispute.clientUid || dispute.clientId) ? (
+                  <Link href={`/admin/clients/${dispute.clientUid || dispute.clientId}`} className="block rounded-2xl border bg-[var(--secondary)] px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-orange-200 hover:bg-white">
                     View client
                   </Link>
                 ) : null}
-                {dispute.talentId ? (
-                  <Link href={`/admin/talents/${dispute.talentId}`} className="block rounded-2xl border bg-[var(--secondary)] px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-orange-200 hover:bg-white">
+                {(dispute.talentUid || dispute.talentId) ? (
+                  <Link href={`/admin/talents/${dispute.talentUid || dispute.talentId}`} className="block rounded-2xl border bg-[var(--secondary)] px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-orange-200 hover:bg-white">
                     View talent
                   </Link>
                 ) : null}

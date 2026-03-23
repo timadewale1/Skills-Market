@@ -31,8 +31,10 @@ import { MessageSquare, FileText, DollarSign } from "lucide-react"
 type Dispute = {
   id: string
   workspaceId: string
-  clientId: string
-  talentId: string
+  clientUid?: string
+  talentUid?: string
+  clientId?: string
+  talentId?: string
   raisedBy: string
   reason: string
   description: string
@@ -103,9 +105,11 @@ export default function AdminDisputesPage() {
 
       const disputesWithDetails = await Promise.all(
         disputesData.map(async (dispute) => {
+          const clientUid = dispute.clientUid || dispute.clientId || ""
+          const talentUid = dispute.talentUid || dispute.talentId || ""
           const [clientDoc, talentDoc, workspaceDoc, messagesQuery] = await Promise.all([
-            getDoc(doc(db, "users", dispute.clientId)),
-            getDoc(doc(db, "users", dispute.talentId)),
+            clientUid ? getDoc(doc(db, "users", clientUid)) : Promise.resolve({ exists: () => false } as any),
+            talentUid ? getDoc(doc(db, "users", talentUid)) : Promise.resolve({ exists: () => false } as any),
             getDoc(doc(db, "workspaces", dispute.workspaceId)),
             getDocs(query(collection(db, "disputeMessages"), where("disputeId", "==", dispute.id))),
           ])

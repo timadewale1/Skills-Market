@@ -623,7 +623,9 @@ describe("Major client and talent UI flows", () => {
       target: { value: "0123456789" },
     })
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Access Bank/i })[0])
+    fireEvent.change(screen.getByRole("combobox", { name: "select" }), {
+      target: { value: "044" },
+    })
     fireEvent.click(screen.getByRole("button", { name: "Verify account" }))
 
     await waitFor(() => {

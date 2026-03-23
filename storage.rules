@@ -38,6 +38,16 @@ service firebase.storage {
         request.auth.uid == firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)).data.talentUid;
     }
 
+    function isFinalWorkApproved(workspaceId) {
+      return firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId)/finalWork/submission)
+        && firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/finalWork/submission).data.status == "approved";
+    }
+
+    function isMilestoneApproved(workspaceId, milestoneId) {
+      return firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId)/milestones/$(milestoneId))
+        && firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/milestones/$(milestoneId)).data.status == "approved";
+    }
+
     function isGigOwnerOrNew(gigId) {
       return signedIn() && (
         !firestore.exists(/databases/(default)/documents/gigs/$(gigId))
@@ -49,6 +59,16 @@ service firebase.storage {
       return signedIn()
         && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function threadExists(threadId) {
+      return firestore.exists(/databases/(default)/documents/threads/$(threadId));
+    }
+
+    function isThreadParticipant(threadId) {
+      return signedIn()
+        && threadExists(threadId)
+        && (request.auth.uid in firestore.get(/databases/(default)/documents/threads/$(threadId)).data.participants);
     }
 
     // ===== USER PROPOSALS =====
@@ -74,10 +94,17 @@ service firebase.storage {
       allow read, write: if signedIn();
     }
 
+    // ===== THREAD MESSAGE ATTACHMENTS =====
+    match /threads/{threadId}/attachments/{allPaths=**} {
+      allow read, write: if isAdmin() || isThreadParticipant(threadId);
+    }
+
     // ===== MILESTONES: RAW + PREVIEWS =====
     match /workspaces/{workspaceId}/milestones/{milestoneId}/raw/{allPaths=**} {
       allow write: if signedIn() && isWorkspaceTalent(workspaceId);
-      allow read: if false;  // Only previews visible externally
+      allow read: if isAdmin()
+        || isWorkspaceTalent(workspaceId)
+        || (isWorkspaceParticipant(workspaceId) && isMilestoneApproved(workspaceId, milestoneId));
     }
 
     match /workspaces/{workspaceId}/milestones/{milestoneId}/previews {
@@ -105,7 +132,9 @@ service firebase.storage {
 
     // ===== FINAL WORK =====
     match /workspaces/{workspaceId}/finalWork/raw/{allPaths=**} {
-      allow read: if signedIn() && isWorkspaceTalent(workspaceId);
+      allow read: if isAdmin()
+        || isWorkspaceTalent(workspaceId)
+        || (isWorkspaceParticipant(workspaceId) && isFinalWorkApproved(workspaceId));
       allow write: if signedIn() && isWorkspaceTalent(workspaceId);
     }
 

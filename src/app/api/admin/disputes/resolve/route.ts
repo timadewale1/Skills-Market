@@ -33,6 +33,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Dispute not found" }, { status: 404 })
     }
 
+    const clientUid = dispute.clientUid || dispute.clientId
+    const talentUid = dispute.talentUid || dispute.talentId
+
     // Get workspace to check escrow amount
     const workspaceRef = adminDb.collection("workspaces").doc(dispute.workspaceId)
     const workspace = (await workspaceRef.get()).data()
@@ -49,7 +52,7 @@ export async function POST(req: Request) {
       }
 
       await adminDb.collection("wallets")
-        .doc(dispute.talentId)
+        .doc(talentUid)
         .update({
           balance: FieldValue.increment(amount)
         })
@@ -60,7 +63,7 @@ export async function POST(req: Request) {
       }
 
       await adminDb.collection("wallets")
-        .doc(dispute.clientId)
+        .doc(clientUid)
         .update({
           balance: FieldValue.increment(amount)
         })
@@ -74,13 +77,13 @@ export async function POST(req: Request) {
       const clientAmount = amount
 
       await adminDb.collection("wallets")
-        .doc(dispute.talentId)
+        .doc(talentUid)
         .update({
           balance: FieldValue.increment(talentAmount)
         })
 
       await adminDb.collection("wallets")
-        .doc(dispute.clientId)
+        .doc(clientUid)
         .update({
           balance: FieldValue.increment(clientAmount)
         })
@@ -107,7 +110,7 @@ export async function POST(req: Request) {
 
     // Notify both parties
     await notifyUser({
-      userId: dispute.clientId,
+      userId: clientUid,
       type: "admin_decision",
       title: "Dispute resolved",
       message: "An admin has resolved your dispute",
@@ -115,7 +118,7 @@ export async function POST(req: Request) {
     })
 
     await notifyUser({
-      userId: dispute.talentId,
+      userId: talentUid,
       type: "admin_decision",
       title: "Dispute resolved",
       message: "An admin has resolved your dispute",

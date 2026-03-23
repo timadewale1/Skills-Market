@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
@@ -10,14 +10,11 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   addDoc,
   onSnapshot,
   orderBy,
   query,
   where,
-  updateDoc,
-  serverTimestamp,
   Timestamp,
 } from "firebase/firestore"
 import { motion } from "framer-motion"
@@ -68,8 +65,10 @@ type DisputeEvidence = {
 type Dispute = {
   id: string
   workspaceId: string
-  clientId: string
-  talentId: string
+  clientUid?: string
+  talentUid?: string
+  clientId?: string
+  talentId?: string
   raisedBy: string
   reason: string
   description: string
@@ -98,6 +97,10 @@ export default function DisputeDetailPage() {
   const [newMessage, setNewMessage] = useState("")
   const [sendingMessage, setSendingMessage] = useState(false)
   const [uploadingEvidence, setUploadingEvidence] = useState(false)
+  const unauthorizedHandledRef = useRef(false)
+
+  const resolveClientUid = (record: Dispute | null) => record?.clientUid || record?.clientId || ""
+  const resolveTalentUid = (record: Dispute | null) => record?.talentUid || record?.talentId || ""
 
   useEffect(() => {
     if (!id || !user) return
@@ -115,9 +118,15 @@ export default function DisputeDetailPage() {
         const disputeData = { id: disputeDoc.id, ...disputeDoc.data() } as Dispute
         setDispute(disputeData)
 
+        const clientUid = disputeData.clientUid || disputeData.clientId || ""
+        const talentUid = disputeData.talentUid || disputeData.talentId || ""
+
         // Check if user is authorized
-        if (disputeData.clientId !== user.uid && disputeData.talentId !== user.uid) {
-          toast.error("Unauthorized")
+        if (clientUid !== user.uid && talentUid !== user.uid) {
+          if (!unauthorizedHandledRef.current) {
+            unauthorizedHandledRef.current = true
+            toast.error("Unauthorized")
+          }
           router.push("/dashboard")
           return
         }
@@ -130,8 +139,8 @@ export default function DisputeDetailPage() {
 
         // Fetch client and talent profiles
         const [clientDoc, talentDoc] = await Promise.all([
-          getDoc(doc(db, "users", disputeData.clientId)),
-          getDoc(doc(db, "users", disputeData.talentId))
+          getDoc(doc(db, "publicProfiles", clientUid)),
+          getDoc(doc(db, "publicProfiles", talentUid))
         ])
 
         if (clientDoc.exists()) setClient({ id: clientDoc.id, ...clientDoc.data() })
@@ -153,13 +162,20 @@ export default function DisputeDetailPage() {
       orderBy("createdAt", "asc")
     )
 
-    const unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
-      const messagesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as DisputeMessage[]
-      setMessages(messagesData)
-    })
+    const unsubscribeMessages = onSnapshot(
+      messagesQuery,
+      (snapshot) => {
+        const messagesData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as DisputeMessage[]
+        setMessages(messagesData)
+      },
+      (error) => {
+        console.error("Error listening to dispute messages:", error)
+        toast.error("You do not have access to dispute messages.")
+      }
+    )
 
     // Listen for evidence
     const evidenceQuery = query(
@@ -168,13 +184,20 @@ export default function DisputeDetailPage() {
       orderBy("createdAt", "asc")
     )
 
-    const unsubscribeEvidence = onSnapshot(evidenceQuery, (snapshot) => {
-      const evidenceData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as DisputeEvidence[]
-      setEvidence(evidenceData)
-    })
+    const unsubscribeEvidence = onSnapshot(
+      evidenceQuery,
+      (snapshot) => {
+        const evidenceData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as DisputeEvidence[]
+        setEvidence(evidenceData)
+      },
+      (error) => {
+        console.error("Error listening to dispute evidence:", error)
+        toast.error("You do not have access to dispute evidence.")
+      }
+    )
 
     return () => {
       unsubscribeMessages()
@@ -384,8 +407,8 @@ export default function DisputeDetailPage() {
                             <div>
                               <p className="font-medium">{item.description || "Evidence file"}</p>
                               <p className="text-sm text-gray-600">
-                                {item.createdAt?.toDate().toLocaleDateString()} •
-                                Uploaded by {item.uploadedBy === user?.uid ? "You" : "Other party"}
+                      {item.createdAt?.toDate().toLocaleDateString()} •
+                      Uploaded by {item.uploadedBy === user?.uid ? "You" : "Other party"}
                               </p>
                             </div>
                           </div>
@@ -468,16 +491,16 @@ export default function DisputeDetailPage() {
                 <CardContent className="space-y-4">
                   <div>
                     <p className="font-medium text-sm text-gray-600">Client</p>
-                    <p className="font-medium">{client?.displayName || "Unknown"}</p>
+                    <p className="font-medium">{client?.displayName || client?.fullName || "Unknown"}</p>
                   </div>
                   <div>
                     <p className="font-medium text-sm text-gray-600">Talent</p>
-                    <p className="font-medium">{talent?.displayName || "Unknown"}</p>
+                    <p className="font-medium">{talent?.displayName || talent?.fullName || "Unknown"}</p>
                   </div>
                   <div>
                     <p className="font-medium text-sm text-gray-600">Raised By</p>
                     <p className="font-medium">
-                      {dispute.raisedBy === dispute.clientId ? "Client" : "Talent"}
+                      {dispute.raisedBy === resolveClientUid(dispute) ? "Client" : "Talent"}
                     </p>
                   </div>
                 </CardContent>

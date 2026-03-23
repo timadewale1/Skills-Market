@@ -11,21 +11,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Wallet, Landmark, ArrowDownToLine, Check, ChevronsUpDown, Edit2 } from "lucide-react"
+import { Wallet, Landmark, ArrowDownToLine, Edit2 } from "lucide-react"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import { cn } from "@/lib/utils"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type WalletDoc = {
   uid: string
@@ -66,8 +59,8 @@ export default function WalletPage() {
 
   const [banks, setBanks] = useState<Array<{ name: string; code: string; slug: string }>>([])
   const [banksLoading, setBanksLoading] = useState(false)
-  const [bankOpen, setBankOpen] = useState(false)
   const [selectedBank, setSelectedBank] = useState<{ name: string; code: string; slug: string } | null>(null)
+  const [bankSearch, setBankSearch] = useState("")
 
   const [accountNumber, setAccountNumber] = useState("")
   const [resolvedAccountName, setResolvedAccountName] = useState<string | null>(null)
@@ -83,6 +76,11 @@ export default function WalletPage() {
   const clientEscrowFunded = txs
     .filter((tx) => tx.reason === "workspace_funding" && tx.status === "completed")
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+  const filteredBanks = banks.filter((bank) => {
+    const query = bankSearch.trim().toLowerCase()
+    if (!query) return true
+    return `${bank.name} ${bank.code}`.toLowerCase().includes(query)
+  })
 
   useEffect(() => {
     ;(async () => {
@@ -213,6 +211,7 @@ export default function WalletPage() {
       toast.success("Bank details saved")
       setAccountNumber("")
       setSelectedBank(null)
+      setBankSearch("")
       setResolvedAccountName(null)
       setEditMode(false)
     } catch (error: any) {
@@ -229,6 +228,7 @@ export default function WalletPage() {
       setAccountNumber(wallet.bank.accountNumber)
       const matchBank = banks.find((bank) => bank.code === wallet.bank?.bankCode)
       setSelectedBank(matchBank || null)
+      setBankSearch("")
       setResolvedAccountName(wallet.bank.accountName || null)
     }
   }
@@ -237,6 +237,7 @@ export default function WalletPage() {
     setEditMode(false)
     setAccountNumber("")
     setSelectedBank(null)
+    setBankSearch("")
     setResolvedAccountName(null)
   }
 
@@ -367,49 +368,44 @@ export default function WalletPage() {
                           : "Add a bank account for refund and settlement support. We'll verify it via Paystack."}
                       </div>
 
-                      <Popover open={bankOpen} onOpenChange={setBankOpen}>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            disabled={banksLoading}
-                            className={cn(
-                              "flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left text-sm font-medium",
-                              selectedBank ? "border-[var(--primary)] bg-[var(--primary)]/5" : "border-gray-300"
-                            )}
+                      {banksLoading ? (
+                        <div className="rounded-2xl border px-3 py-2 text-sm text-gray-600">Loading banks...</div>
+                      ) : banks.length === 0 ? (
+                        <div className="rounded-2xl border px-3 py-2 text-sm text-gray-600">
+                          Failed to load banks. Please refresh.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Input
+                            value={bankSearch}
+                            onChange={(e) => setBankSearch(e.target.value)}
+                            placeholder="Search bank..."
+                            className="rounded-2xl"
+                          />
+                          <Select
+                            value={selectedBank?.code || ""}
+                            onValueChange={(value) => {
+                              const bank = banks.find((item) => item.code === value) || null
+                              setSelectedBank(bank)
+                            }}
                           >
-                            <span>{selectedBank?.name || (banksLoading ? "Loading banks..." : "Select bank...")}</span>
-                            <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search banks..." />
-                            <CommandEmpty>No banks found.</CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                {banks.map((bank, idx) => (
-                                  <CommandItem
-                                    key={`${bank.code}-${idx}`}
-                                    value={`${bank.name} ${bank.code}`}
-                                    onSelect={() => {
-                                      setSelectedBank(bank)
-                                      setBankOpen(false)
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedBank?.code === bank.code ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
+                            <SelectTrigger className="rounded-2xl bg-white">
+                              <SelectValue placeholder="Select bank..." />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-80">
+                              {filteredBanks.length === 0 ? (
+                                <div className="px-3 py-2 text-sm text-gray-600">No banks match your search.</div>
+                              ) : (
+                                filteredBanks.map((bank, idx) => (
+                                  <SelectItem key={`${bank.code}-${idx}`} value={bank.code}>
                                     {bank.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
 
                       <Input
                         value={accountNumber}

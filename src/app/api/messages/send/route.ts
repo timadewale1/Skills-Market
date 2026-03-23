@@ -16,9 +16,26 @@ export async function POST(request: NextRequest) {
     const decodedToken = await auth.verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const { threadId, text, meta } = await request.json()
-    if (!threadId || !text?.trim()) {
-      return NextResponse.json({ error: "Thread ID and text are required" }, { status: 400 })
+    const { threadId, text, meta, attachments } = await request.json()
+    const trimmedText = typeof text === "string" ? text.trim() : ""
+    const normalizedAttachments = Array.isArray(attachments)
+      ? attachments
+          .filter(
+            (attachment) =>
+              attachment &&
+              typeof attachment === "object" &&
+              typeof attachment.name === "string" &&
+              typeof attachment.url === "string" &&
+              typeof attachment.storagePath === "string"
+          )
+          .slice(0, 5)
+      : []
+
+    if (!threadId || (!trimmedText && normalizedAttachments.length === 0)) {
+      return NextResponse.json(
+        { error: "Thread ID and either text or attachments are required" },
+        { status: 400 }
+      )
     }
 
     const threadRef = db.collection("threads").doc(threadId)
@@ -35,13 +52,18 @@ export async function POST(request: NextRequest) {
 
     const messageRef = await threadRef.collection("messages").add({
       fromUid: userId,
-      text: text.trim(),
+      text: trimmedText,
       createdAt: new Date(),
       ...(meta && { meta }),
+      ...(normalizedAttachments.length ? { attachments: normalizedAttachments } : {}),
     })
 
+    const lastMessageText =
+      trimmedText ||
+      `Sent ${normalizedAttachments.length} attachment${normalizedAttachments.length === 1 ? "" : "s"}`
+
     await threadRef.update({
-      lastMessageText: text.trim(),
+      lastMessageText,
       lastMessageAt: new Date(),
       lastMessageBy: userId,
       updatedAt: new Date(),

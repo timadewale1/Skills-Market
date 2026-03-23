@@ -131,42 +131,44 @@ export default function AdminDashboardPage() {
     const run = async () => {
       if (!user?.uid) return
 
-      const [profileSnap, usersSnap, gigsSnap, workspacesSnap, disputesSnap] =
-        await Promise.all([
-          getDoc(doc(db, "users", user.uid)),
-          getDoc(doc(db, "stats", "users")),
-          getDoc(doc(db, "stats", "gigs")),
-          getDoc(doc(db, "stats", "workspaces")),
-          getDoc(doc(db, "stats", "disputes")),
-        ])
+      try {
+        const profileSnap = await getDoc(doc(db, "users", user.uid))
+        setProfile((profileSnap.data() as AdminDoc) || null)
 
-      setProfile((profileSnap.data() as AdminDoc) || null)
+        const token = await user.getIdToken()
+        const res = await fetch("/api/admin/stats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
 
-      const nextUsers = usersSnap.exists() ? Number(usersSnap.data()?.count || 0) : 0
-      const nextGigs = gigsSnap.exists() ? Number(gigsSnap.data()?.count || 0) : 0
-      const nextWorkspaces = workspacesSnap.exists()
-        ? Number(workspacesSnap.data()?.count || 0)
-        : 0
-      const nextDisputes = disputesSnap.exists()
-        ? Number(disputesSnap.data()?.count || 0)
-        : 0
+        if (res.ok) {
+          const stats = await res.json()
+          const nextUsers = Number(stats.users || 0)
+          const nextGigs = Number(stats.gigs || 0)
+          const nextWorkspaces = Number(stats.workspaces || 0)
+          const nextDisputes = Number(stats.disputes || 0)
 
-      animate(0, nextUsers, { duration: 0.7, onUpdate: (value) => setUsersCount(Math.round(value)) })
-      animate(0, nextGigs, { duration: 0.8, onUpdate: (value) => setGigsCount(Math.round(value)) })
-      animate(0, nextWorkspaces, {
-        duration: 0.9,
-        onUpdate: (value) => setWorkspacesCount(Math.round(value)),
-      })
-      animate(0, nextDisputes, {
-        duration: 1,
-        onUpdate: (value) => setDisputesCount(Math.round(value)),
-      })
+          animate(0, nextUsers, { duration: 0.7, onUpdate: (value) => setUsersCount(Math.round(value)) })
+          animate(0, nextGigs, { duration: 0.8, onUpdate: (value) => setGigsCount(Math.round(value)) })
+          animate(0, nextWorkspaces, {
+            duration: 0.9,
+            onUpdate: (value) => setWorkspacesCount(Math.round(value)),
+          })
+          animate(0, nextDisputes, {
+            duration: 1,
+            onUpdate: (value) => setDisputesCount(Math.round(value)),
+          })
+        }
+      } catch (error) {
+        console.error("Error loading stats:", error)
+      }
 
       await loadWellness()
     }
 
     void run()
-  }, [user?.uid])
+  }, [user?.uid, user])
 
   const adminName = useMemo(() => {
     return profile?.fullName?.split(" ")[0] || "Admin"
