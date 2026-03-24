@@ -322,10 +322,35 @@ export default function BlogPost({ slug }: BlogPostProps) {
                   <div className="rounded-2xl border border-gray-100 p-5 bg-white">
                     <div className="flex justify-between items-center mb-3">
                       <p className="fm text-[10px] text-gray-400 uppercase tracking-wider">Reading progress</p>
-                      <span className="fm text-[10px] font-bold" style={{ color: post.categoryColor }}>{Math.round(progress)}%</span>
+                      <span
+                        className="fm inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold"
+                        style={{ color: post.categoryColor, background: `${post.categoryColor}12` }}
+                      >
+                        <span
+                          className="inline-block h-1.5 w-1.5 rounded-full"
+                          style={{ background: post.categoryColor, transform: `scale(${0.9 + progress / 180})`, transition: "transform .18s ease-out" }}
+                        />
+                        {Math.round(progress)}%
+                      </span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-200" style={{ width: `${progress}%`, background: post.categoryColor }} />
+                    <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-200"
+                        style={{
+                          width: `${progress}%`,
+                          background: `linear-gradient(90deg, ${post.categoryColor}, #FCD34D, ${post.categoryColor})`,
+                          backgroundSize: "220% 100%",
+                          animation: "gradShift 3.2s ease infinite",
+                        }}
+                      />
+                      <div
+                        className="absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-white shadow-sm transition-all duration-200"
+                        style={{
+                          left: `calc(${progress}% - 7px)`,
+                          background: post.categoryColor,
+                          opacity: progress > 2 ? 1 : 0,
+                        }}
+                      />
                     </div>
                     <p className="fm text-[10px] text-gray-400 mt-2">{post.readTime}</p>
                   </div>

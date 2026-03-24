@@ -14,6 +14,7 @@ import {
   MessageSquare,
   LayoutGrid,
   PlusCircle,
+  Wallet,
 } from "lucide-react"
 import { auth, db } from "@/lib/firebase"
 import Button from "@/components/ui/Button"
@@ -87,9 +88,7 @@ export default function AuthNavbar() {
     if (loadingRole || !role) {
       return [
         { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-        { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
         { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
-        { href: "/dashboard/wallet", label: "Wallet", icon: Briefcase },
       ]
     }
 
@@ -98,9 +97,7 @@ export default function AuthNavbar() {
         { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
         { href: "/dashboard/find-work", label: "Find Work", icon: Briefcase },
         { href: "/dashboard/proposals", label: "Proposals", icon: PlusCircle },
-        { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
         { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
-        { href: "/dashboard/wallet", label: "Wallet", icon: Briefcase },
       ]
     }
 
@@ -108,12 +105,15 @@ export default function AuthNavbar() {
       { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
       { href: "/dashboard/find-talent", label: "Hire Talent", icon: Users },
       { href: "/dashboard/post-gig", label: "Post a Gig", icon: PlusCircle },
-      { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
       { href: "/dashboard/gigs", label: "Gigs", icon: Briefcase },
       { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
-      { href: "/dashboard/wallet", label: "Wallet", icon: Briefcase },
     ]
   }, [role, loadingRole])
+
+  const utilityLinks = [
+    { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+    { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
+  ]
 
   const searchType = role === "client" ? "talent" : "job"
   const searchPlaceholder =
@@ -134,10 +134,10 @@ export default function AuthNavbar() {
   }, [fullName, user?.email])
 
   return (
-    <header className="bg-white border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
         {/* LEFT */}
-        <div className="flex items-center gap-6">
+        <div className="flex min-w-0 items-center gap-6">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 text-xl font-extrabold text-[var(--primary)]"
@@ -146,7 +146,7 @@ export default function AuthNavbar() {
           </Link>
 
           {/* DESKTOP NAV */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden xl:flex items-center gap-8">
             {links.map((l) => (
               <Link key={l.href} href={l.href} className={navItem}>
                 {l.label}
@@ -156,7 +156,7 @@ export default function AuthNavbar() {
         </div>
 
         {/* RIGHT (DESKTOP) */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="ml-auto hidden min-w-0 items-center gap-3 md:flex">
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -165,7 +165,7 @@ export default function AuthNavbar() {
               if (!q) return
               router.push(`/search?type=${searchType}&q=${encodeURIComponent(q)}`)
             }}
-            className="flex items-center border rounded-md overflow-hidden"
+            className="hidden items-center overflow-hidden rounded-xl border bg-white lg:flex"
           >
             <div className="px-3 text-gray-500">
               <Search size={16} />
@@ -173,9 +173,26 @@ export default function AuthNavbar() {
             <input
               name="q"
               placeholder={searchPlaceholder}
-              className="px-2 py-2 text-sm outline-none w-72"
+              className="w-72 bg-transparent px-2 py-2 text-sm outline-none xl:w-80"
             />
           </form>
+
+          <div className="flex items-center gap-1">
+            {utilityLinks.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent text-gray-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+                  aria-label={item.label}
+                  title={item.label}
+                >
+                  <Icon size={18} />
+                </Link>
+              )
+            })}
+          </div>
 
           <NotificationBell />
 

@@ -33,7 +33,7 @@ export default function Navbar() {
     "flex items-center gap-1 font-semibold text-black hover:text-[var(--primary)] cursor-pointer"
 
   return (
-    <header className="bg-white border-b relative">
+    <header className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85 relative">
       {/* TOP BAR */}
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* LEFT */}
@@ -174,7 +174,7 @@ export default function Navbar() {
         </div>
 
         {/* RIGHT */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-3">
           <form
   onSubmit={(e) => {
     e.preventDefault()
@@ -182,12 +182,12 @@ export default function Navbar() {
     router.push(`/search?type=${type}&q=${query}`)
     setMobileOpen(false)
   }}
-  className="flex border rounded-md overflow-hidden w-full"
+  className="flex h-12 min-w-[520px] max-w-[620px] flex-1 overflow-hidden rounded-2xl border border-gray-200 bg-white"
 >
   <select
     value={type}
     onChange={(e) => setType(e.target.value as any)}
-    className="bg-gray-100 px-2 text-sm outline-none"
+    className="w-28 shrink-0 border-r border-gray-200 bg-gray-100 px-4 text-sm font-semibold text-gray-900 outline-none"
   >
     <option value="talent">Talent</option>
     <option value="job">Jobs</option>
@@ -197,14 +197,23 @@ export default function Navbar() {
     value={query}
     onChange={(e) => setQuery(e.target.value)}
     placeholder="Search impact talents or jobs"
-    className="px-3 py-2 text-sm outline-none w-full"
+    className="w-full bg-transparent px-4 py-2 text-sm outline-none"
   />
 </form>
 
 
-          <Link href="/login">Login</Link>
-          <Button><Link href="/signup">Sign Up</Link>
-</Button>
+          <Link
+            href="/login"
+            className="inline-flex h-12 items-center justify-center rounded-2xl px-6 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
+          >
+            Login
+          </Link>
+          <Link
+            href="/signup"
+            className="inline-flex h-12 min-w-[132px] items-center justify-center rounded-2xl bg-[var(--primary)] px-6 text-sm font-extrabold whitespace-nowrap text-white shadow-[0_12px_28px_rgba(249,115,22,.28)] transition hover:opacity-95"
+          >
+            Sign Up
+          </Link>
         </div>
 
         {/* MOBILE TOGGLE */}
@@ -226,12 +235,12 @@ export default function Navbar() {
     router.push(`/search?type=${type}&q=${query}`)
     setMobileOpen(false)
   }}
-  className="flex border rounded-md overflow-hidden w-full"
+  className="flex h-12 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white"
 >
   <select
     value={type}
     onChange={(e) => setType(e.target.value as any)}
-    className="bg-gray-100 px-2 text-sm outline-none"
+    className="w-28 shrink-0 border-r border-gray-200 bg-gray-100 px-4 text-sm font-semibold text-gray-900 outline-none"
   >
     <option value="talent">Talent</option>
     <option value="job">Jobs</option>
@@ -241,7 +250,7 @@ export default function Navbar() {
     value={query}
     onChange={(e) => setQuery(e.target.value)}
     placeholder="Search impact talents or jobs"
-    className="px-3 py-2 text-sm outline-none w-full"
+    className="w-full bg-transparent px-4 py-2 text-sm outline-none"
   />
 </form>
 

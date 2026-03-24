@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import {
   FiArrowUp, FiShield, FiUsers, FiDollarSign, FiAlertTriangle,
   FiLock, FiGlobe, FiRefreshCw, FiMail, FiFileText,
-  FiChevronRight, FiCheckCircle, FiCopy, FiArrowLeft, FiExternalLink
+  FiChevronRight, FiCheckCircle, FiCopy, FiArrowLeft, FiExternalLink, FiChevronDown, FiChevronUp
 } from "react-icons/fi"
 import { HiSparkles } from "react-icons/hi"
 import { MdGavel } from "react-icons/md"
@@ -286,6 +286,58 @@ export default function TermsPage() {
 
         {/* ── BODY: sidebar + content ── */}
         <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16">
+          <div className="mb-6 lg:hidden">
+            <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-[.22em] text-gray-400">Reading progress</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-200"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[10px] font-bold text-orange-500">{Math.round(progress)}%</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen((open) => !open)}
+                  className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold text-orange-700"
+                >
+                  Contents
+                  {sidebarOpen ? <FiChevronUp size={12} /> : <FiChevronDown size={12} />}
+                </button>
+              </div>
+
+              {sidebarOpen ? (
+                <div className="mt-4 border-t border-orange-100 pt-4">
+                  <nav className="flex flex-col gap-1">
+                    {SECTIONS.map(({ id, label, icon: Icon }) => {
+                      const isActive = active === id
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => scrollTo(id)}
+                          className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ${
+                            isActive
+                              ? "nav-item-active border-orange-200 bg-orange-50"
+                              : "border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span className={`nav-dot h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-200 ${isActive ? "bg-orange-500" : "bg-gray-300 group-hover:bg-orange-300"}`} />
+                          <Icon size={13} className={`shrink-0 transition-colors ${isActive ? "text-orange-500" : "text-gray-400 group-hover:text-gray-600"}`} />
+                          <span className={`text-xs font-display font-medium transition-colors ${isActive ? "text-orange-700" : ""}`}>{label}</span>
+                        </button>
+                      )
+                    })}
+                  </nav>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
           <div className="grid lg:grid-cols-[260px_1fr] gap-12">
 
             {/* ── STICKY SIDEBAR ── */}

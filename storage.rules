@@ -71,9 +71,11 @@ service firebase.storage {
         && (request.auth.uid in firestore.get(/databases/(default)/documents/threads/$(threadId)).data.participants);
     }
 
-    // ===== USER PROPOSALS =====
-    match /users/{userId}/proposals/{proposalId}/{allPaths=**} {
-      allow read, write: if signedIn() && request.auth.uid == userId;
+    // ===== USER FILES =====
+    // Covers profile photos, resumes, portfolio items, proposal attachments,
+    // verification docs, and other user-owned uploads written under users/{uid}/...
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if (signedIn() && request.auth.uid == userId) || isAdmin();
     }
 
     // === verification uploads (kyc/orgKyc) ===

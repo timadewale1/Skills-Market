@@ -7,7 +7,7 @@ import {
   FiArrowUp, FiShield, FiUsers, FiDatabase, FiLock,
   FiGlobe, FiRefreshCw, FiMail, FiFileText, FiEye,
   FiChevronRight, FiCheckCircle, FiCopy, FiExternalLink,
-  FiAlertTriangle, FiTrash2, FiEdit3, FiDownload,
+  FiAlertTriangle, FiTrash2, FiEdit3, FiDownload, FiChevronDown, FiChevronUp,
   FiToggleRight, FiServer, FiWifi, FiSmartphone, FiKey
 } from "react-icons/fi"
 import { HiSparkles, HiShieldCheck } from "react-icons/hi"
@@ -241,10 +241,14 @@ export default function PrivacyPage() {
   const scrollY  = useScrollY()
   const progress = useReadingProgress()
   const active   = useActiveSection(SECTION_IDS)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id)
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+      setSidebarOpen(false)
+    }
   }
 
   return (

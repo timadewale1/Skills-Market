@@ -845,7 +845,6 @@ export default function DashboardPage() {
               animate="show"
               variants={fadeUp}
               custom={4}
-              className="mt-6"
             >
               <Card className="rounded-2xl">
                 <CardHeader>
@@ -1006,8 +1005,8 @@ function StatCard({
 }) {
   return (
     <motion.div variants={fadeUp} custom={i + 1} whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}>
-      <Card className="rounded-2xl hover:shadow-md transition">
-        <CardContent className="p-6">
+      <Card className="h-full rounded-2xl hover:shadow-md transition">
+        <CardContent className="flex h-full min-h-[176px] flex-col p-6">
           <div className="flex items-center justify-between">
             <motion.div
               className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center"
@@ -1019,7 +1018,7 @@ function StatCard({
             <div className="text-2xl font-extrabold">{value}</div>
           </div>
           <div className="mt-3 font-extrabold">{title}</div>
-          <div className="text-sm text-gray-600 mt-1">{hint}</div>
+          <div className="mt-auto pt-2 text-sm text-gray-600">{hint}</div>
         </CardContent>
       </Card>
     </motion.div>
@@ -1044,8 +1043,8 @@ function RatingsCard({
 
   return (
     <motion.div variants={fadeUp} custom={i + 1} whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}>
-      <Card className="rounded-2xl hover:shadow-md transition">
-        <CardContent className="p-6">
+      <Card className="h-full rounded-2xl hover:shadow-md transition">
+        <CardContent className="flex h-full min-h-[176px] flex-col p-6">
           <div className="flex items-center justify-between">
             <motion.div
               className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center"
@@ -1087,7 +1086,7 @@ function RatingsCard({
             })}
           </div>
 
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="mt-auto pt-2 text-sm text-gray-600">
             Ratings will update after completed gigs.
           </div>
         </CardContent>

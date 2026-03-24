@@ -155,6 +155,14 @@ const FAQS = [
   { q: "Is changeworker available outside Nigeria?",   a: "Currently we serve organizations and freelancers within Nigeria. We're planning expansion to other African markets - use this form to register your interest." },
 ]
 
+const FAQ_ENTRIES = [
+  { q: "How quickly will I get a response?", a: "Email enquiries receive a response within 24 hours on business days. Urgent platform and payment issues are triaged first." },
+  { q: "I'm having trouble with a payment - help?", a: "Payment issues are top priority. Use the support form below and include your transaction reference, workspace, and what went wrong so we can investigate quickly.", ctaLabel: "Open support form", ctaHref: "#contact-form" },
+  { q: "Can I schedule a demo for my organization?", a: "Absolutely. Choose the organization or partnership option in the form below and mention that you'd like a demo. We'll follow up with the right next step.", ctaLabel: "Request a demo", ctaHref: "#contact-form" },
+  { q: "I want to be a vetted freelancer - how?", a: "Create your account, complete your profile, and submit your verification details. Each submission is reviewed individually based on the information and documents provided." },
+  { q: "Is changeworker available outside Nigeria?", a: "Right now the platform is focused on Nigeria. If you'd like to use changeworker from another market, register your interest with the form below.", ctaLabel: "Register interest", ctaHref: "#contact-form" },
+]
+
 const OFFICES = [
   { city: "Lagos",  address: "Victoria Island, Lagos State",   tag: "HQ",      color: "#F97316" },
   { city: "Abuja",  address: "Maitama, FCT Abuja",            tag: "Satellite",color: "#6366F1" },
@@ -207,7 +215,7 @@ function CopyChip({ value }: { value: string }) {
 }
 
 /* ═══ FAQ ITEM ════════════════════════════════════════════════ */
-function FaqItem({ faq, idx, inView }: { faq: typeof FAQS[0]; idx: number; inView: boolean }) {
+function FaqItem({ faq, idx, inView }: { faq: typeof FAQ_ENTRIES[0]; idx: number; inView: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <div
@@ -227,8 +235,18 @@ function FaqItem({ faq, idx, inView }: { faq: typeof FAQS[0]; idx: number; inVie
           <FiChevronDown size={13} style={{ color: open ? "white" : "#9CA3AF" }} />
         </span>
       </button>
-      <div style={{ maxHeight: open ? "160px" : "0", transition: "max-height .42s cubic-bezier(.4,0,.2,1)", overflow: "hidden" }}>
-        <p className="px-6 pb-5 text-gray-500 text-sm leading-relaxed font-display font-normal">{faq.a}</p>
+      <div style={{ maxHeight: open ? "220px" : "0", transition: "max-height .42s cubic-bezier(.4,0,.2,1)", overflow: "hidden" }}>
+        <div className="px-6 pb-5">
+          <p className="text-gray-500 text-sm leading-relaxed font-display font-normal">{faq.a}</p>
+          {faq.ctaLabel && faq.ctaHref ? (
+            <a
+              href={faq.ctaHref}
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold text-[var(--primary)] transition hover:bg-orange-100"
+            >
+              {faq.ctaLabel}
+            </a>
+          ) : null}
+        </div>
       </div>
     </div>
   )
@@ -510,7 +528,7 @@ export default function ContactPage() {
           <div className="absolute left-0 bottom-0 w-64 h-64 opacity-20 dot-bg pointer-events-none" />
 
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
-            <div className="grid lg:grid-cols-[1fr_380px] gap-12 xl:gap-16 items-start" ref={formRef.ref}>
+            <div id="contact-form" className="grid lg:grid-cols-[1fr_380px] gap-12 xl:gap-16 items-start" ref={formRef.ref}>
 
               {/* ── LEFT: FORM ── */}
               <div>
@@ -945,7 +963,7 @@ export default function ContactPage() {
               </h2>
             </div>
             <div className="flex flex-col gap-3">
-              {FAQS.map((f, i) => (
+              {FAQ_ENTRIES.map((f, i) => (
                 <FaqItem key={i} faq={f} idx={i} inView={faqRef.inView} />
               ))}
             </div>
