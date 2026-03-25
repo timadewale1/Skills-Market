@@ -390,6 +390,58 @@ export default function PrivacyPage() {
 
         {/* ── BODY ── */}
         <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16">
+          <div className="sticky top-20 z-30 mb-6 lg:hidden">
+            <div className="rounded-2xl border border-violet-100 bg-white/95 p-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-[.22em] text-gray-400">Reading progress</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-violet-600 to-purple-400 transition-all duration-200"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[10px] font-bold text-violet-600">{Math.round(progress)}%</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen((open) => !open)}
+                  className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-700"
+                >
+                  Contents
+                  {sidebarOpen ? <FiChevronUp size={12} /> : <FiChevronDown size={12} />}
+                </button>
+              </div>
+
+              {sidebarOpen ? (
+                <div className="mt-4 border-t border-violet-100 pt-4">
+                  <nav className="flex flex-col gap-1">
+                    {SECTIONS.map(({ id, label, icon: Icon }) => {
+                      const isActive = active === id
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => scrollTo(id)}
+                          className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ${
+                            isActive
+                              ? "nav-active border-violet-200 bg-violet-50"
+                              : "border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span className={`ndot h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-200 ${isActive ? "bg-violet-500" : "bg-gray-300 group-hover:bg-violet-300"}`} />
+                          <Icon size={13} className={`shrink-0 transition-colors ${isActive ? "text-violet-500" : "text-gray-400 group-hover:text-gray-600"}`} />
+                          <span className={`text-xs font-display font-medium transition-colors ${isActive ? "text-violet-700" : ""}`}>{label}</span>
+                        </button>
+                      )
+                    })}
+                  </nav>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
           <div className="grid lg:grid-cols-[260px_1fr] gap-12">
 
             {/* ── STICKY SIDEBAR ── */}

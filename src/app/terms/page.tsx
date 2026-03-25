@@ -286,8 +286,8 @@ export default function TermsPage() {
 
         {/* ── BODY: sidebar + content ── */}
         <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16">
-          <div className="mb-6 lg:hidden">
-            <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+          <div className="sticky top-20 z-30 mb-6 lg:hidden">
+            <div className="rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="font-mono text-[10px] uppercase tracking-[.22em] text-gray-400">Reading progress</p>
