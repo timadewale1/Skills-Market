@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase"
 import { doc, getDoc } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import AdminPageHeader from "@/components/admin/AdminPageHeader"
+import AdminSupportAssistant from "@/components/help/AdminSupportAssistant"
 import {
   Users,
   Briefcase,
@@ -61,6 +62,7 @@ const quickLinks: QuickLink[] = [
   { title: "Check reviews", desc: "Read peer reviews and reputation signals.", href: "/admin/reviews", icon: BarChart3 },
   { title: "Analytics", desc: "Follow users, gigs, workspaces, volume, and revenue.", href: "/admin/analytics", icon: BarChart3 },
   { title: "Notifications", desc: "Check admin alerts and linked operational records.", href: "/admin/notifications", icon: Bell },
+  { title: "Support inbox", desc: "Reply to dashboard help requests from talents and clients.", href: "/admin/support", icon: Bell },
   { title: "Reports", desc: "Jump into reporting and trend snapshots.", href: "/admin/reports", icon: BarChart3 },
   { title: "Settings", desc: "Review admin-side configuration controls.", href: "/admin/settings", icon: ShieldCheck },
 ]
@@ -369,6 +371,8 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
       </div>
+
+      <AdminSupportAssistant />
     </div>
   )
 }

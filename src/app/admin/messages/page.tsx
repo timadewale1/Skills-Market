@@ -54,6 +54,17 @@ export default async function MessagesPage({ searchParams }: MessagesPageProps) 
 
       <Card className="rounded-[1.75rem] border-0 shadow-sm">
         <CardContent className="p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm text-gray-600">
+              Need dashboard help requests too? Open the admin support inbox for user-to-support conversations.
+            </div>
+            <Link
+              href="/admin/support"
+              className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+            >
+              Open support inbox
+            </Link>
+          </div>
           <form action="/admin/messages" className="flex gap-3">
             <input
               name="q"

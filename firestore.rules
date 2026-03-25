@@ -398,6 +398,25 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // ===== SUPPORT THREADS =====
+    match /supportThreads/{threadId} {
+      allow read: if isAdmin()
+        || (
+          signedIn()
+          && request.auth.uid == resource.data.createdByUid
+        );
+      allow create, update, delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isAdmin()
+          || (
+            signedIn()
+            && request.auth.uid == get(/databases/$(database)/documents/supportThreads/$(threadId)).data.createdByUid
+          );
+        allow create, update, delete: if false;
+      }
+    }
+
     // ===== TRANSACTIONS =====
     match /transactions/{transactionId} {
       allow read: if isAdmin();

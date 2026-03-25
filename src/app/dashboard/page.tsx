@@ -27,6 +27,7 @@ import Link from "next/link"
 import { motion, animate } from "framer-motion"
 import { Wallet } from "lucide-react"
 import TalentCard, { TalentRow } from "@/components/talent/TalentCard"
+import DashboardHelpAssistant from "@/components/help/DashboardHelpAssistant"
 import { matchTalentsToClient } from "@/lib/matching"
 import { fetchPublicTalents } from "@/lib/publicProfile"
 import { matchGigsToTalent, Gig } from "@/lib/matching"
@@ -983,6 +984,16 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={fadeUp}
+            custom={5}
+            className="mt-6"
+          >
+            <DashboardHelpAssistant role={role} />
           </motion.div>
         </div>
       </div>

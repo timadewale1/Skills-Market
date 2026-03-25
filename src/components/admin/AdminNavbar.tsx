@@ -25,6 +25,7 @@ import {
   FileSearch,
   UserRoundCheck,
   Building2,
+  LifeBuoy,
 } from "lucide-react"
 import { doc, getDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
@@ -52,6 +53,7 @@ const navGroups: NavGroup[] = [
       { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/admin/reports", label: "Reports", icon: FileSearch },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
+      { href: "/admin/support", label: "Support", icon: LifeBuoy },
     ],
   },
   {
