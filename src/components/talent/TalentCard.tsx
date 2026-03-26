@@ -45,7 +45,7 @@ export default function TalentCard({
         <Card className="rounded-2xl hover:shadow-md transition bg-white">
           <CardContent className="p-5">
             <div className="flex items-start gap-4">
-              <div className="h-12 w-12 rounded-full bg-orange-50 flex items-center justify-center font-extrabold text-[var(--primary)] overflow-hidden">
+              <div className="h-12 w-12 shrink-0 rounded-full bg-orange-50 flex items-center justify-center font-extrabold text-[var(--primary)] overflow-hidden">
                 {t.photoURL ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={t.photoURL} alt={t.fullName} className="h-full w-full object-cover" />
@@ -54,9 +54,9 @@ export default function TalentCard({
                 )}
               </div>
 
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="font-extrabold text-gray-900">{t.fullName}</div>
+                  <div className="min-w-0 truncate font-extrabold text-gray-900">{t.fullName}</div>
                   <Badge
                     className={`rounded-full ${
                       verified ? "bg-[var(--primary)] text-white" : "bg-gray-200 text-gray-700"
@@ -118,9 +118,9 @@ export default function TalentCard({
                 </div>
               </div>
 
-              <div className="text-right">
+              <div className="min-w-[110px] shrink-0 text-right">
                 <div className="text-sm text-gray-500 font-semibold">Rate</div>
-                <div className="text-xl font-extrabold">
+                <div className="whitespace-nowrap text-xl font-extrabold">
                   {t.hourlyRate != null ? `₦${Number(t.hourlyRate).toLocaleString()}/hr` : "-"}
                 </div>
               </div>

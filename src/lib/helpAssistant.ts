@@ -42,6 +42,13 @@ const TALENT_INTENTS: HelpIntent[] = [
     href: "/dashboard/messages",
   },
   {
+    id: "saved_gigs",
+    keywords: ["saved gig", "bookmark", "save", "later"],
+    answer:
+      "You can save gigs you want to revisit and manage your active submissions from Proposals. Use Find Work to discover opportunities, then return to your saved or submitted items when you are ready.",
+    href: "/dashboard/proposals",
+  },
+  {
     id: "workspace_submit",
     keywords: ["milestone", "final work", "workspace", "submit", "delivery"],
     answer:
@@ -54,6 +61,13 @@ const TALENT_INTENTS: HelpIntent[] = [
     answer:
       "Go to Wallet to set up your bank account, verify it, and request a withdrawal once you have available earnings. Completed and approved project payments flow into your wallet history there.",
     href: "/dashboard/wallet",
+  },
+  {
+    id: "reviews",
+    keywords: ["review", "rating", "feedback"],
+    answer:
+      "Reviews become available after completed workspaces. Your rating updates based on completed gigs and peer review submissions from the other party.",
+    href: "/dashboard/workspaces",
   },
 ]
 
@@ -80,6 +94,13 @@ const CLIENT_INTENTS: HelpIntent[] = [
     href: "/dashboard/find-talent",
   },
   {
+    id: "messages",
+    keywords: ["message", "chat", "conversation", "thread"],
+    answer:
+      "Use Messages to continue conversations with shortlisted or hired talent. That is also where agreements are reviewed before the workspace starts.",
+    href: "/dashboard/messages",
+  },
+  {
     id: "workspace_review",
     keywords: ["workspace", "approve", "milestone", "final work"],
     answer:
@@ -92,6 +113,13 @@ const CLIENT_INTENTS: HelpIntent[] = [
     answer:
       "Use Wallet to see funded workspace amounts, transaction history, and payment-related actions. Funding and release events are also reflected inside the relevant workspace.",
     href: "/dashboard/wallet",
+  },
+  {
+    id: "dispute",
+    keywords: ["dispute", "issue", "problem", "raise dispute"],
+    answer:
+      "If a workspace issue needs escalation, open the workspace or disputes flow and raise a dispute so the conversation, files, and delivery history stay attached to the case.",
+    href: "/dashboard/workspaces",
   },
 ]
 
@@ -154,6 +182,18 @@ export const HELP_FAQS: Record<HelpRole, HelpFaq[]> = {
       href: TALENT_INTENTS[3].href,
     },
     {
+      id: "talent-chat",
+      question: "Where do I chat with a client?",
+      answer: TALENT_INTENTS[2].answer,
+      href: TALENT_INTENTS[2].href,
+    },
+    {
+      id: "talent-reviews",
+      question: "When does my rating update?",
+      answer: TALENT_INTENTS[6].answer,
+      href: TALENT_INTENTS[6].href,
+    },
+    {
       id: "talent-wallet",
       question: "How do I withdraw my earnings?",
       answer: TALENT_INTENTS[4].answer,
@@ -174,16 +214,34 @@ export const HELP_FAQS: Record<HelpRole, HelpFaq[]> = {
       href: CLIENT_INTENTS[1].href,
     },
     {
-      id: "client-workspace",
-      question: "How do I approve milestone or final work?",
+      id: "client-find-talent",
+      question: "How do I search for talent directly?",
+      answer: CLIENT_INTENTS[2].answer,
+      href: CLIENT_INTENTS[2].href,
+    },
+    {
+      id: "client-chat",
+      question: "Where do I message a talent?",
       answer: CLIENT_INTENTS[3].answer,
       href: CLIENT_INTENTS[3].href,
     },
     {
-      id: "client-wallet",
-      question: "Where do I see funding and payment activity?",
+      id: "client-workspace",
+      question: "How do I approve milestone or final work?",
       answer: CLIENT_INTENTS[4].answer,
       href: CLIENT_INTENTS[4].href,
+    },
+    {
+      id: "client-wallet",
+      question: "Where do I see funding and payment activity?",
+      answer: CLIENT_INTENTS[5].answer,
+      href: CLIENT_INTENTS[5].href,
+    },
+    {
+      id: "client-dispute",
+      question: "How do I raise a dispute if something goes wrong?",
+      answer: CLIENT_INTENTS[6].answer,
+      href: CLIENT_INTENTS[6].href,
     },
   ],
   admin: [

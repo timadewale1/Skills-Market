@@ -816,11 +816,7 @@ export default function DashboardPage() {
                         <div className="flex gap-4 min-w-max">
                           {suggestedTalents.map((t, idx) => (
                             <div key={t.uid} className="w-80 flex-shrink-0">
-                            <Card className="rounded-2xl hover:shadow-md transition bg-white">
-                              <CardContent className="p-5">
-                                <TalentCard t={t} idx={idx} />
-                              </CardContent>
-                            </Card>
+                              <TalentCard t={t} idx={idx} />
                             </div>
                           ))}
                         </div>

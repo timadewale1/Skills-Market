@@ -27,9 +27,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const text = String(body?.text || "").trim()
     const threadIdFromRequest = typeof body?.threadId === "string" ? body.threadId.trim() : ""
+    const normalizedAttachments = Array.isArray(body?.attachments)
+      ? body.attachments
+          .filter(
+            (attachment: any) =>
+              attachment &&
+              typeof attachment === "object" &&
+              typeof attachment.name === "string" &&
+              typeof attachment.url === "string" &&
+              typeof attachment.storagePath === "string"
+          )
+          .slice(0, 5)
+      : []
+    const fallbackSummary =
+      normalizedAttachments.length > 0
+        ? `Sent ${normalizedAttachments.length} attachment${normalizedAttachments.length === 1 ? "" : "s"}`
+        : ""
 
-    if (!text) {
-      return NextResponse.json({ error: "Message text is required." }, { status: 400 })
+    if (!text && normalizedAttachments.length === 0) {
+      return NextResponse.json({ error: "Message text or attachments are required." }, { status: 400 })
     }
 
     if (role === "admin") {
@@ -49,11 +65,12 @@ export async function POST(request: NextRequest) {
         senderRole: "admin",
         senderName: userData?.fullName || userData?.email || "Admin support",
         text,
+        ...(normalizedAttachments.length ? { attachments: normalizedAttachments } : {}),
         createdAt: FieldValue.serverTimestamp(),
       })
       await threadRef.set(
         {
-          lastMessageText: text,
+          lastMessageText: text || fallbackSummary,
           lastMessageAt: FieldValue.serverTimestamp(),
           lastMessageBy: userId,
           unreadByUser: true,
@@ -91,21 +108,22 @@ export async function POST(request: NextRequest) {
     })
 
     const threadRef = db.collection("supportThreads").doc(threadId)
-    await threadRef.collection("messages").add({
-      senderUid: userId,
-      senderRole: role,
-      senderName:
-        userData?.client?.orgName ||
-        userData?.fullName ||
-        userData?.email ||
-        (role === "talent" ? "Talent" : "Client"),
-      text,
-      createdAt: FieldValue.serverTimestamp(),
-    })
+      await threadRef.collection("messages").add({
+        senderUid: userId,
+        senderRole: role,
+        senderName:
+          userData?.client?.orgName ||
+          userData?.fullName ||
+          userData?.email ||
+          (role === "talent" ? "Talent" : "Client"),
+        text,
+        ...(normalizedAttachments.length ? { attachments: normalizedAttachments } : {}),
+        createdAt: FieldValue.serverTimestamp(),
+      })
     await threadRef.set(
       {
         status: "open",
-        lastMessageText: text,
+        lastMessageText: text || fallbackSummary,
         lastMessageAt: FieldValue.serverTimestamp(),
         lastMessageBy: userId,
         unreadByAdmin: true,

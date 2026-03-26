@@ -101,6 +101,16 @@ service firebase.storage {
       allow read, write: if isAdmin() || isThreadParticipant(threadId);
     }
 
+    // ===== SUPPORT CHAT ATTACHMENTS =====
+    match /support/{threadId}/attachments/{allPaths=**} {
+      allow read, write: if isAdmin()
+        || (
+          signedIn()
+          && firestore.exists(/databases/(default)/documents/supportThreads/$(threadId))
+          && request.auth.uid == firestore.get(/databases/(default)/documents/supportThreads/$(threadId)).data.createdByUid
+        );
+    }
+
     // ===== MILESTONES: RAW + PREVIEWS =====
     match /workspaces/{workspaceId}/milestones/{milestoneId}/raw/{allPaths=**} {
       allow write: if signedIn() && isWorkspaceTalent(workspaceId);
