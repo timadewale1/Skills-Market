@@ -382,7 +382,7 @@ export default function PostGigPage() {
       try {
         const token = await user.getIdToken()
         if (token) {
-          await fetch("/api/admin/new-gig", {
+          const notifyRes = await fetch("/api/admin/new-gig", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -394,6 +394,9 @@ export default function PostGigPage() {
               clientUid: user.uid,
             }),
           })
+          if (!notifyRes.ok) {
+            console.error("matched-talent notification failed", await notifyRes.json())
+          }
         }
       } catch (err) {
         console.error("admin notification for gig failed", err)

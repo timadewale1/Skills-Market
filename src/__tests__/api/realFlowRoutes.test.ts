@@ -49,6 +49,7 @@ import { POST as submitMilestone } from "@/app/api/workspaces/submit-milestone/r
 import { POST as reviewMilestone } from "@/app/api/workspaces/review-milestone/route"
 import { POST as submitFinalWork } from "@/app/api/workspaces/submit-final-work/route"
 import { POST as reviewFinalWork } from "@/app/api/workspaces/review-final-work/route"
+import { POST as notifyNewGig } from "@/app/api/admin/new-gig/route"
 import { getAdminApp, getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
@@ -585,6 +586,95 @@ describe("Real non-admin flow routes", () => {
           type: "final_work_approval",
           title: "Final work approved",
         })
+      )
+    })
+  })
+
+  describe("new gig talent alerts", () => {
+    it("notifies only matched talents when a new open gig is posted", async () => {
+      const gigRef = makeDocRef({
+        id: "gig-1",
+        data: {
+          clientUid: "user-1",
+          title: "Grant writer needed",
+          status: "open",
+          requiredSkills: ["Grant Writing", "Monitoring"],
+          category: { group: "Writing", item: "Grant Writing" },
+          sdgTags: ["Climate Action"],
+          workMode: "Remote",
+          location: "Lagos",
+        },
+      })
+
+      const publicProfilesCollection = {
+        where: jest.fn().mockReturnThis(),
+        get: jest.fn().mockResolvedValue({
+          docs: [
+            {
+              id: "talent-match",
+              data: () => ({
+                role: "talent",
+                fullName: "Matched Talent",
+                location: "Lagos",
+                sdgTags: ["Climate Action"],
+                verification: { status: "verified" },
+                talent: { skills: ["Grant Writing", "Monitoring"], roleTitle: "Grant Writer", workMode: "Remote" },
+                publicProfile: { categories: ["Grant Writing"] },
+              }),
+            },
+            {
+              id: "talent-nomatch",
+              data: () => ({
+                role: "talent",
+                fullName: "No Match",
+                location: "Abuja",
+                sdgTags: ["Quality Education"],
+                verification: { status: "verified" },
+                talent: { skills: ["Design"], roleTitle: "Designer", workMode: "On-site" },
+                publicProfile: { categories: ["Design"] },
+              }),
+            },
+          ],
+        }),
+      }
+
+      mockedGetAdminDb.mockReturnValue({
+        collection: jest.fn((name: string) => {
+          if (name === "gigs") {
+            return { doc: jest.fn(() => gigRef) }
+          }
+          if (name === "publicProfiles") return publicProfilesCollection
+          throw new Error(`Unexpected collection ${name}`)
+        }),
+      })
+
+      const response = await notifyNewGig(
+        jsonRequest({
+          gigId: "gig-1",
+          gigTitle: "Grant writer needed",
+          clientUid: "user-1",
+        }) as any
+      )
+
+      expect(response.status).toBe(200)
+      expect(mockedNotifyAdmins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "admin:gig",
+        })
+      )
+      expect(mockedNotifyUser).toHaveBeenCalledTimes(1)
+      expect(mockedNotifyUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "talent-match",
+          type: "gig_match",
+          link: "/dashboard/find-work/gig-1",
+        })
+      )
+      expect(gigRef.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          matchedTalentNotificationCount: 1,
+        }),
+        { merge: true }
       )
     })
   })
