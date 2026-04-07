@@ -2,16 +2,33 @@ export const dynamic = "force-dynamic"
 
 import AdminPageHeader from "@/components/admin/AdminPageHeader"
 import { Card, CardContent } from "@/components/ui/card"
+import AdminSettingsForm from "@/components/admin/AdminSettingsForm"
+import { getAdminDb } from "@/lib/firebaseAdmin"
+
+async function getSettings() {
+  const db = getAdminDb()
+  const snap = await db.collection("adminSettings").doc("platform").get()
+  const data = snap.exists ? (snap.data() as any) : {}
+  return {
+    platformFeePercent: Number(data.platformFeePercent ?? 10),
+    commercialNote: String(
+      data.commercialNote || "Default commercial configuration for admin review."
+    ),
+    templateNotes: String(data.templateNotes || "Default email template..."),
+  }
+}
 
 export default async function SettingsPage() {
+  const settings = await getSettings()
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
         eyebrow="Admin settings"
         title="Platform settings"
-        description="Keep the operational defaults visible in one place while the deeper admin configuration flows continue to mature."
+        description="Keep the operational defaults visible in one place and persist admin-owned commercial and template settings."
         stats={[
-          { label: "Platform fee", value: "10%" },
+          { label: "Platform fee", value: `${settings.platformFeePercent}%` },
           { label: "Email templates", value: "Default" },
           { label: "Mode", value: "Live" },
           { label: "Scope", value: "Admin only" },
@@ -26,50 +43,35 @@ export default async function SettingsPage() {
               These values represent the current operating defaults visible in the product.
             </p>
 
-            <div className="mt-6 space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Platform fee (%)
-                </label>
-                <input
-                  type="number"
-                  defaultValue="10"
-                  className="w-full rounded-2xl border px-4 py-3 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Internal note
-                </label>
-                <textarea
-                  className="min-h-[120px] w-full rounded-2xl border px-4 py-3 text-sm"
-                  defaultValue="Default commercial configuration for admin review."
-                />
-              </div>
-            </div>
+            <AdminSettingsForm
+              initialPlatformFee={settings.platformFeePercent}
+              initialCommercialNote={settings.commercialNote}
+              initialTemplateNotes={settings.templateNotes}
+            />
           </CardContent>
         </Card>
 
         <Card className="rounded-[1.75rem] border-0 shadow-sm">
           <CardContent className="p-6">
-            <h2 className="text-lg font-extrabold text-gray-900">Comms and templates</h2>
+            <h2 className="text-lg font-extrabold text-gray-900">What this controls</h2>
             <p className="mt-2 text-sm leading-7 text-gray-600">
-              Admin-owned operational messaging can be reviewed here before a deeper template system is introduced.
+              This admin settings view now stores platform-level defaults for the operations team. It currently captures the fee percentage, internal commercial notes, and template notes used to guide admin-owned communication.
             </p>
 
-            <div className="mt-6">
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Email template notes
-              </label>
-              <textarea
-                className="min-h-[190px] w-full rounded-2xl border px-4 py-3 text-sm"
-                defaultValue="Default email template..."
-              />
+            <div className="mt-6 space-y-4 text-sm leading-7 text-gray-700">
+              <div className="rounded-2xl border bg-[var(--secondary)] p-4">
+                <div className="font-semibold text-gray-900">Commercial defaults</div>
+                <div className="mt-2">
+                  Used as the admin-side source of truth for the platform fee and related internal notes.
+                </div>
+              </div>
+              <div className="rounded-2xl border bg-[var(--secondary)] p-4">
+                <div className="font-semibold text-gray-900">Template guidance</div>
+                <div className="mt-2">
+                  Gives the ops team one saved place to keep messaging and communication notes until a larger template-management system is introduced.
+                </div>
+              </div>
             </div>
-
-            <button className="mt-5 rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90">
-              Save settings
-            </button>
           </CardContent>
         </Card>
       </div>

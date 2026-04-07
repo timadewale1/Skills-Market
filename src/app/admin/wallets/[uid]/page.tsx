@@ -8,6 +8,7 @@ import {
   getAdminIndexes,
   getUserSummary,
   getWorkspaceEscrowByClient,
+  timestampToMillis,
 } from "@/lib/adminData"
 import { Badge } from "@/components/ui/badge"
 
@@ -21,20 +22,47 @@ async function getWalletDetail(uid: string) {
   const db = getAdminDb()
   const indexes = await getAdminIndexes()
   const escrowByClient = await getWorkspaceEscrowByClient()
-  const [walletSnap, txSnap] = await Promise.all([
+  const [walletSnap, txSnap, withdrawalsSnap] = await Promise.all([
     db.collection("wallets").doc(uid).get(),
-    db.collection("wallets").doc(uid).collection("transactions").orderBy("createdAt", "desc").get(),
+    db.collection("wallets").doc(uid).collection("transactions").get(),
+    db.collection("wallets").doc(uid).collection("withdrawals").get(),
   ])
 
   if (!walletSnap.exists) return null
+
+  const transactions = txSnap.docs
+    .map((doc: any) => ({ id: doc.id, ...doc.data() }))
+    .sort((a: any, b: any) => timestampToMillis(b.createdAt) - timestampToMillis(a.createdAt))
+
+  const withdrawals = withdrawalsSnap.docs
+    .map((doc: any) => ({ id: doc.id, ...doc.data() }))
+    .sort(
+      (a: any, b: any) =>
+        timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt)
+    )
 
   return {
     id: walletSnap.id,
     ...(walletSnap.data() as any),
     owner: getUserSummary(uid, indexes),
     activeEscrow: Number(escrowByClient.get(uid) || 0),
-    transactions: txSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })),
+    transactions,
+    withdrawals,
   }
+}
+
+function statusBadge(status?: string) {
+  const value = String(status || "recorded").toLowerCase()
+  if (["paid", "completed", "success"].includes(value)) {
+    return <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50">{status}</Badge>
+  }
+  if (["pending", "requested", "processing"].includes(value)) {
+    return <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50">{status}</Badge>
+  }
+  if (["failed", "declined"].includes(value)) {
+    return <Badge className="bg-red-50 text-red-700 hover:bg-red-50">{status}</Badge>
+  }
+  return <Badge className="bg-orange-50 text-[var(--primary)] hover:bg-orange-50">{status}</Badge>
 }
 
 export default async function AdminWalletDetailPage({ params }: PageProps) {
@@ -49,25 +77,42 @@ export default async function AdminWalletDetailPage({ params }: PageProps) {
     )
   }
 
+  const pendingWithdrawals = wallet.withdrawals.filter((item: any) =>
+    ["requested", "processing"].includes(String(item.status || "").toLowerCase())
+  ).length
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
         eyebrow="Wallet detail"
         title={wallet.owner.name}
-        description="Review the admin wallet view for this user, including funding, earnings, bank setup, escrow exposure, and transaction history."
+        description="Review the admin wallet view for this user, including funding, earnings, escrow exposure, bank setup, withdrawal requests, and transaction history."
         actions={
-          <Link
-            href="/admin/wallets"
-            className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
-          >
-            Back to wallets
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/admin/wallets"
+              className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+            >
+              Back to wallets
+            </Link>
+            {wallet.owner.adminHref !== "/admin/users" ? (
+              <Link
+                href={wallet.owner.adminHref}
+                className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Open owner profile
+              </Link>
+            ) : null}
+          </div>
         }
         stats={[
           { label: "Role", value: wallet.role || wallet.owner.role || "wallet" },
-          { label: "Available", value: formatAdminMoney(wallet.availableBalance) },
+          {
+            label: wallet.role === "client" ? "Escrow exposure" : "Available",
+            value: formatAdminMoney(wallet.role === "client" ? wallet.activeEscrow : wallet.availableBalance),
+          },
           { label: "Pending", value: formatAdminMoney(wallet.pendingBalance) },
-          { label: "Total spent", value: formatAdminMoney(wallet.totalSpent) },
+          { label: "Withdrawal queue", value: pendingWithdrawals },
         ]}
       />
 
@@ -113,8 +158,8 @@ export default async function AdminWalletDetailPage({ params }: PageProps) {
               <div className="mt-1 text-gray-900">{formatAdminDate(wallet.updatedAt, true)}</div>
             </div>
             <div>
-              <div className="font-semibold text-gray-500">Wallet ID</div>
-              <div className="mt-1 break-all text-gray-900">{wallet.id}</div>
+              <div className="font-semibold text-gray-500">Owner email</div>
+              <div className="mt-1 text-gray-900">{wallet.owner.email || "N/A"}</div>
             </div>
           </CardContent>
         </Card>
@@ -138,7 +183,9 @@ export default async function AdminWalletDetailPage({ params }: PageProps) {
                   <div className="font-semibold text-gray-500">Account number</div>
                   <div className="mt-1 text-gray-900">{wallet.bank.accountNumber}</div>
                 </div>
-                <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50">Verified on Paystack</Badge>
+                <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
+                  Verified on Paystack
+                </Badge>
               </>
             ) : (
               <div className="text-gray-600">No verified bank details saved.</div>
@@ -147,31 +194,74 @@ export default async function AdminWalletDetailPage({ params }: PageProps) {
         </Card>
       </div>
 
-      <Card className="rounded-[1.75rem] border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-extrabold">Transaction history</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {wallet.transactions.length === 0 ? (
-            <div className="text-sm text-gray-600">No wallet transactions yet.</div>
-          ) : (
-            wallet.transactions.map((tx: any) => (
-              <div key={tx.id} className="flex items-center justify-between gap-4 rounded-2xl border bg-white px-4 py-4">
-                <div className="min-w-0">
-                  <div className="font-extrabold capitalize text-gray-900">
-                    {String(tx.reason || tx.type || "transaction").replace(/_/g, " ")}
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <Card className="rounded-[1.75rem] border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-extrabold">Withdrawal requests</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {wallet.withdrawals.length === 0 ? (
+              <div className="text-sm text-gray-600">No withdrawal requests yet.</div>
+            ) : (
+              wallet.withdrawals.map((withdrawal: any) => (
+                <div key={withdrawal.id} className="rounded-2xl border bg-white p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="font-extrabold text-gray-900">
+                      {formatAdminMoney(withdrawal.amount)}
+                    </div>
+                    {statusBadge(withdrawal.status || "requested")}
                   </div>
-                  <div className="text-xs font-semibold text-gray-500">{formatAdminDate(tx.createdAt, true)}</div>
+                  <div className="mt-3 grid gap-2 text-sm">
+                    <div>
+                      <div className="font-semibold text-gray-500">Requested</div>
+                      <div className="mt-1 text-gray-900">
+                        {formatAdminDate(withdrawal.createdAt, true)}
+                      </div>
+                    </div>
+                    {withdrawal.errorMessage ? (
+                      <div>
+                        <div className="font-semibold text-gray-500">Provider feedback</div>
+                        <div className="mt-1 text-gray-900">{withdrawal.errorMessage}</div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-extrabold text-gray-900">{formatAdminMoney(tx.amount)}</div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{tx.status || "recorded"}</div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[1.75rem] border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-extrabold">Transaction history</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {wallet.transactions.length === 0 ? (
+              <div className="text-sm text-gray-600">No wallet transactions yet.</div>
+            ) : (
+              wallet.transactions.map((tx: any) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border bg-white px-4 py-4"
+                >
+                  <div className="min-w-0">
+                    <div className="font-extrabold capitalize text-gray-900">
+                      {String(tx.reason || tx.type || "transaction").replace(/_/g, " ")}
+                    </div>
+                    <div className="text-xs font-semibold text-gray-500">
+                      {formatAdminDate(tx.createdAt, true)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-extrabold text-gray-900">{formatAdminMoney(tx.amount)}</div>
+                    <div className="mt-1">{statusBadge(tx.status || "recorded")}</div>
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

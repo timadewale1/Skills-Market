@@ -3,6 +3,7 @@ import AdminPageHeader from "@/components/admin/AdminPageHeader"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getAdminDb } from "@/lib/firebaseAdmin"
+import AdminDeleteGigButton from "@/components/admin/AdminDeleteGigButton"
 
 export const dynamic = "force-dynamic"
 
@@ -43,12 +44,15 @@ export default async function AdminGigDetailPage({ params }: PageProps) {
         title={gig.title}
         description="Inspect the full admin view of this opportunity, then jump into related proposal and workspace records."
         actions={
-          <Link
-            href="/admin/gigs"
-            className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
-          >
-            Back to gigs
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/admin/gigs"
+              className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+            >
+              Back to gigs
+            </Link>
+            <AdminDeleteGigButton gigId={gigId} />
+          </div>
         }
         stats={[
           { label: "Status", value: gig.status || "unknown" },
@@ -119,7 +123,7 @@ export default async function AdminGigDetailPage({ params }: PageProps) {
             <CardContent className="p-6">
               <h2 className="text-lg font-extrabold text-gray-900">Admin actions</h2>
               <p className="mt-3 text-sm leading-7 text-gray-600">
-                This page is currently the admin inspection surface for gig quality, linked proposals, and workspace creation context.
+                Admin can inspect the gig, jump to proposals and workspaces, or delete the gig from the marketplace if the posting needs to be removed.
               </p>
             </CardContent>
           </Card>

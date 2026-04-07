@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/firebaseAdmin"
 import AdminPageHeader from "@/components/admin/AdminPageHeader"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import AdminDeleteGigButton from "@/components/admin/AdminDeleteGigButton"
 
 export const dynamic = "force-dynamic"
 
@@ -102,9 +103,7 @@ export default async function AdminGigsPage() {
                     >
                       View gig
                     </Link>
-                    <button className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100">
-                      Delete
-                    </button>
+                    <AdminDeleteGigButton gigId={gig.id} />
                   </div>
                 </div>
               </CardContent>

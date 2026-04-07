@@ -25,11 +25,11 @@ export default function AdminPageHeader({
   return (
     <div className="rounded-[1.75rem] border bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
             {eyebrow}
           </p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="mt-2 break-words text-3xl font-extrabold tracking-tight text-gray-900">
             {title}
           </h1>
           {description ? (
@@ -39,7 +39,11 @@ export default function AdminPageHeader({
           ) : null}
         </div>
 
-        {actions ? <div className="max-w-full shrink-0">{actions}</div> : null}
+        {actions ? (
+          <div className="flex max-w-full flex-wrap items-center gap-3 lg:justify-end">
+            {actions}
+          </div>
+        ) : null}
       </div>
 
       {stats.length ? (

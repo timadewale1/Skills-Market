@@ -78,6 +78,10 @@ export default function AdminDashboardPage() {
   const [gigsCount, setGigsCount] = useState(0)
   const [workspacesCount, setWorkspacesCount] = useState(0)
   const [disputesCount, setDisputesCount] = useState(0)
+  const [payoutQueue, setPayoutQueue] = useState(0)
+  const [withdrawalQueue, setWithdrawalQueue] = useState(0)
+  const [supportUnread, setSupportUnread] = useState(0)
+  const [supportOpen, setSupportOpen] = useState(0)
   const [wellness, setWellness] = useState<WellnessState>({
     status: "watch",
     checks: [],
@@ -150,6 +154,10 @@ export default function AdminDashboardPage() {
           const nextGigs = Number(stats.gigs || 0)
           const nextWorkspaces = Number(stats.workspaces || 0)
           const nextDisputes = Number(stats.disputes || 0)
+          const nextPayoutQueue = Number(stats.payoutQueue || 0)
+          const nextWithdrawalQueue = Number(stats.withdrawalQueue || 0)
+          const nextSupportUnread = Number(stats.supportUnread || 0)
+          const nextSupportOpen = Number(stats.supportOpen || 0)
 
           animate(0, nextUsers, { duration: 0.7, onUpdate: (value) => setUsersCount(Math.round(value)) })
           animate(0, nextGigs, { duration: 0.8, onUpdate: (value) => setGigsCount(Math.round(value)) })
@@ -160,6 +168,22 @@ export default function AdminDashboardPage() {
           animate(0, nextDisputes, {
             duration: 1,
             onUpdate: (value) => setDisputesCount(Math.round(value)),
+          })
+          animate(0, nextPayoutQueue, {
+            duration: 0.75,
+            onUpdate: (value) => setPayoutQueue(Math.round(value)),
+          })
+          animate(0, nextWithdrawalQueue, {
+            duration: 0.8,
+            onUpdate: (value) => setWithdrawalQueue(Math.round(value)),
+          })
+          animate(0, nextSupportUnread, {
+            duration: 0.85,
+            onUpdate: (value) => setSupportUnread(Math.round(value)),
+          })
+          animate(0, nextSupportOpen, {
+            duration: 0.9,
+            onUpdate: (value) => setSupportOpen(Math.round(value)),
           })
         }
       } catch (error) {
@@ -254,6 +278,57 @@ export default function AdminDashboardPage() {
         </Card>
 
         <div className="space-y-4">
+          <Card className="rounded-[1.75rem] border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-extrabold">Operations queues</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              {[
+                {
+                  href: "/admin/transactions",
+                  label: "Payout queue",
+                  value: payoutQueue,
+                  detail: "Workspace payout requests waiting for review or release.",
+                },
+                {
+                  href: "/admin/wallets",
+                  label: "Withdrawal queue",
+                  value: withdrawalQueue,
+                  detail: "Talent withdrawals waiting on transfer processing or admin attention.",
+                },
+                {
+                  href: "/admin/support",
+                  label: "Unread support",
+                  value: supportUnread,
+                  detail: "Dashboard help chats that still need an admin response.",
+                },
+                {
+                  href: "/admin/support",
+                  label: "Open support",
+                  value: supportOpen,
+                  detail: "Total active support conversations across client and talent users.",
+                },
+              ].map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="rounded-2xl border bg-[var(--secondary)] px-4 py-4 transition hover:border-orange-200 hover:bg-white"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
+                        {item.label}
+                      </div>
+                      <div className="mt-2 text-3xl font-extrabold text-gray-900">{item.value}</div>
+                    </div>
+                    <ArrowRight size={18} className="text-gray-400" />
+                  </div>
+                  <div className="mt-2 text-sm leading-6 text-gray-600">{item.detail}</div>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+
           <Card className="rounded-[1.75rem] border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">

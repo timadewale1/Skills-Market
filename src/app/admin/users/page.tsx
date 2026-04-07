@@ -220,8 +220,8 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                         </div>
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-500">User ID</div>
-                        <div className="mt-1 break-all text-gray-900">{user.id}</div>
+                        <div className="font-semibold text-gray-500">Profile destination</div>
+                        <div className="mt-1 text-gray-900">{actionLabel(String(user.role || ""))}</div>
                       </div>
                     </div>
                   </div>

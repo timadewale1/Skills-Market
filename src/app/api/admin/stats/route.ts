@@ -21,19 +21,42 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Fetch actual counts from collections
-    const [usersSnap, gigsSnap, workspacesSnap, disputesSnap] = await Promise.all([
+    const [
+      usersSnap,
+      gigsSnap,
+      workspacesSnap,
+      disputesSnap,
+      supportSnap,
+      payoutRequestsSnap,
+      withdrawalsSnap,
+    ] = await Promise.all([
       adminDb.collection("users").count().get(),
       adminDb.collection("gigs").count().get(),
       adminDb.collection("workspaces").where("status", "==", "active").count().get(),
       adminDb.collection("disputes").where("status", "==", "open").count().get(),
+      adminDb.collection("supportThreads").get(),
+      adminDb.collectionGroup("payoutRequests").get(),
+      adminDb.collectionGroup("withdrawals").get(),
     ])
+
+    const payoutQueue = payoutRequestsSnap.docs.filter((doc: any) =>
+      ["requested", "approved", "processing"].includes(String(doc.data().status || "").toLowerCase())
+    ).length
+    const withdrawalQueue = withdrawalsSnap.docs.filter((doc: any) =>
+      ["requested", "processing"].includes(String(doc.data().status || "").toLowerCase())
+    ).length
+    const supportUnread = supportSnap.docs.filter((doc: any) => doc.data().unreadByAdmin).length
+    const supportOpen = supportSnap.docs.filter((doc: any) => doc.data().status !== "closed").length
 
     const stats = {
       users: usersSnap.data().count,
       gigs: gigsSnap.data().count,
       workspaces: workspacesSnap.data().count,
       disputes: disputesSnap.data().count,
+      payoutQueue,
+      withdrawalQueue,
+      supportUnread,
+      supportOpen,
     }
 
     return NextResponse.json(stats)

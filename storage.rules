@@ -93,7 +93,7 @@ service firebase.storage {
    // ===== AGREEMENTS =====
     // Simplified: just check if signed in. Firestore rules validate thread participation.
     match /agreements/{threadId}/{fileName} {
-      allow read, write: if signedIn();
+      allow read, write: if isAdmin() || isThreadParticipant(threadId);
     }
 
     // ===== THREAD MESSAGE ATTACHMENTS =====
@@ -120,11 +120,11 @@ service firebase.storage {
     }
 
     match /workspaces/{workspaceId}/milestones/{milestoneId}/previews {
-      allow read: if signedIn();  // List folder
+      allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
     }
 
     match /workspaces/{workspaceId}/milestones/{milestoneId}/previews/{allPaths=**} {
-      allow read: if signedIn();
+      allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
       allow write: if false;  // Cloud Functions writes previews
     }
 
@@ -134,11 +134,11 @@ service firebase.storage {
     }
 
     match /workspaces/{workspaceId}/hourly/checkins/{checkinId}/previews {
-      allow read: if signedIn();
+      allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
     }
 
     match /workspaces/{workspaceId}/hourly/checkins/{checkinId}/previews/{allPaths=**} {
-      allow read: if signedIn();
+      allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
       allow write: if false;  // Cloud Functions writes previews
     }
 
@@ -151,14 +151,14 @@ service firebase.storage {
     }
 
     match /workspaces/{workspaceId}/finalWork/previews/{allPaths=**} {
-      allow read: if isWorkspaceParticipant(workspaceId);
+      allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
       allow write: if false;  // Cloud Functions writes previews
       allow delete: if false;
     }
 
     // ===== GIGS =====
     match /gigs/{gigId}/attachments/{allPaths=**} {
-      allow read, write: if isGigOwnerOrNew(gigId);
+      allow read, write: if isAdmin() || isGigOwnerOrNew(gigId);
     }
 
     // ===== DISPUTES =====

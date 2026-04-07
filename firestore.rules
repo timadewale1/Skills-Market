@@ -227,11 +227,6 @@ service cloud.firestore {
             && request.auth.uid == threadData().clientUid;
         }
 
-        function isTalent() {
-          return signedIn()
-            && request.auth.uid == threadData().talentUid;
-        }
-
         allow read: if isAdmin() || isAgreementParticipant();
 
         allow create: if isClient()
@@ -318,26 +313,36 @@ service cloud.firestore {
       allow delete: if false;
 
       match /milestones/{milestoneId} {
-        allow read: if isAdmin() || signedIn();
-        allow create, update: if signedIn();
+        allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
+        allow create, update: if isAdmin() || isWorkspaceParticipant(workspaceId);
         allow delete: if false;
       }
 
       match /payoutRequests/{payoutId} {
-        allow read: if isAdmin() || signedIn();
-        allow create, update: if signedIn();
+        allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
+        allow create, update: if isAdmin() || isWorkspaceParticipant(workspaceId);
         allow delete: if false;
       }
 
       match /hourly/{document=**} {
-        allow read: if isAdmin() || signedIn();
-        allow create, update: if isAdmin() || signedIn();
+        allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
+        allow create, update: if isAdmin() || isWorkspaceParticipant(workspaceId);
         allow delete: if false;
       }
 
       match /finalWork/{document=**} {
-        allow read: if isAdmin() || signedIn();
-        allow create, update: if isAdmin() || signedIn();
+        allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
+        allow create, update: if isAdmin() || isWorkspaceParticipant(workspaceId);
+        allow delete: if false;
+      }
+
+      match /payments/{paymentId} {
+        allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
+        allow write: if false;
+      }
+
+      match /escrowLedger/{entryId} {
+        allow read: if isAdmin() || isWorkspaceParticipant(workspaceId);
         allow delete: if false;
       }
     }
@@ -415,6 +420,10 @@ service cloud.firestore {
           );
         allow create, update, delete: if false;
       }
+    }
+
+    match /adminSettings/{docId} {
+      allow read, write: if isAdmin();
     }
 
     // ===== TRANSACTIONS =====

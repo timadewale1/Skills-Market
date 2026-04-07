@@ -21,10 +21,8 @@ import { Badge } from "@/components/ui/badge"
 import Button from "@/components/ui/Button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import AdminPageHeader from "@/components/admin/AdminPageHeader"
+import AdminResolveDisputePanel from "@/components/admin/AdminResolveDisputePanel"
 
 import { MessageSquare, FileText, DollarSign } from "lucide-react"
 
@@ -57,7 +55,12 @@ type UserProfile = {
 type Workspace = {
   id: string
   title?: string
+  gigTitle?: string
   escrowAmount?: number
+  payment?: {
+    amount?: number
+    status?: string
+  }
 }
 
 type DisputeWithDetails = Dispute & {
@@ -87,7 +90,6 @@ export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState<DisputeWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDispute, setSelectedDispute] = useState<DisputeWithDetails | null>(null)
-  const [resolving, setResolving] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -130,40 +132,6 @@ export default function AdminDisputesPage() {
       toast.error("Failed to load disputes")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const resolveDispute = async (disputeId: string, action: string, amount?: number, adminNotes?: string) => {
-    setResolving(true)
-    try {
-      const response = await fetch("/api/admin/disputes/resolve", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${await user?.getIdToken()}`,
-        },
-        body: JSON.stringify({
-          disputeId,
-          action,
-          amount,
-          adminNotes,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        toast.error(error.error || "Failed to resolve dispute")
-        return
-      }
-
-      toast.success("Dispute resolved successfully")
-      await fetchDisputes()
-      setSelectedDispute(null)
-    } catch (error) {
-      console.error("Error resolving dispute:", error)
-      toast.error("Failed to resolve dispute")
-    } finally {
-      setResolving(false)
     }
   }
 
@@ -245,16 +213,20 @@ export default function AdminDisputesPage() {
 
           {selectedDispute ? (
             <Dialog open={!!selectedDispute} onOpenChange={() => setSelectedDispute(null)}>
-              <DialogContent className="max-w-2xl">
-                <DialogTitle>Resolve dispute</DialogTitle>
-                <ResolveDisputeForm
-                  dispute={selectedDispute}
-                  onResolve={resolveDispute}
-                  resolving={resolving}
-                />
-              </DialogContent>
-            </Dialog>
-          ) : null}
+                <DialogContent className="max-w-2xl">
+                  <DialogTitle>Resolve dispute</DialogTitle>
+                  <AdminResolveDisputePanel
+                    disputeId={selectedDispute.id}
+                    escrowAmount={Number(selectedDispute.workspace?.payment?.amount || selectedDispute.workspace?.escrowAmount || 0)}
+                    defaultNotes={selectedDispute.adminNotes || ""}
+                    onResolved={async () => {
+                      await fetchDisputes()
+                      setSelectedDispute(null)
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+            ) : null}
         </CardContent>
       </Card>
     </div>
@@ -273,8 +245,15 @@ function DisputeCard({
       <CardContent className="p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Dispute #{dispute.id.slice(-8)}</h3>
-            <p className="text-sm text-gray-600">{dispute.workspace?.title || "Unknown workspace"}</p>
+            <h3 className="text-lg font-bold text-gray-900">
+              {dispute.workspace?.gigTitle
+                ? `Dispute for "${dispute.workspace.gigTitle}"`
+                : "Workspace dispute"}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {dispute.client?.displayName || dispute.client?.fullName || "Client"} and{" "}
+              {dispute.talent?.displayName || dispute.talent?.fullName || "Talent"}
+            </p>
           </div>
           {badgeByStatus(dispute.status)}
         </div>
@@ -310,7 +289,7 @@ function DisputeCard({
           {dispute.workspace?.escrowAmount ? (
             <div className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
-              ${dispute.workspace.escrowAmount} escrow
+              ₦{Number(dispute.workspace.escrowAmount).toLocaleString()} escrow
             </div>
           ) : null}
         </div>
@@ -318,105 +297,17 @@ function DisputeCard({
         <p className="mb-4 text-sm leading-7 text-gray-700">{dispute.description}</p>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline">
-            <Link href={`/admin/disputes/${dispute.id}`}>View details</Link>
-          </Button>
+          <Link
+            href={`/admin/disputes/${dispute.id}`}
+            className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]"
+          >
+            View details
+          </Link>
           {!dispute.status.includes("resolved") && dispute.status !== "closed" ? (
             <Button onClick={() => onResolve(dispute)}>Resolve dispute</Button>
           ) : null}
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-function ResolveDisputeForm({
-  dispute,
-  onResolve,
-  resolving,
-}: {
-  dispute: DisputeWithDetails
-  onResolve: (disputeId: string, action: string, amount?: number, adminNotes?: string) => void
-  resolving: boolean
-}) {
-  const [action, setAction] = useState("")
-  const [amount, setAmount] = useState("")
-  const [adminNotes, setAdminNotes] = useState("")
-
-  const escrowAmount = dispute.workspace?.escrowAmount || 0
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const amountNum = amount ? parseFloat(amount) : undefined
-    onResolve(dispute.id, action, amountNum, adminNotes)
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-2 block text-sm font-medium">Resolution action</label>
-        <Select value={action} onValueChange={setAction} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Select resolution action" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="release_talent">Release funds to talent</SelectItem>
-            <SelectItem value="refund_client">Refund funds to client</SelectItem>
-            <SelectItem value="partial_refund">Partial refund</SelectItem>
-            <SelectItem value="close_case">Close case (no payment change)</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {(action === "release_talent" || action === "refund_client") ? (
-        <div>
-          <label className="mb-2 block text-sm font-medium">Amount</label>
-          <Input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder={`Max: $${escrowAmount}`}
-            max={escrowAmount}
-            min={0}
-            step={0.01}
-            required
-          />
-          <p className="mt-1 text-xs text-gray-500">Escrow amount: ${escrowAmount}</p>
-        </div>
-      ) : null}
-
-      {action === "partial_refund" ? (
-        <div>
-          <label className="mb-2 block text-sm font-medium">Client refund amount</label>
-          <Input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder={`Max: $${escrowAmount}`}
-            max={escrowAmount}
-            min={0}
-            step={0.01}
-            required
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Escrow: ${escrowAmount} | Talent gets: ${escrowAmount - parseFloat(amount || "0")}
-          </p>
-        </div>
-      ) : null}
-
-      <div>
-        <label className="mb-2 block text-sm font-medium">Admin notes</label>
-        <Textarea
-          value={adminNotes}
-          onChange={(e) => setAdminNotes(e.target.value)}
-          placeholder="Internal notes about the resolution..."
-          rows={3}
-        />
-      </div>
-
-      <Button type="submit" disabled={resolving || !action}>
-        {resolving ? "Resolving..." : "Resolve dispute"}
-      </Button>
-    </form>
   )
 }

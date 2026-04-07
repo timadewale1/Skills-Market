@@ -18,6 +18,26 @@ export function formatAdminDate(value: any, withTime = false) {
   return withTime ? date.toLocaleString("en-NG") : date.toLocaleDateString("en-NG")
 }
 
+export function timestampToMillis(value: any) {
+  if (!value) return 0
+  if (typeof value?.toMillis === "function") return value.toMillis()
+  if (typeof value?.toDate === "function") return value.toDate().getTime()
+  if (value instanceof Date) return value.getTime()
+  if (typeof value === "number") return value
+  const parsed = new Date(value).getTime()
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+export function formatAdminDuration(totalSeconds?: number | null) {
+  const seconds = Math.max(0, Number(totalSeconds || 0))
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours && minutes) return `${hours}h ${minutes}m`
+  if (hours) return `${hours}h`
+  if (minutes) return `${minutes}m`
+  return `${seconds}s`
+}
+
 export function initials(name?: string | null) {
   const parts = String(name || "")
     .trim()
@@ -27,9 +47,13 @@ export function initials(name?: string | null) {
 }
 
 export function buildWorkspaceDisplayTitle(workspace: DocData) {
-  const gigTitle = workspace.gigTitle || workspace.title || "Workspace"
-  const pair = [workspace.clientName, workspace.talentName].filter(Boolean).join(" - ")
-  return pair ? `${gigTitle} - ${pair}` : gigTitle
+  const gigTitle = workspace.gigTitle || workspace.title || "Untitled gig"
+  const client = workspace.clientName || workspace.clientUid
+  const talent = workspace.talentName || workspace.talentUid
+  if (client && talent) {
+    return `Workspace for "${gigTitle}" between ${client} and ${talent}`
+  }
+  return `Workspace for "${gigTitle}"`
 }
 
 export async function getAdminIndexes() {
