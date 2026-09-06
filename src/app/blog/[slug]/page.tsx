@@ -289,15 +289,15 @@ export default function BlogPost({ slug }: BlogPostProps) {
                 {/* prev / next */}
                 <div className="mt-14 grid sm:grid-cols-2 gap-4">
                   {prev && (
-                    <a href={`/blog/${prev.slug}`} className="card rounded-2xl border border-gray-100 p-5 group block">
+                    <a href={`/blog/${prev?.slug}`} className="card rounded-2xl border border-gray-100 p-5 group block">
                       <p className="fm text-[10px] text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><FiArrowLeft size={10}/>Previous</p>
-                      <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors leading-snug line-clamp-2">{prev.title}</p>
+                      <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors leading-snug line-clamp-2">{prev?.title}</p>
                     </a>
                   )}
                   {next && (
-                    <a href={`/blog/${next.slug}`} className="card rounded-2xl border border-gray-100 p-5 group block sm:text-right">
+                    <a href={`/blog/${next?.slug}`} className="card rounded-2xl border border-gray-100 p-5 group block sm:text-right">
                       <p className="fm text-[10px] text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5 sm:justify-end">Next<FiArrowRight size={10}/></p>
-                      <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors leading-snug line-clamp-2">{next.title}</p>
+                      <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors leading-snug line-clamp-2">{next?.title}</p>
                     </a>
                   )}
                 </div>

@@ -404,10 +404,10 @@ export default async function WhyUsPage({
                         style={{background:c.tagColor}}>
                         {c.cta.label}
                       </Link>
-                      <Link href={c.ctaSecondary.href}
+                      {/* <Link href={c.ctaSecondary.href}
                         className="block w-full text-center font-black text-sm text-white/50 hover:text-white py-3 rounded-xl border border-white/8 hover:border-white/20 transition-all">
                         {c.ctaSecondary.label}
-                      </Link>
+                      </Link> */}
                     </div>
                   </div>
 
