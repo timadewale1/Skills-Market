@@ -635,10 +635,10 @@ Pay for what you need. Get work that counts.                </p>
           </div>
         </section>
 
-        <section ref={splitRef.ref} className="bg-white pb-14 border-b border-gray-100">
+        {/* <section ref={splitIntroRef.ref} className="bg-white pb-14 border-b border-gray-100">
           <div className="max-w-6xl mx-auto px-6 lg:px-12">
             <div className="grid gap-4 md:grid-cols-2">
-              <div className={`rounded-3xl border border-gray-200 bg-[#F8FAFC] p-6 ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".04s" } as React.CSSProperties}>
+              <div className={`rounded-3xl border border-gray-200 bg-[#F8FAFC] p-6 ${splitIntroRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".04s" } as React.CSSProperties}>
                 <span className="pill bg-orange-100 text-[#F97316] border border-orange-200 mb-4 text-[11px]">
                   <FiBriefcase size={10} /> For organizations
                 </span>
@@ -647,7 +647,7 @@ Pay for what you need. Get work that counts.                </p>
                 <button onClick={handlePostProject} className="btn-p">Post a gig <FiArrowRight size={14} /></button>
               </div>
 
-              <div className={`rounded-3xl border border-gray-200 bg-[#111] p-6 ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".12s" } as React.CSSProperties}>
+              <div className={`rounded-3xl border border-gray-200 bg-[#111] p-6 ${splitIntroRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".12s" } as React.CSSProperties}>
                 <span className="pill bg-white/10 text-white border border-white/15 mb-4 text-[11px]">
                   <FiUsers size={10} /> For freelancers
                 </span>
@@ -657,7 +657,7 @@ Pay for what you need. Get work that counts.                </p>
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* <section ref={statsRef.ref} className="py-16 bg-[#F5F5F5] border-y border-gray-200">
           <div className="max-w-5xl mx-auto px-6">
@@ -845,8 +845,8 @@ Pay for what you need. Get work that counts.                </p>
 
         <section ref={splitRef.ref} className="overflow-hidden">
           <div className="grid md:grid-cols-2 md:grid-rows-2">
-            <div className={`relative overflow-hidden min-h-[340px] md:min-h-0 md:row-span-2 ${splitRef.inView ? "sc" : "opacity-0"}`} style={{ "--d": ".1s" } as React.CSSProperties}>
-              <img src={SPLIT_IMG_ORG} alt="Organizations and freelancers using changeworker" className="img-cover" />
+            <div className={`relative overflow-hidden min-h-[340px] bg-[#EDE7DF] md:min-h-0 md:row-span-2 ${splitRef.inView ? "sc" : "opacity-0"}`} style={{ "--d": ".1s" } as React.CSSProperties}>
+              <img src={SPLIT_IMG_ORG} alt="Organizations and freelancers using changeworker" className="w-full h-full object-contain" />
               <div className="absolute inset-0 img-scrim-r" style={{ background: "linear-gradient(to right,rgba(0,0,0,.4) 0%,rgba(0,0,0,.05) 60%,transparent 100%)" }} />
             </div>
             <div className={`px-10 lg:px-16 py-16 bg-[#F5F5F5] flex flex-col justify-center ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".05s" } as React.CSSProperties}>
