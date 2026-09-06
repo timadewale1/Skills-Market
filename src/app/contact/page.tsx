@@ -354,7 +354,7 @@ export default function ContactPage() {
                 </div>
                 <div className="space-y-2.5">
                   <p className="text-white/25 text-xs uppercase tracking-wider mb-3" style={{ fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Quick links</p>
-                  {[["About us","/about"],["How it works","/how-it-works"],["FAQ","/faq"],["Blog","/blog"]].map(([l,h])=>(
+                  {[["About us","/about"],["How it works","/how-it-works"],["FAQ","/faq"]].map(([l,h])=>(
                     <Link key={l} href={h} className="flex items-center justify-between text-sm text-white/45 hover:text-orange-400 transition-colors no-underline"
                       style={{ fontFamily:"'DM Sans',sans-serif" }}>
                       {l} <FiArrowRight size={11} />

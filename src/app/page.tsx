@@ -79,7 +79,6 @@ const TALENT_IMG_2 = "https://images.pexels.com/photos/5212345/pexels-photo-5212
 const TALENT_IMG_3 = "https://images.pexels.com/photos/3807571/pexels-photo-3807571.jpeg?auto=compress&cs=tinysrgb&w=400"
 const TALENT_IMG_4 = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=400"
 const SPLIT_IMG_ORG = "/images/work.png?auto=compress&cs=tinysrgb&w=700"
-const SPLIT_IMG_FL = "/images/youth.png?auto=compress&cs=tinysrgb&w=700"
 const CTA_IMG = "/images/6.jpeg?auto=compress&cs=tinysrgb&w=1200"
 
 const FEATURES = [
@@ -380,7 +379,7 @@ function ProfileCard({ p, idx, inView }: { p: any; idx: number; inView: boolean 
 }
 
 export default function Home() {
-  const [loaded, setLoaded] = useState(false)
+  const [loaded] = useState(true)
   const [tab, setTab] = useState<"org" | "freelancer">("org")
   const [activeStep, setActiveStep] = useState(0)
   const [email, setEmail] = useState("")
@@ -509,7 +508,7 @@ export default function Home() {
         .img-scrim-r{background:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.15) 60%,transparent 100%)}
       `}</style>
 
-      {!loaded && <Preloader onDone={() => setLoaded(true)} />}
+      {/* {!loaded && <Preloader onDone={() => setLoaded(true)} />} */}
 
       <div style={{ opacity: loaded ? 1 : 0, transition: "opacity .4s ease .1s" }}>
         <Navbar />
@@ -636,7 +635,7 @@ Pay for what you need. Get work that counts.                </p>
           </div>
         </section>
 
-        <section ref={splitRef.ref} className="bg-white py-14 border-b border-gray-100">
+        <section ref={splitRef.ref} className="bg-white pb-14 border-b border-gray-100">
           <div className="max-w-6xl mx-auto px-6 lg:px-12">
             <div className="grid gap-4 md:grid-cols-2">
               <div className={`rounded-3xl border border-gray-200 bg-[#F8FAFC] p-6 ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".04s" } as React.CSSProperties}>
@@ -845,8 +844,12 @@ Pay for what you need. Get work that counts.                </p>
         </section> */}
 
         <section ref={splitRef.ref} className="overflow-hidden">
-          <div className="grid md:grid-cols-2 min-h-[520px]">
-            <div className={`px-10 lg:px-16 py-20 bg-[#F5F5F5] flex flex-col justify-center ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".05s" } as React.CSSProperties}>
+          <div className="grid md:grid-cols-2 md:grid-rows-2">
+            <div className={`relative overflow-hidden min-h-[340px] md:min-h-0 md:row-span-2 ${splitRef.inView ? "sc" : "opacity-0"}`} style={{ "--d": ".1s" } as React.CSSProperties}>
+              <img src={SPLIT_IMG_ORG} alt="Organizations and freelancers using changeworker" className="img-cover" />
+              <div className="absolute inset-0 img-scrim-r" style={{ background: "linear-gradient(to right,rgba(0,0,0,.4) 0%,rgba(0,0,0,.05) 60%,transparent 100%)" }} />
+            </div>
+            <div className={`px-10 lg:px-16 py-16 bg-[#F5F5F5] flex flex-col justify-center ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".05s" } as React.CSSProperties}>
               <span className="pill bg-orange-100 text-[#F97316] border border-orange-200 mb-6 self-start text-[11px]">
                 <FiBriefcase size={10} /> For organizations
               </span>
@@ -876,18 +879,7 @@ No long-term salary commitments. No overhead.
               </ul>
               <button onClick={handlePostProject} className="btn-p self-start">Post a gig <FiArrowRight size={14} /></button>
             </div>
-            <div className={`relative overflow-hidden min-h-[340px] md:min-h-0 ${splitRef.inView ? "sc" : "opacity-0"}`} style={{ "--d": ".1s" } as React.CSSProperties}>
-              <img src={SPLIT_IMG_ORG} alt="Organizations using changeworker" className="img-cover" />
-              <div className="absolute inset-0 img-scrim-r" style={{ background: "linear-gradient(to left,rgba(0,0,0,.4) 0%,rgba(0,0,0,.05) 60%,transparent 100%)" }} />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 min-h-[520px]">
-            <div className={`relative overflow-hidden min-h-[340px] md:min-h-0 order-2 md:order-1 ${splitRef.inView ? "sc" : "opacity-0"}`} style={{ "--d": ".2s" } as React.CSSProperties}>
-              <img src={SPLIT_IMG_FL} alt="Freelancers on changeworker" className="img-cover" style={{ objectPosition: "center 20%" }} />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to right,rgba(0,0,0,.4) 0%,rgba(0,0,0,.05) 60%,transparent 100%)" }} />
-            </div>
-            <div className={`px-10 lg:px-16 py-20 bg-[#111] flex flex-col justify-center order-1 md:order-2 ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".15s" } as React.CSSProperties}>
+            <div className={`px-10 lg:px-16 py-16 bg-[#111] flex flex-col justify-center ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".15s" } as React.CSSProperties}>
               <span className="pill bg-white/10 text-white border border-white/15 mb-6 self-start text-[11px]">
                 <FiUsers size={10} /> For freelancers
               </span>

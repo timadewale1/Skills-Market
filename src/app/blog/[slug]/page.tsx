@@ -126,6 +126,9 @@ function renderSection(s: Section, i: number, accentColor: string) {
 }
 
 export default function BlogPost({ slug }: BlogPostProps) {
+  // Blog is temporarily disabled. Remove this return to re-enable the page.
+  return null
+
   // In real Next.js, slug comes from useParams(). Default to first post for preview.
   const resolvedSlug = slug || (typeof window !== "undefined" ? window.location.pathname.split("/").pop() : "")
   const post = POSTS.find(p => p.slug === resolvedSlug) || POSTS[0]

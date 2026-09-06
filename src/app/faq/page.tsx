@@ -296,7 +296,7 @@ export default function FAQPage() {
             </div>
             {[
               { title:"Platform", links:[["How It Works","/how-it-works"],["FAQ","/faq"]] },
-              { title:"Company",  links:[["About","/about"],["Blog","/blog"],["Contact","/contact"]] },
+              { title:"Company",  links:[["About","/about"],["Contact","/contact"]] },
               { title:"Legal",    links:[["Terms","/terms"],["Privacy","/privacy"]] },
             ].map(col=>(
               <div key={col.title}>

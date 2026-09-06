@@ -207,7 +207,6 @@ function contentFor(slug: string) {
     ],
     highlight: "We don't just connect talent and clients - we provide the structure, knowledge, and tools to succeed at impact work.",
     cta: { label: "Explore gig categories", href: "/hire" },
-    ctaSecondary: { label: "Read the blog", href: "/blog" },
   }
 }
 

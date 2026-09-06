@@ -30,6 +30,9 @@ function useScrollY() {
 }
 
 export default function BlogIndex() {
+  // Blog is temporarily disabled. Remove this return to re-enable the page.
+  return null
+
   const [query, setQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState("All")
   const scrollY = useScrollY()
