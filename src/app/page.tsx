@@ -78,7 +78,6 @@ const TALENT_IMG_1 = "https://images.pexels.com/photos/3778603/pexels-photo-3778
 const TALENT_IMG_2 = "https://images.pexels.com/photos/5212345/pexels-photo-5212345.jpeg?auto=compress&cs=tinysrgb&w=400"
 const TALENT_IMG_3 = "https://images.pexels.com/photos/3807571/pexels-photo-3807571.jpeg?auto=compress&cs=tinysrgb&w=400"
 const TALENT_IMG_4 = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=400"
-const SPLIT_IMG_ORG = "/images/work.png?auto=compress&cs=tinysrgb&w=700"
 const CTA_IMG = "/images/6.jpeg?auto=compress&cs=tinysrgb&w=1200"
 
 const FEATURES = [
@@ -844,11 +843,7 @@ Pay for what you need. Get work that counts.                </p>
         </section> */}
 
         <section ref={splitRef.ref} className="overflow-hidden">
-          <div className="grid md:grid-cols-2 md:grid-rows-2">
-            <div className={`relative overflow-hidden min-h-[340px] bg-[#EDE7DF] md:min-h-0 md:row-span-2 ${splitRef.inView ? "sc" : "opacity-0"}`} style={{ "--d": ".1s" } as React.CSSProperties}>
-              <img src={SPLIT_IMG_ORG} alt="Organizations and freelancers using changeworker" className="w-full h-full object-contain" />
-              <div className="absolute inset-0 img-scrim-r" style={{ background: "linear-gradient(to right,rgba(0,0,0,.4) 0%,rgba(0,0,0,.05) 60%,transparent 100%)" }} />
-            </div>
+          <div className="grid md:grid-cols-2">
             <div className={`px-10 lg:px-16 py-16 bg-[#F5F5F5] flex flex-col justify-center ${splitRef.inView ? "up" : "opacity-0"}`} style={{ "--d": ".05s" } as React.CSSProperties}>
               <span className="pill bg-orange-100 text-[#F97316] border border-orange-200 mb-6 self-start text-[11px]">
                 <FiBriefcase size={10} /> For organizations
