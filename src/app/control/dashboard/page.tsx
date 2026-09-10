@@ -224,7 +224,7 @@ export default function AdminDashboardPage() {
   const keyChecks = wellness.checks.slice(0, 4)
 
   return (
-    <div className="space-y-6">
+    <div className="control-overview space-y-6">
       <AdminPageHeader
         eyebrow="Admin overview"
         title={`Welcome back, ${adminName}`}

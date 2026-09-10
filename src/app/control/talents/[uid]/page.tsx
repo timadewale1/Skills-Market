@@ -246,12 +246,12 @@ export default function AdminTalentDetailPage() {
 
   return (
 
-      <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)]">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="control-profile-page">
+        <div className="control-profile-inner">
           {/* HEADER */}
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
+          <div className="control-profile-hero flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
             <div className="flex items-start gap-4">
-              <div className="h-20 w-20 rounded-full bg-orange-50 flex items-center justify-center font-extrabold text-2xl text-[var(--primary)] overflow-hidden">
+              <div className="control-profile-avatar h-20 w-20 rounded-full bg-orange-50 flex items-center justify-center font-extrabold text-2xl text-[var(--primary)] overflow-hidden">
                 {profile.photoURL ? (
                   <img src={profile.photoURL} alt={profile.fullName} className="h-full w-full object-cover" />
                 ) : (
@@ -353,7 +353,7 @@ export default function AdminTalentDetailPage() {
             </div>
 
             {/* ADMIN ACTIONS */}
-            <div className="flex flex-col gap-2 min-w-[200px]">
+            <div className="control-profile-actions flex flex-col gap-2 min-w-[200px]">
               <div className="flex flex-col gap-1">
                 {profile.verification?.status !== "verified" && (
                   <Button
@@ -415,7 +415,7 @@ export default function AdminTalentDetailPage() {
           </div>
 
           {/* CONTENT GRID */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="control-profile-content grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* MAIN CONTENT */}
             <div className="lg:col-span-2 space-y-6">
               {/* ABOUT */}

@@ -125,7 +125,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="control-records-page space-y-6">
       <AdminPageHeader
         eyebrow="User operations"
         title="Manage users"

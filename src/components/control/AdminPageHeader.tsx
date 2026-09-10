@@ -23,17 +23,17 @@ export default function AdminPageHeader({
   stats = [],
 }: AdminPageHeaderProps) {
   return (
-    <div className="rounded-[1.75rem] border bg-white p-6 shadow-sm">
+    <div className="control-page-header">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
+          <p className="control-page-eyebrow">
             {eyebrow}
           </p>
-          <h1 className="mt-2 break-words text-3xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="control-page-title">
             {title}
           </h1>
           {description ? (
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-gray-600">
+            <p className="control-page-description">
               {description}
             </p>
           ) : null}
@@ -47,16 +47,16 @@ export default function AdminPageHeader({
       </div>
 
       {stats.length ? (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="control-header-stats">
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="rounded-2xl border bg-[var(--secondary)] px-4 py-4"
+              className="control-header-stat"
             >
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
+              <div className="control-header-stat-label">
                 {stat.label}
               </div>
-              <div className="mt-1 text-2xl font-extrabold text-gray-900">
+              <div className="control-header-stat-value">
                 {stat.value}
               </div>
             </div>

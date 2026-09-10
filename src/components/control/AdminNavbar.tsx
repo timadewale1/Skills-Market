@@ -5,25 +5,9 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import {
-  LayoutGrid,
-  Users,
-  Briefcase,
-  FolderKanban,
-  AlertTriangle,
-  Wallet,
-  BarChart3,
-  Bell,
-  Menu,
-  X,
-  ShieldCheck,
-  LogOut,
-  MessageSquare,
-  Star,
-  HandCoins,
-  FileSearch,
-  UserRoundCheck,
-  Building2,
-  LifeBuoy,
+  AlertTriangle, BarChart3, Bell, Briefcase, Building2, ChevronRight, FileSearch,
+  FolderKanban, HandCoins, LayoutGrid, LifeBuoy, LogOut, Menu, MessageSquare,
+  ShieldCheck, Star, UserRoundCheck, Users, Wallet, X,
 } from "lucide-react"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -32,53 +16,33 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AdminNotificationBell from "@/components/control/AdminNotificationBell"
 import { logoutExpiredSession } from "@/lib/authSession"
 
-type NavItem = {
-  href: string
-  label: string
-  icon: React.ElementType
-}
-
-type NavGroup = {
-  label: string
-  items: NavItem[]
-}
+type NavItem = { href: string; label: string; icon: React.ElementType }
+type NavGroup = { label: string; items: NavItem[] }
 
 const navGroups: NavGroup[] = [
-  {
-    label: "Overview",
-    items: [
-      { href: "/control/dashboard", label: "Dashboard", icon: LayoutGrid },
-      { href: "/control/analytics", label: "Analytics", icon: BarChart3 },
-      { href: "/control/notifications", label: "Notifications", icon: Bell },
-      { href: "/control/support", label: "Support", icon: LifeBuoy },
-    ],
-  },
-  {
-    label: "People",
-    items: [
-      { href: "/control/users", label: "Users", icon: Users },
-      { href: "/control/talents", label: "Talents", icon: UserRoundCheck },
-      { href: "/control/clients", label: "Clients", icon: Building2 },
-      { href: "/control/reviews", label: "Reviews", icon: Star },
-    ],
-  },
-  {
-    label: "Marketplace",
-    items: [
-      { href: "/control/gigs", label: "Gigs", icon: Briefcase },
-      { href: "/control/proposals", label: "Proposals", icon: FileSearch },
-      { href: "/control/workspaces", label: "Workspaces", icon: FolderKanban },
-      { href: "/control/messages", label: "Messages", icon: MessageSquare },
-      { href: "/control/disputes", label: "Disputes", icon: AlertTriangle },
-    ],
-  },
-  {
-    label: "Money",
-    items: [
-      { href: "/control/transactions", label: "Transactions", icon: HandCoins },
-      { href: "/control/wallets", label: "Wallets", icon: Wallet },
-    ],
-  },
+  { label: "Workspace", items: [
+    { href: "/control/dashboard", label: "Overview", icon: LayoutGrid },
+    { href: "/control/analytics", label: "Analytics", icon: BarChart3 },
+    { href: "/control/notifications", label: "Notifications", icon: Bell },
+    { href: "/control/support", label: "Support inbox", icon: LifeBuoy },
+  ] },
+  { label: "People", items: [
+    { href: "/control/users", label: "All users", icon: Users },
+    { href: "/control/talents", label: "Talents", icon: UserRoundCheck },
+    { href: "/control/clients", label: "Clients", icon: Building2 },
+    { href: "/control/reviews", label: "Reviews", icon: Star },
+  ] },
+  { label: "Marketplace", items: [
+    { href: "/control/gigs", label: "Gigs", icon: Briefcase },
+    { href: "/control/proposals", label: "Proposals", icon: FileSearch },
+    { href: "/control/workspaces", label: "Workspaces", icon: FolderKanban },
+    { href: "/control/messages", label: "Messages", icon: MessageSquare },
+    { href: "/control/disputes", label: "Disputes", icon: AlertTriangle },
+  ] },
+  { label: "Finance", items: [
+    { href: "/control/transactions", label: "Transactions", icon: HandCoins },
+    { href: "/control/wallets", label: "Wallets", icon: Wallet },
+  ] },
 ]
 
 function isActivePath(pathname: string, href: string) {
@@ -95,31 +59,25 @@ export default function AdminNavbar() {
 
   useEffect(() => {
     let alive = true
-
     const loadProfile = async () => {
       if (!user?.uid) return
       try {
         const snap = await getDoc(doc(db, "users", user.uid))
-        const data = snap.data() as any
         if (!alive) return
+        const data = snap.data() as any
         setFullName(String(data?.fullName || data?.name || "Admin"))
         setPhotoUrl(String(data?.photoUrl || ""))
-      } catch (error) {
-        console.error("Admin profile read failed:", error)
-      }
+      } catch (error) { console.error("Admin profile read failed:", error) }
     }
-
-    loadProfile()
-    return () => {
-      alive = false
-    }
+    void loadProfile()
+    return () => { alive = false }
   }, [user?.uid])
+
+  useEffect(() => { setMobileOpen(false) }, [pathname])
 
   const initials = useMemo(() => {
     const parts = fullName.trim().split(" ").filter(Boolean)
-    const first = parts[0]?.[0] || user?.email?.[0] || "A"
-    const second = parts[1]?.[0] || ""
-    return `${first}${second}`.toUpperCase()
+    return `${parts[0]?.[0] || user?.email?.[0] || "A"}${parts[1]?.[0] || ""}`.toUpperCase()
   }, [fullName, user?.email])
 
   const handleLogout = async () => {
@@ -128,139 +86,53 @@ export default function AdminNavbar() {
       window.localStorage.removeItem("sm_role")
       toast.success("Admin session closed")
       router.push("/control/login")
-    } catch (error) {
-      console.error(error)
-      toast.error("Logout failed")
-    }
+    } catch (error) { console.error(error); toast.error("Logout failed") }
   }
 
-  const navLinkClass = (active: boolean) =>
-    [
-      "inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition",
-      active
-        ? "bg-orange-50 text-[var(--primary)]"
-        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-    ].join(" ")
+  const navigation = (
+    <nav className="control-nav-scroll" aria-label="Control navigation">
+      {navGroups.map((group) => (
+        <section key={group.label} className="control-nav-group">
+          <p className="control-nav-label">{group.label}</p>
+          <div className="space-y-1">
+            {group.items.map((item) => {
+              const Icon = item.icon
+              const active = isActivePath(pathname, item.href)
+              return (
+                <Link key={item.href} href={item.href} className={`control-nav-link ${active ? "control-nav-link-active" : ""}`}>
+                  <Icon size={17} strokeWidth={active ? 2.3 : 1.9} />
+                  <span>{item.label}</span>
+                  {active ? <ChevronRight className="ml-auto" size={15} /> : null}
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      ))}
+    </nav>
+  )
+
+  const profile = (
+    <div className="flex min-w-0 items-center gap-3">
+      <Avatar className="h-9 w-9 border border-orange-100">
+        {photoUrl ? <AvatarImage src={photoUrl} alt="Admin avatar" /> : <AvatarFallback className="bg-orange-50 text-xs font-bold text-[var(--primary)]">{initials}</AvatarFallback>}
+      </Avatar>
+      <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{fullName || "Admin"}</p><p className="truncate text-xs text-slate-500">{user?.email || "Control account"}</p></div>
+    </div>
+  )
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link href="/control/dashboard" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-[var(--primary)]">
-              <ShieldCheck size={20} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-extrabold tracking-tight text-gray-900">changeworker admin</div>
-              <div className="text-xs font-medium text-gray-500">Platform operations console</div>
-            </div>
-          </Link>
-        </div>
-
-        <nav className="hidden flex-1 items-center justify-center gap-3 xl:flex">
-          {navGroups.map((group) => (
-            <details key={group.label} className="group relative">
-              <summary className="list-none cursor-pointer rounded-full border bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--primary)]">
-                {group.label}
-              </summary>
-              <div className="absolute left-1/2 top-[calc(100%+0.75rem)] z-50 w-72 -translate-x-1/2 rounded-3xl border bg-white p-3 shadow-xl">
-                <div className="grid gap-2">
-                  {group.items.map((item) => {
-                    const Icon = item.icon
-                    const active = isActivePath(pathname, item.href)
-                    return (
-                      <Link key={item.href} href={item.href} className={navLinkClass(active)}>
-                        <Icon size={16} />
-                        {item.label}
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            </details>
-          ))}
-        </nav>
-
-        <div className="hidden items-center gap-3 xl:flex">
-          <AdminNotificationBell />
-
-          <div className="flex items-center gap-3 rounded-full border bg-[var(--secondary)] px-3 py-2">
-            <Avatar className="h-9 w-9">
-              {photoUrl ? <AvatarImage src={photoUrl} alt="Admin avatar" /> : <AvatarFallback>{initials}</AvatarFallback>}
-            </Avatar>
-            <div className="leading-tight">
-              <div className="text-sm font-semibold text-gray-900">{fullName || "Admin"}</div>
-              <div className="text-xs text-gray-500">{user?.email}</div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
-        </div>
-
-        <button
-          type="button"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border xl:hidden"
-          onClick={() => setMobileOpen((open) => !open)}
-          aria-label="Toggle admin navigation"
-        >
-          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
-
-      {mobileOpen ? (
-        <div className="border-t bg-white px-4 py-4 xl:hidden">
-          <div className="mb-4 flex items-center gap-3 rounded-2xl border bg-[var(--secondary)] px-3 py-3">
-            <Avatar className="h-10 w-10">
-              {photoUrl ? <AvatarImage src={photoUrl} alt="Admin avatar" /> : <AvatarFallback>{initials}</AvatarFallback>}
-            </Avatar>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-gray-900">{fullName || "Admin"}</div>
-              <div className="truncate text-xs text-gray-500">{user?.email}</div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {navGroups.map((group) => (
-              <div key={group.label}>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{group.label}</div>
-                <div className="grid gap-2">
-                  {group.items.map((item) => {
-                    const Icon = item.icon
-                    const active = isActivePath(pathname, item.href)
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={navLinkClass(active)}
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        <Icon size={16} />
-                        {item.label}
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
-        </div>
-      ) : null}
-    </header>
+    <>
+      <aside className="control-sidebar hidden lg:flex">
+        <Link href="/control/dashboard" className="control-brand"><span className="control-brand-mark"><ShieldCheck size={20} /></span><span><strong>changeworker</strong><small>control centre</small></span></Link>
+        {navigation}
+        <div className="control-sidebar-footer"><div className="control-admin-profile">{profile}</div><button type="button" onClick={handleLogout} className="control-logout-button"><LogOut size={16} /> Sign out</button></div>
+      </aside>
+      <header className="control-mobile-bar lg:hidden">
+        <Link href="/control/dashboard" className="flex items-center gap-2 text-slate-900"><span className="control-brand-mark h-9 w-9 rounded-xl"><ShieldCheck size={17} /></span><span className="text-sm font-extrabold tracking-tight">control</span></Link>
+        <div className="flex items-center gap-2"><AdminNotificationBell /><button type="button" className="control-menu-toggle" onClick={() => setMobileOpen((open) => !open)} aria-label="Toggle control navigation">{mobileOpen ? <X size={19} /> : <Menu size={20} />}</button></div>
+      </header>
+      {mobileOpen ? <div className="control-mobile-panel lg:hidden"><div className="control-admin-profile border-b border-slate-100 pb-4">{profile}</div>{navigation}<button type="button" onClick={handleLogout} className="control-logout-button mt-3 w-full justify-center"><LogOut size={16} /> Sign out</button></div> : null}
+    </>
   )
 }
