@@ -37,8 +37,8 @@ export async function POST(req: Request) {
 
     const { amount } = await req.json()
     const amountNaira = Number(amount || 0)
-    if (!amountNaira || amountNaira < 1000) {
-      return NextResponse.json({ error: "Minimum top-up is NGN 1,000" }, { status: 400 })
+    if (!amountNaira || amountNaira < 10000) {
+      return NextResponse.json({ error: "Minimum top-up is NGN 10,000" }, { status: 400 })
     }
 
     const userSnap = await adminDb.doc(`users/${uid}`).get()
@@ -80,7 +80,8 @@ export async function POST(req: Request) {
         amount: Math.round(amountNaira * 100),
         reference,
         metadata: { walletUid: uid, type: "wallet_topup" },
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/wallet?topup=1`,
+        // Keep the user on the exact host where their Firebase session was created.
+        callback_url: `${new URL(req.url).origin}/dashboard/wallet?topup=1&reference=${encodeURIComponent(reference)}`,
       }),
     })
 

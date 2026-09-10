@@ -6,12 +6,90 @@ import type { Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
+import { confirmWalletTopup } from "@/lib/paystack/walletTopup"
 
 export const runtime = "nodejs"
 
 async function readRawBody(req: Request) {
   const arrayBuffer = await req.arrayBuffer()
   return Buffer.from(arrayBuffer)
+}
+
+async function settleWithdrawalEvent(db: ReturnType<typeof getAdminDb>, event: any) {
+  const reference = String(event?.data?.reference || "")
+  const eventName = String(event?.event || "")
+  if (!reference || !["transfer.success", "transfer.failed", "transfer.reversed"].includes(eventName)) return false
+
+  const withdrawalMatches = await db
+    .collectionGroup("withdrawals")
+    .where(admin.firestore.FieldPath.documentId(), "==", reference)
+    .limit(1)
+    .get()
+  if (withdrawalMatches.empty) return false
+
+  const withdrawalRef = withdrawalMatches.docs[0].ref
+  const walletRef = withdrawalRef.parent.parent
+  if (!walletRef) return false
+
+  const result = await db.runTransaction(async (tx: Transaction) => {
+    const [withdrawalSnap, walletSnap] = await Promise.all([tx.get(withdrawalRef), tx.get(walletRef)])
+    if (!withdrawalSnap.exists || !walletSnap.exists) return { changed: false, userId: "", amount: 0 }
+    const withdrawal = withdrawalSnap.data() as any
+    const wallet = walletSnap.data() as any
+    const amount = Number(withdrawal?.amount || 0)
+    const currentStatus = String(withdrawal?.status || "")
+    if (!amount || ["paid", "failed", "reversed"].includes(currentStatus)) return { changed: false, userId: walletRef.id, amount }
+
+    const transactionRef = walletRef.collection("transactions").doc(reference)
+    if (eventName === "transfer.success") {
+      tx.update(walletRef, {
+        pendingBalance: Math.max(0, Number(wallet?.pendingBalance || 0) - amount),
+        totalWithdrawn: Number(wallet?.totalWithdrawn || 0) + amount,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+      tx.set(withdrawalRef, {
+        status: "paid",
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        paystackEvent: eventName,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true })
+      tx.set(transactionRef, { status: "paid", settlementStatus: "paid", updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
+      return { changed: true, userId: walletRef.id, amount, status: "paid" }
+    }
+
+    const status = eventName === "transfer.reversed" ? "reversed" : "failed"
+    tx.update(walletRef, {
+      availableBalance: Number(wallet?.availableBalance || 0) + amount,
+      pendingBalance: Math.max(0, Number(wallet?.pendingBalance || 0) - amount),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+    tx.set(withdrawalRef, {
+      status,
+      paystackEvent: eventName,
+      failureReason: String(event?.data?.reason || event?.data?.failure_reason || "Transfer was not completed"),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true })
+    tx.set(transactionRef, { status, settlementStatus: status, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    tx.set(walletRef.collection("transactions").doc(`${reference}_${status}`), {
+      type: "credit", reason: "withdrawal_reversal", amount, currency: "NGN", status: "completed",
+      meta: { withdrawalId: reference, source: "paystack_webhook" }, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true })
+    return { changed: true, userId: walletRef.id, amount, status }
+  })
+
+  if (result.changed) {
+    const paid = result.status === "paid"
+    await notifyUser({
+      userId: result.userId,
+      type: "withdrawal",
+      title: paid ? "Withdrawal paid" : "Withdrawal returned to wallet",
+      message: paid
+        ? `Your withdrawal of ₦${result.amount.toLocaleString()} has been paid to your bank account.`
+        : `Your withdrawal of ₦${result.amount.toLocaleString()} was not completed, so the money is available in your wallet again.`,
+      link: "/dashboard/wallet",
+    })
+  }
+  return true
 }
 
 export async function POST(req: Request) {
@@ -36,7 +114,11 @@ export async function POST(req: Request) {
     const adminApp = getAdminApp()
     const db = adminDb
 
-    // We only handle charge.success for funding
+    if (await settleWithdrawalEvent(db, event)) {
+      return NextResponse.json({ ok: true })
+    }
+
+    // We only handle charge.success for funding after transfer settlements.
     if (event?.event !== "charge.success") {
       console.log("[Paystack Webhook] Ignoring event type:", event?.event)
       return NextResponse.json({ ok: true })
@@ -77,53 +159,12 @@ export async function POST(req: Request) {
     const paidNaira = paidKobo / 100
 
     if (paymentType === "wallet_topup" && walletUid) {
-      const walletRef = db.doc(`wallets/${walletUid}`)
-      const walletTxRef = walletRef.collection("transactions").doc(reference)
-      const topupRef = walletRef.collection("topups").doc(reference)
-
-      await db.runTransaction(async (tx: Transaction) => {
-        const walletSnap: any = await tx.get(walletRef)
-        const walletData = walletSnap.exists() ? (walletSnap.data() as any) : {}
-
-        tx.set(
-          walletRef,
-          {
-            uid: walletUid,
-            role: String(walletData?.role || "client"),
-            availableBalance: Number(walletData.availableBalance || 0) + paidNaira,
-            totalLoaded: Number(walletData.totalLoaded || 0) + paidNaira,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            createdAt: walletData.createdAt || admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        )
-
-        tx.set(
-          walletTxRef,
-          {
-            type: "credit",
-            reason: "wallet_topup",
-            amount: paidNaira,
-            currency: "NGN",
-            status: "completed",
-            meta: { reference },
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        )
-
-        tx.set(
-          topupRef,
-          {
-            amount: paidNaira,
-            currency: "NGN",
-            status: "funded",
-            paidAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        )
+      await confirmWalletTopup({
+        db,
+        reference,
+        walletUid,
+        amount: paidNaira,
+        source: "paystack_webhook",
       })
 
       return NextResponse.json({ ok: true })
@@ -241,6 +282,9 @@ export async function POST(req: Request) {
             uid: clientUid,
             role: "client",
             totalSpent: Number(existing.totalSpent || 0) + paidNaira,
+            totalWorkspaceFunded: Number((existing.totalWorkspaceFunded ?? existing.totalSpent) || 0) + paidNaira,
+            totalDirectWorkspaceFunded: Number(existing.totalDirectWorkspaceFunded || 0) + paidNaira,
+            totalFundingReceived: Number(existing.totalFundingReceived ?? (Number(existing.totalLoaded || 0) + Number(existing.totalSpent || 0))) + paidNaira,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             createdAt: existing.createdAt || admin.firestore.FieldValue.serverTimestamp(),
           },

@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db, auth } from "@/lib/firebase"
-import { doc, onSnapshot, collection, query, orderBy, getDoc, setDoc } from "firebase/firestore"
+import { doc, onSnapshot, collection, query, orderBy, getDoc, getDocs, setDoc, limit, startAfter } from "firebase/firestore"
 import toast from "react-hot-toast"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,6 +31,8 @@ type WalletDoc = {
   totalWithdrawn?: number
   totalSpent?: number
   totalLoaded?: number
+  totalWorkspaceFunded?: number
+  totalFundingReceived?: number
   bank?: {
     accountNumber: string
     bankCode: string
@@ -57,8 +60,14 @@ function money(n?: number) {
 
 export default function WalletPage() {
   const { user } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [wallet, setWallet] = useState<WalletDoc | null>(null)
   const [txs, setTxs] = useState<Tx[]>([])
+  const [txPage, setTxPage] = useState(1)
+  const [hasMoreTransactions, setHasMoreTransactions] = useState(false)
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
+  const [historyRefresh, setHistoryRefresh] = useState(0)
 
   const [banks, setBanks] = useState<Array<{ name: string; code: string; slug: string }>>([])
   const [banksLoading, setBanksLoading] = useState(false)
@@ -76,14 +85,14 @@ export default function WalletPage() {
 
   const [topupAmount, setTopupAmount] = useState("")
   const [toppingUp, setToppingUp] = useState(false)
+  const reconciledTopups = useRef(new Set<string>())
+  const txCursors = useRef<any[]>([])
 
   const isTalent = wallet?.role === "talent"
-  const isClient = wallet?.role === "client"
   const clientAvailableBalance = Number(wallet?.availableBalance || 0)
   const clientTotalLoaded = Number(wallet?.totalLoaded || 0)
-  const clientEscrowFunded = txs
-    .filter((tx) => tx.reason === "workspace_funding" && ["completed", "paid", "success"].includes(String(tx.status || "").toLowerCase()))
-    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+  const clientWorkspaceFunded = Number(wallet?.totalWorkspaceFunded ?? wallet?.totalSpent ?? 0)
+  const clientTotalFunded = Number(wallet?.totalFundingReceived ?? (clientTotalLoaded + clientWorkspaceFunded))
   const filteredBanks = banks.filter((bank) => {
     const query = bankSearch.trim().toLowerCase()
     if (!query) return true
@@ -150,16 +159,43 @@ export default function WalletPage() {
       setWallet(snap.exists() ? (snap.data() as WalletDoc) : null)
     })
 
-    const unsubTx = onSnapshot(
-      query(collection(db, "wallets", user.uid, "transactions"), orderBy("createdAt", "desc")),
-      (snap) => setTxs(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })))
-    )
-
     return () => {
       unsubWallet()
-      unsubTx()
     }
   }, [user?.uid])
+
+  useEffect(() => {
+    if (!user?.uid) return
+    const cursor = txPage > 1 ? txCursors.current[txPage - 2] : undefined
+    if (txPage > 1 && !cursor) return
+    let active = true
+
+    const loadTransactions = async () => {
+      setTransactionsLoading(true)
+      try {
+        const base = collection(db, "wallets", user.uid, "transactions")
+        const recordsQuery = cursor
+          ? query(base, orderBy("createdAt", "desc"), startAfter(cursor), limit(6))
+          : query(base, orderBy("createdAt", "desc"), limit(6))
+        const snapshot = await getDocs(recordsQuery)
+        if (!active) return
+        const visibleDocs = snapshot.docs.slice(0, 5)
+        setTxs(visibleDocs.map((item) => ({ id: item.id, ...(item.data() as any) })))
+        setHasMoreTransactions(snapshot.docs.length > 5)
+        if (visibleDocs.length === 5) {
+          txCursors.current[txPage - 1] = visibleDocs[4]
+        }
+      } catch (error) {
+        console.error("wallet history failed to load", error)
+        if (active) toast.error("Unable to load wallet history")
+      } finally {
+        if (active) setTransactionsLoading(false)
+      }
+    }
+
+    void loadTransactions()
+    return () => { active = false }
+  }, [historyRefresh, txPage, user?.uid])
 
   const tokenGetter = useMemo(
     () => async () => {
@@ -169,6 +205,72 @@ export default function WalletPage() {
     },
     []
   )
+
+  useEffect(() => {
+    const reference = searchParams.get("reference")
+    if (!user || searchParams.get("topup") !== "1" || !reference) return
+
+    let active = true
+    const confirmReturn = async () => {
+      try {
+        const token = await user.getIdToken()
+        const response = await fetch("/api/paystack/wallet-topup/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ reference }),
+        })
+        const data = await response.json()
+        if (!active) return
+        if (response.ok && data.pending) {
+          toast("Your payment is being confirmed. Your wallet will update shortly.")
+          router.replace("/dashboard/wallet")
+        } else if (response.ok) {
+          toast.success(data.credited ? "Wallet funded successfully" : "Wallet top-up already confirmed")
+          setHistoryRefresh((value) => value + 1)
+          router.replace("/dashboard/wallet")
+        } else {
+          toast.error(data?.error || "We could not confirm this wallet top-up")
+        }
+      } catch (error) {
+        console.error("wallet top-up confirmation failed", error)
+      }
+    }
+    void confirmReturn()
+    return () => { active = false }
+  }, [router, searchParams, user])
+
+  useEffect(() => {
+    if (!user || txs.length === 0) return
+
+    const pendingReferences = txs
+      .filter((tx) => tx.reason === "wallet_topup" && ["pending", "initiated", "processing"].includes(String(tx.status || "").toLowerCase()))
+      .map((tx) => tx.meta?.reference || tx.id)
+      .filter((reference): reference is string => Boolean(reference) && !reconciledTopups.current.has(reference))
+      .slice(0, 5)
+
+    if (pendingReferences.length === 0) return
+    pendingReferences.forEach((reference) => reconciledTopups.current.add(reference))
+
+    const reconcile = async () => {
+      try {
+        const token = await user.getIdToken()
+        const results = await Promise.all(
+          pendingReferences.map((reference) =>
+            fetch("/api/paystack/wallet-topup/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ reference }),
+            })
+          )
+        )
+        if (results.some((response) => response.ok)) setHistoryRefresh((value) => value + 1)
+      } catch (error) {
+        console.error("pending wallet top-up reconciliation failed", error)
+      }
+    }
+
+    void reconcile()
+  }, [txs, user])
 
   const verifyBank = async () => {
     if (!selectedBank) return toast.error("Select a bank")
@@ -284,7 +386,7 @@ export default function WalletPage() {
 
   const topUpWallet = async () => {
     const amount = Number(topupAmount || 0)
-    if (!amount || amount < 1000) return toast.error("Minimum top-up is NGN 1,000")
+    if (!amount || amount < 10000) return toast.error("Minimum top-up is NGN 10,000")
 
     setToppingUp(true)
     try {
@@ -346,17 +448,22 @@ export default function WalletPage() {
                     </>
                   ) : (
                     <>
-                      <div className="rounded-2xl border border-orange-100 bg-white p-4 md:col-span-2">
+                      <div className="rounded-2xl border border-orange-100 bg-white p-4">
                         <div className="font-semibold text-gray-600">Wallet balance</div>
                         <div className="text-2xl font-extrabold">{money(clientAvailableBalance)}</div>
                         <div className="mt-1 text-xs font-semibold text-gray-500">
-                          Funds available for workspace funding
+                          Available to fund your next workspace
                         </div>
                       </div>
                       <div className="rounded-2xl border border-orange-100 bg-white p-4">
+                        <div className="font-semibold text-gray-600">Workspace funded</div>
+                        <div className="text-xl font-extrabold">{money(clientWorkspaceFunded)}</div>
+                        <div className="mt-1 text-xs font-semibold text-gray-500">Wallet and direct workspace payments</div>
+                      </div>
+                      <div className="rounded-2xl border border-orange-100 bg-white p-4">
                         <div className="font-semibold text-gray-600">Total funded</div>
-                        <div className="text-xl font-extrabold">{money(clientTotalLoaded || clientEscrowFunded)}</div>
-                        <div className="mt-1 text-xs font-semibold text-gray-500">Confirmed wallet top-ups</div>
+                        <div className="text-xl font-extrabold">{money(clientTotalFunded)}</div>
+                        <div className="mt-1 text-xs font-semibold text-gray-500">Wallet top-ups and direct payments</div>
                       </div>
                     </>
                   )}
@@ -543,14 +650,21 @@ export default function WalletPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-2xl border border-orange-100 bg-white p-4">
-                      <div className="font-semibold text-gray-600">Funding transactions</div>
+                      <div className="font-semibold text-gray-600">All funding records</div>
                       <div className="text-xl font-extrabold">
-                        {txs.filter((tx) => tx.reason === "workspace_funding").length}
+                        {txs.filter((tx) => ["workspace_funding", "wallet_topup"].includes(tx.reason)).length}
                       </div>
                       <div className="mt-1 text-xs font-semibold text-gray-500">
-                        Workspace funding records captured so far
+                        Wallet top-ups and workspace payments on this page
                       </div>
+                    </div>
+                    <div className="rounded-2xl border border-orange-100 bg-white p-4">
+                      <div className="font-semibold text-gray-600">Workspace funded</div>
+                      <div className="text-xl font-extrabold">{money(clientWorkspaceFunded)}</div>
+                      <div className="mt-1 text-xs font-semibold text-gray-500">Across wallet balance and direct Paystack funding</div>
+                    </div>
                     </div>
                       <div className="rounded-2xl border border-orange-100 bg-white p-4">
                       <div className="font-semibold text-gray-600">Bank setup</div>
@@ -565,13 +679,13 @@ export default function WalletPage() {
                       <div>
                         <div className="font-semibold text-gray-600">Top up wallet</div>
                         <div className="mt-1 text-xs font-semibold text-gray-500">
-                          Add funds once and reuse them when you want to fund a workspace.
+                          Add at least NGN 10,000 and use the balance when you are ready to fund work.
                         </div>
                       </div>
                       <Input
                         value={topupAmount}
                         onChange={(e) => setTopupAmount(e.target.value)}
-                        placeholder="Amount to add (NGN)"
+                        placeholder="Amount to add (minimum NGN 10,000)"
                         className="rounded-2xl"
                       />
                       <button
@@ -594,7 +708,9 @@ export default function WalletPage() {
               <CardTitle className="text-base font-extrabold">History</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {txs.length === 0 ? (
+              {transactionsLoading ? (
+                <FancyLoader label="Loading wallet history..." compact />
+              ) : txs.length === 0 ? (
                 <div className="text-gray-600">No transactions yet.</div>
               ) : (
                 txs.map((tx) => (
@@ -618,8 +734,13 @@ export default function WalletPage() {
                 ))
               )}
               <Separator />
-              <div className="text-xs font-semibold text-gray-500">
-                Note: Client payments are held in escrow for safety and released through the payout flow.
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="text-xs font-semibold text-gray-500">Showing 5 records per page. Workspace payments are held in escrow until settlement.</div>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setTxPage((page) => Math.max(1, page - 1))} disabled={txPage === 1} className="rounded-lg border px-3 py-1.5 text-xs font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45">Previous</button>
+                  <span className="text-xs font-bold text-gray-500">Page {txPage}</span>
+                  <button type="button" onClick={() => setTxPage((page) => page + 1)} disabled={!hasMoreTransactions} className="rounded-lg border px-3 py-1.5 text-xs font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45">Next</button>
+                </div>
               </div>
             </CardContent>
           </Card>

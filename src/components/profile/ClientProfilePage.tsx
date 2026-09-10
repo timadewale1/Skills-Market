@@ -201,6 +201,16 @@ export default function ClientProfilePage() {
 
   const isProfileComplete = !!userDoc?.profileComplete
   const showTabs = isProfileComplete || showCompletionTabs
+  const completionItems = [
+    { label: "Organization logo", complete: Boolean(photoUrl) },
+    { label: "Organization overview", complete: Boolean(about) },
+    { label: "Website", complete: Boolean(website) },
+    { label: "Contact details", complete: Boolean(contactEmail) },
+    { label: "Past projects", complete: portfolio.length > 0 },
+    { label: "Impact focus", complete: selectedSdgs.length > 0 },
+  ]
+  const completedItems = completionItems.filter((item) => item.complete).length
+  const completionPercent = Math.round((completedItems / completionItems.length) * 100)
 
   if (loading) {
     return (
@@ -215,13 +225,13 @@ export default function ClientProfilePage() {
   }
 
   return (
-    <div className="bg-[var(--secondary)] min-h-[calc(100vh-64px)]">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="profile-workspace">
+      <div className="profile-workspace-inner">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="flex items-start justify-between gap-4"
+          className="profile-editor-hero flex items-start justify-between gap-4"
         >
           <div className="flex items-center gap-4">
             <AvatarUploader
@@ -273,6 +283,8 @@ export default function ClientProfilePage() {
           )}
         </motion.div>
 
+        <div className="profile-editor-layout">
+          <div className="min-w-0">
         {/* reviews card for this client profile */}
         {user?.uid && (
           <motion.div
@@ -566,6 +578,26 @@ export default function ClientProfilePage() {
             </motion.div>
           )}
         </AnimatePresence>
+          </div>
+
+          <aside className="profile-completion-panel">
+            <div className="text-sm font-extrabold text-slate-900">Complete your organization profile</div>
+            <div className="mt-5 flex items-center gap-4">
+              <div className="profile-completion-ring" style={{ "--profile-completion": `${completionPercent}%` } as React.CSSProperties}>
+                <span>{completionPercent}%</span>
+              </div>
+              <p className="text-xs leading-5 text-slate-500">A clear organization profile helps the right talent understand your work before applying.</p>
+            </div>
+            <div className="mt-6 space-y-3">
+              {completionItems.map((item) => (
+                <div key={item.label} className={`profile-completion-item ${item.complete ? "is-complete" : ""}`}>
+                  <span>{item.complete ? "✓" : "○"}</span>{item.label}
+                </div>
+              ))}
+            </div>
+            {!isProfileComplete ? <Button onClick={() => setShowCompletionTabs(true)} className="mt-6 w-full">Finish profile</Button> : null}
+          </aside>
+        </div>
       </div>
     </div>
   )

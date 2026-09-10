@@ -123,6 +123,7 @@ export async function POST(req: Request) {
           role: "client",
           availableBalance: Number(latestWallet?.availableBalance || 0) - totalAmount,
           totalSpent: Number(latestWallet?.totalSpent || 0) + totalAmount,
+          totalWorkspaceFunded: Number((latestWallet?.totalWorkspaceFunded ?? latestWallet?.totalSpent) || 0) + totalAmount,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }

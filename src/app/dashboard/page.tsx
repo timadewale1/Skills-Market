@@ -101,6 +101,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<UserDoc | null>(null)
   const [loading, setLoading] = useState(true)
   const [walletTotal, setWalletTotal] = useState(0)
+  const [clientWalletBalance, setClientWalletBalance] = useState(0)
 
 
   // Animated stats (count-up)
@@ -187,9 +188,10 @@ export default function DashboardPage() {
           Number(walletData?.totalWithdrawn || 0) ||
         Number(data?.wallet?.totalEarned || 0)
       const funded =
-        Number(walletData?.totalSpent || 0) ||
+        Number(walletData?.totalFundingReceived ?? (Number(walletData?.totalLoaded || 0) + Number(walletData?.totalSpent || 0))) ||
         workspaceDocs.reduce((sum, docSnap) => sum + Number(docSnap.data()?.payment?.amount || 0), 0) ||
         Number(data?.wallet?.totalSpent || data?.wallet?.totalDeposited || 0)
+      setClientWalletBalance(Number(walletData?.availableBalance || 0))
       const total = role === "client" ? funded : earned
       animate(0, total, {
         duration: 0.9,
@@ -732,9 +734,16 @@ export default function DashboardPage() {
       <div className="mt-3 font-extrabold">Wallet</div>
         <div className="text-sm text-gray-600 mt-1">
           {role === "client"
-          ? "Your funded workspace amounts will show here for escrow and payouts."
+          ? "Track wallet balance alongside direct and wallet-funded workspace payments."
           : "Your earnings will show here after completed gigs."}
         </div>
+
+      {role === "client" ? (
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3 text-xs">
+          <div><div className="font-semibold text-gray-500">Wallet balance</div><div className="mt-1 font-extrabold text-gray-900">₦{clientWalletBalance.toLocaleString()}</div></div>
+          <div><div className="font-semibold text-gray-500">Total funded</div><div className="mt-1 font-extrabold text-gray-900">₦{walletTotal.toLocaleString()}</div></div>
+        </div>
+      ) : null}
 
       <div className="mt-4">
         <Link

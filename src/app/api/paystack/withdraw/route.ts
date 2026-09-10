@@ -68,7 +68,58 @@ async function initiateTransfer(secret: string, recipientCode: string, amountNai
   return { transferResp, transferJson }
 }
 
+async function returnReservedWithdrawalFunds(
+  db: ReturnType<typeof getAdminDb>,
+  walletRef: ReturnType<ReturnType<typeof getAdminDb>["doc"]>,
+  withdrawalId: string,
+  amount: number,
+  error: unknown,
+  status: "failed" | "reversed" = "failed"
+) {
+  await db.runTransaction(async (tx: Transaction) => {
+    const [walletSnap, withdrawalSnap] = await Promise.all([
+      tx.get(walletRef),
+      tx.get(walletRef.collection("withdrawals").doc(withdrawalId)),
+    ])
+    const withdrawal = withdrawalSnap.data() as any
+    if (!withdrawalSnap.exists || ["failed", "reversed"].includes(String(withdrawal?.status || ""))) return
+
+    const wallet = walletSnap.data() as any
+    tx.update(walletRef, {
+      availableBalance: Number(wallet?.availableBalance || 0) + amount,
+      pendingBalance: Math.max(0, Number(wallet?.pendingBalance || 0) - amount),
+      totalWithdrawn: withdrawal?.status === "paid"
+        ? Math.max(0, Number(wallet?.totalWithdrawn || 0) - amount)
+        : Number(wallet?.totalWithdrawn || 0),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+    tx.set(walletRef.collection("withdrawals").doc(withdrawalId), {
+      status,
+      error: error instanceof Error ? error.message : String(error || "Transfer failed"),
+      reversedAt: status === "reversed" ? admin.firestore.FieldValue.serverTimestamp() : null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true })
+    tx.set(walletRef.collection("transactions").doc(withdrawalId), {
+      status,
+      settlementStatus: status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true })
+    tx.set(walletRef.collection("transactions").doc(`${withdrawalId}_${status}`), {
+      type: "credit",
+      reason: "withdrawal_reversal",
+      amount,
+      currency: "NGN",
+      status: "completed",
+      meta: { withdrawalId, source: "paystack" },
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true })
+  })
+}
+
 export async function POST(req: Request) {
+  let reservedWalletRef: ReturnType<ReturnType<typeof getAdminDb>["doc"]> | null = null
+  let reservedWithdrawalId = ""
+  let reservedAmount = 0
   try {
     const adminDb = getAdminDb()
     const adminApp = getAdminApp()
@@ -93,6 +144,9 @@ export async function POST(req: Request) {
     const walletRef = db.doc(`wallets/${uid}`)
 
     const withdrawalId = `wd_${Date.now()}_${crypto.randomBytes(6).toString("hex")}`
+    reservedWalletRef = walletRef
+    reservedWithdrawalId = withdrawalId
+    reservedAmount = amountNaira
 
     await db.runTransaction(async (tx: Transaction) => {
       const wSnap = (await tx.get(walletRef)) as any
@@ -174,22 +228,7 @@ export async function POST(req: Request) {
 
     if (!transferResp.ok || !transferJson?.status) {
       // rollback pending -> available
-      await db.runTransaction(async (tx: Transaction) => {
-        const wSnap = (await tx.get(walletRef)) as any
-        const w = wSnap.data() as any
-        tx.update(walletRef, {
-          availableBalance: Number(w.availableBalance || 0) + amountNaira,
-          pendingBalance: Math.max(0, Number(w.pendingBalance || 0) - amountNaira),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        })
-        tx.update(walletRef.collection("withdrawals").doc(withdrawalId), {
-          status: "failed",
-          error: transferJson,
-          errorMessage: transferJson?.message || "Transfer failed",
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        })
-        tx.update(walletRef.collection("transactions").doc(withdrawalId), { status: "failed" })
-      })
+      await returnReservedWithdrawalFunds(db, walletRef, withdrawalId, amountNaira, transferJson)
 
       return NextResponse.json(
         {
@@ -202,40 +241,28 @@ export async function POST(req: Request) {
 
     await walletRef.collection("withdrawals").doc(withdrawalId).set(
       {
-        status: "paid",
+        status: "processing",
         paystack: {
           transferCode: transferJson.data.transfer_code,
           reference: withdrawalId,
         },
-        paidAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
 
-    await db.runTransaction(async (tx: Transaction) => {
-      const walletSnap = (await tx.get(walletRef)) as any
-      const walletData = walletSnap.data() as any
-
-      tx.update(walletRef, {
-        pendingBalance: Math.max(0, Number(walletData.pendingBalance || 0) - amountNaira),
-        totalWithdrawn: Number(walletData.totalWithdrawn || 0) + amountNaira,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      })
-
-      tx.update(walletRef.collection("transactions").doc(withdrawalId), {
-        status: "paid",
-        settlementStatus: "paid",
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      })
-    })
+    await walletRef.collection("transactions").doc(withdrawalId).set({
+      status: "processing",
+      settlementStatus: "processing",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true })
 
     // Send notification for withdrawal request
     await notifyUser({
       userId: uid,
       type: "withdrawal",
-      title: "Withdrawal paid",
-      message: `Your withdrawal of ₦${amountNaira.toLocaleString()} has been paid to your bank account.`,
+      title: "Withdrawal processing",
+      message: `Your withdrawal of ₦${amountNaira.toLocaleString()} is being confirmed by your bank.`,
       link: `/dashboard/wallet`,
     })
 
@@ -243,8 +270,8 @@ export async function POST(req: Request) {
     try {
       await notifyAdmins({
         type: "admin:withdrawal",
-        title: "Withdrawal paid",
-        message: `Talent ${uid} withdrawal of NGN ${amountNaira.toLocaleString()} was paid successfully.`,
+        title: "Withdrawal processing",
+        message: `Talent ${uid} withdrawal of NGN ${amountNaira.toLocaleString()} is awaiting Paystack confirmation.`,
         link: `/admin/wallets`,
       })
     } catch (err) {
@@ -256,6 +283,13 @@ export async function POST(req: Request) {
     return response
   } catch (e: any) {
     console.error(e)
+    if (reservedWalletRef && reservedWithdrawalId && reservedAmount > 0) {
+      try {
+        await returnReservedWithdrawalFunds(getAdminDb(), reservedWalletRef, reservedWithdrawalId, reservedAmount, e)
+      } catch (rollbackError) {
+        console.error("withdrawal rollback failed", rollbackError)
+      }
+    }
     return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 })
   }
 }

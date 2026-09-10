@@ -116,9 +116,21 @@ export default async function WalletsPage() {
                             </div>
                           </div>
                           <div>
-                            <div className="font-semibold text-gray-500">Total funded spend</div>
+                            <div className="font-semibold text-gray-500">Workspace funded</div>
                             <div className="mt-1 text-gray-900">
-                              {formatAdminMoney(wallet.totalSpent)}
+                              {formatAdminMoney(wallet.totalWorkspaceFunded ?? wallet.totalSpent)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-500">Wallet balance</div>
+                            <div className="mt-1 text-gray-900">
+                              {formatAdminMoney(wallet.availableBalance)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-500">Total funded</div>
+                            <div className="mt-1 text-gray-900">
+                              {formatAdminMoney(wallet.totalFundingReceived ?? (Number(wallet.totalLoaded || 0) + Number(wallet.totalSpent || 0)))}
                             </div>
                           </div>
                         </>
