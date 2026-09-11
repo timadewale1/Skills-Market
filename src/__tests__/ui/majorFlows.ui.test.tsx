@@ -41,6 +41,7 @@ jest.mock("next/navigation", () => ({
     replace: sharedMocks().replaceMock,
     prefetch: jest.fn(),
   }),
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 jest.mock("next/link", () => {
@@ -319,6 +320,7 @@ describe("Major client and talent UI flows", () => {
   beforeEach(() => {
     const mocks = sharedMocks()
     jest.clearAllMocks()
+    mocks.onSnapshotMock.mockReset()
     const stableUser = {
       uid: "user-1",
       email: "user@test.com",
@@ -611,7 +613,7 @@ describe("Major client and talent UI flows", () => {
         return jest.fn()
       })
       .mockImplementationOnce((ref: any, cb: any) => {
-        cb({ docs: [] })
+        cb({ docs: [], exists: () => false, data: () => ({}) })
         return jest.fn()
       })
 
@@ -672,7 +674,7 @@ describe("Major client and talent UI flows", () => {
         return jest.fn()
       })
       .mockImplementationOnce((ref: any, cb: any) => {
-        cb({ docs: [] })
+        cb({ docs: [], exists: () => false, data: () => ({}) })
         return jest.fn()
       })
 

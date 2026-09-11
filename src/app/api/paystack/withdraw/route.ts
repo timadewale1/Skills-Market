@@ -5,6 +5,7 @@ import admin from "firebase-admin"
 import type { DocumentReference, Firestore, Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
+import { settleWithdrawal } from "@/lib/paystack/withdrawalSettlement"
 
 export const runtime = "nodejs"
 
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
       const wSnap = (await tx.get(walletRef)) as any
       if (!wSnap?.exists) throw new Error("Wallet not found")
       const w = wSnap.data() as any
-      if (w.role !== "talent") throw new Error("Talent only")
+      if (!["talent", "client"].includes(String(w.role))) throw new Error("Only talent and client wallets can withdraw")
       if (!w.bank?.recipientCode) throw new Error("Add & verify bank account first")
 
       const avail = Number(w.availableBalance || 0)
@@ -239,7 +240,8 @@ export async function POST(req: Request) {
       )
     }
 
-    await walletRef.collection("withdrawals").doc(withdrawalId).set(
+    const withdrawalRef = walletRef.collection("withdrawals").doc(withdrawalId)
+    await withdrawalRef.set(
       {
         status: "processing",
         paystack: {
@@ -257,12 +259,26 @@ export async function POST(req: Request) {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true })
 
+    const transferStatus = String(transferJson?.data?.status || "").toLowerCase()
+    if (transferStatus === "success" || transferStatus === "successful") {
+      await settleWithdrawal(db, withdrawalRef, "paid", { eventName: "transfer.success" })
+    } else if (["failed", "reversed"].includes(transferStatus)) {
+      await settleWithdrawal(db, withdrawalRef, transferStatus as "failed" | "reversed", {
+        eventName: `transfer.${transferStatus}`,
+        failureReason: String(transferJson?.data?.reason || transferJson?.data?.failure_reason || "Transfer was not completed"),
+      })
+    }
+
+    const roleLabel = String(w2?.role || "user") === "client" ? "Client" : "Talent"
+
     // Send notification for withdrawal request
     await notifyUser({
       userId: uid,
       type: "withdrawal",
-      title: "Withdrawal processing",
-      message: `Your withdrawal of ₦${amountNaira.toLocaleString()} is being confirmed by your bank.`,
+      title: transferStatus === "success" || transferStatus === "successful" ? "Withdrawal paid" : "Withdrawal requested",
+      message: transferStatus === "success" || transferStatus === "successful"
+        ? `Your withdrawal of ₦${amountNaira.toLocaleString()} has been paid to your bank account.`
+        : `Your withdrawal of ₦${amountNaira.toLocaleString()} has been requested.`,
       link: `/dashboard/wallet`,
     })
 
@@ -270,8 +286,8 @@ export async function POST(req: Request) {
     try {
       await notifyAdmins({
         type: "admin:withdrawal",
-        title: "Withdrawal processing",
-        message: `Talent ${uid} withdrawal of NGN ${amountNaira.toLocaleString()} is awaiting Paystack confirmation.`,
+        title: "Withdrawal requested",
+        message: `${roleLabel} ${uid} has requested withdrawal of NGN ${amountNaira.toLocaleString()}.`,
         link: `/admin/wallets`,
       })
     } catch (err) {

@@ -86,6 +86,7 @@ function WalletPageContent() {
   const [topupAmount, setTopupAmount] = useState("")
   const [toppingUp, setToppingUp] = useState(false)
   const reconciledTopups = useRef(new Set<string>())
+  const reconciledWithdrawals = useRef(new Set<string>())
   const txCursors = useRef<any[]>([])
 
   const isTalent = wallet?.role === "talent"
@@ -266,6 +267,39 @@ function WalletPageContent() {
         if (results.some((response) => response.ok)) setHistoryRefresh((value) => value + 1)
       } catch (error) {
         console.error("pending wallet top-up reconciliation failed", error)
+      }
+    }
+
+    void reconcile()
+  }, [txs, user])
+
+  useEffect(() => {
+    if (!user || txs.length === 0) return
+
+    const pendingWithdrawals = txs
+      .filter((tx) => tx.reason === "withdrawal" && ["pending", "processing", "requested"].includes(String(tx.status || "").toLowerCase()))
+      .map((tx) => tx.meta?.withdrawalId || tx.id)
+      .filter((withdrawalId): withdrawalId is string => Boolean(withdrawalId) && !reconciledWithdrawals.current.has(withdrawalId))
+      .slice(0, 5)
+
+    if (pendingWithdrawals.length === 0) return
+    pendingWithdrawals.forEach((withdrawalId) => reconciledWithdrawals.current.add(withdrawalId))
+
+    const reconcile = async () => {
+      try {
+        const token = await user.getIdToken()
+        const results = await Promise.all(
+          pendingWithdrawals.map((withdrawalId) =>
+            fetch("/api/paystack/withdraw/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ withdrawalId }),
+            })
+          )
+        )
+        if (results.some((response) => response.ok)) setHistoryRefresh((value) => value + 1)
+      } catch (error) {
+        console.error("pending withdrawal reconciliation failed", error)
       }
     }
 
@@ -504,17 +538,13 @@ function WalletPageContent() {
                         Verified on Paystack
                       </Badge>
                       <div className="mt-2 text-xs font-semibold text-gray-500">
-                        {isTalent
-                          ? "Withdrawals will go to this account."
-                          : "Refunds or future settlement support can use this account."}
+                        Withdrawals will go to this account.
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-3 rounded-2xl border bg-white p-4">
                       <div className="text-xs font-semibold text-gray-500">
-                        {isTalent
-                          ? "Select your bank and account. We'll verify it via Paystack for withdrawals."
-                          : "Add a bank account for refund and settlement support. We'll verify it via Paystack."}
+                        Select your bank and account. We'll verify it via Paystack for withdrawals.
                       </div>
 
                       {banksLoading ? (
@@ -605,43 +635,43 @@ function WalletPageContent() {
                 </CardContent>
               </Card>
 
-              {isTalent ? (
-                <Card className="dashboard-card-accent rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="inline-flex items-center gap-2 text-base font-extrabold">
-                      <ArrowDownToLine className="h-5 w-5 text-[var(--primary)]" />
-                      Withdraw
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div className="text-xs font-semibold text-gray-500">Minimum withdrawal is ₦1,000.</div>
-                    <Input
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      placeholder="Amount (₦)"
-                      className="rounded-2xl"
-                    />
-                    <button
-                      type="button"
-                      onClick={withdraw}
-                      disabled={withdrawing || !wallet.bank?.recipientCode || (wallet.availableBalance || 0) < 1000}
-                      className="w-full rounded-2xl bg-[var(--primary)] py-2 font-extrabold text-white disabled:opacity-60"
-                    >
-                      {withdrawing ? "Processing..." : "Withdraw to bank"}
-                    </button>
-                    {!wallet.bank?.recipientCode ? (
-                      <div className="text-xs font-semibold text-orange-700">
-                        Add and verify your bank details first.
-                      </div>
-                    ) : null}
-                    {wallet.bank?.recipientCode && (wallet.availableBalance || 0) < 1000 ? (
-                      <div className="text-xs font-semibold text-orange-700">
-                        Your available balance is {money(wallet.availableBalance)}. Minimum is ₦1,000 to withdraw.
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ) : (
+              <Card className="dashboard-card-accent rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="inline-flex items-center gap-2 text-base font-extrabold">
+                    <ArrowDownToLine className="h-5 w-5 text-[var(--primary)]" />
+                    Withdraw
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="text-xs font-semibold text-gray-500">Minimum withdrawal is ₦1,000.</div>
+                  <Input
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Amount (₦)"
+                    className="rounded-2xl"
+                  />
+                  <button
+                    type="button"
+                    onClick={withdraw}
+                    disabled={withdrawing || !wallet.bank?.recipientCode || (wallet.availableBalance || 0) < 1000}
+                    className="w-full rounded-2xl bg-[var(--primary)] py-2 font-extrabold text-white disabled:opacity-60"
+                  >
+                    {withdrawing ? "Processing..." : "Withdraw to bank"}
+                  </button>
+                  {!wallet.bank?.recipientCode ? (
+                    <div className="text-xs font-semibold text-orange-700">
+                      Add and verify your bank details first.
+                    </div>
+                  ) : null}
+                  {wallet.bank?.recipientCode && (wallet.availableBalance || 0) < 1000 ? (
+                    <div className="text-xs font-semibold text-orange-700">
+                      Your available balance is {money(wallet.availableBalance)}. Minimum is ₦1,000 to withdraw.
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              {!isTalent ? (
                 <Card className="rounded-2xl">
                   <CardHeader>
                     <CardTitle className="inline-flex items-center gap-2 text-base font-extrabold">
@@ -699,7 +729,7 @@ function WalletPageContent() {
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              ) : null}
             </div>
           ) : null}
 
