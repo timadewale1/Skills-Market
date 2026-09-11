@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
@@ -58,7 +58,7 @@ function money(n?: number) {
   return v.toLocaleString("en-NG", { style: "currency", currency: "NGN" })
 }
 
-export default function WalletPage() {
+function WalletPageContent() {
   const { user } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -747,6 +747,14 @@ export default function WalletPage() {
         </div>
       </div>
     </RequireAuth>
+  )
+}
+
+export default function WalletPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--secondary)]" />}>
+      <WalletPageContent />
+    </Suspense>
   )
 }
 
