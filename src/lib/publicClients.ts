@@ -108,6 +108,11 @@ export function pickClientSocials(p: any) {
 }
 
 export async function fetchPublicClientBySlug(slug: string) {
+  // Canonical links use the document UID, which cannot collide between organizations.
+  const direct = await fetchPublicClientByUid(slug)
+  if (direct?.role === "client") return direct
+
+  // Retain old human-readable links as a backwards-compatible fallback.
   const qy = query(
     collection(db, "publicProfiles"),
     where("role", "==", "client"),
@@ -121,5 +126,5 @@ export async function fetchPublicClientBySlug(slug: string) {
 
 export async function fetchPublicClientByUid(uid: string) {
   const snap = await getDoc(doc(db, "publicProfiles", uid))
-  return snap.exists() ? (snap.data() as PublicClientProfile) : null
+  return snap.exists() ? ({ ...snap.data(), uid: snap.id } as PublicClientProfile) : null
 }

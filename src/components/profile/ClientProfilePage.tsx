@@ -119,7 +119,7 @@ export default function ClientProfilePage() {
       uid: user.uid,
       role: "client",
       fullName: userDoc.fullName,
-      slug: slugifyName(userDoc.fullName),
+      slug: slugifyName(userDoc.fullName, user.uid),
       location: userDoc.location || "",
       sdgTags: nextSdgs,
       profileComplete: !!userDoc.profileComplete,

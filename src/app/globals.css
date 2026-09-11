@@ -165,6 +165,7 @@ body {
     max-width: 100%;
   }
 
+  /* Preserve normal word shapes. Long unbroken identifiers can still wrap, but labels and names never split letter-by-letter. */
   p,
   h1,
   h2,
@@ -172,15 +173,21 @@ body {
   h4,
   h5,
   h6,
-  span,
-  label,
   li,
   td,
   th,
   dt,
   dd {
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  span,
+  label,
+  button,
+  a {
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   input,

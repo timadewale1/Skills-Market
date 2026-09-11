@@ -81,7 +81,7 @@ type PublicTalentDoc = {
 
 export default function PublicTalentProfilePage() {
   const params = useParams<{ uid: string }>()
-  const slug = params?.uid
+  const profileId = params?.uid
   const { user } = useAuth()
 
   const [data, setData] = useState<PublicTalentDoc | null>(null)
@@ -89,29 +89,34 @@ export default function PublicTalentProfilePage() {
 
   useEffect(() => {
     const run = async () => {
-      if (!slug) return
+      if (!profileId) return
       setLoading(true)
 
       try {
-        // ✅ Fetch directly from publicProfiles by slug
-        const qy = query(
-          collection(db, "publicProfiles"),
-          where("slug", "==", slug),
-          where("role", "==", "talent"),
-          limit(1)
-        )
-        const snap = await getDocs(qy)
+        // UID is the canonical URL identifier. Slug lookup only supports legacy links.
+        let raw: any = null
+        const direct = await getDoc(doc(db, "publicProfiles", profileId))
+        if (direct.exists() && direct.data()?.role === "talent") {
+          raw = { id: direct.id, ...direct.data() }
+        } else {
+          const legacy = await getDocs(query(
+            collection(db, "publicProfiles"),
+            where("slug", "==", profileId),
+            where("role", "==", "talent"),
+            limit(1)
+          ))
+          if (!legacy.empty) raw = { id: legacy.docs[0].id, ...legacy.docs[0].data() }
+        }
 
-        if (snap.empty) {
+        if (!raw) {
           setData(null)
-          setLoading(false)
           return
         }
 
-        const d = snap.docs[0].data() as any
+        const d = raw
 
         const mapped: PublicTalentDoc = {
-          uid: d.uid,
+          uid: d.uid || d.id,
           slug: d.slug,
           role: d.role,
           fullName: d.fullName || "Unnamed Talent",
@@ -149,7 +154,7 @@ export default function PublicTalentProfilePage() {
 
         setData(mapped)
       } catch (e) {
-        console.error("Failed to fetch public talent by slug:", e)
+        console.error("Failed to fetch public talent profile:", e)
         setData(null)
       } finally {
         setLoading(false)
@@ -157,7 +162,7 @@ export default function PublicTalentProfilePage() {
     }
 
     run()
-  }, [slug])
+  }, [profileId])
 
   const TopNav = user ? <AuthNavbar /> : <Navbar />
 

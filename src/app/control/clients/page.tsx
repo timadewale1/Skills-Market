@@ -313,8 +313,8 @@ export default function AdminClientsPage() {
                 filtered.map((c) => (
                   <Card key={c.uid} className="rounded-2xl hover:shadow-md transition">
                     <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4 flex-1">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 items-start gap-4 flex-1">
                           <div className="h-12 w-12 rounded-full bg-orange-50 flex items-center justify-center font-extrabold text-[var(--primary)] overflow-hidden">
                             {c.photoURL ? (
                               <img src={c.photoURL} alt={c.fullName} className="h-full w-full object-cover" />
@@ -323,11 +323,11 @@ export default function AdminClientsPage() {
                             )}
                           </div>
 
-                          <div className="flex-1">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap mb-1">
                               <Link
                                 href={`/control/clients/${c.uid}`}
-                                className="font-extrabold text-gray-900 hover:text-[var(--primary)] transition"
+                                className="min-w-0 break-words font-extrabold text-gray-900 hover:text-[var(--primary)] transition"
                               >
                                 {c.fullName}
                               </Link>
@@ -352,9 +352,9 @@ export default function AdminClientsPage() {
                               {c.companyName || "Company not specified"}
                             </div>
 
-                            <div className="flex items-center gap-4 text-xs text-gray-600 mb-2">
-                              <span>{c.location || "Location not set"}</span>
-                              <span>{c.openGigsCount || 0} open gigs</span>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 mb-2">
+                              <span className="whitespace-nowrap">{c.location || "Location not set"}</span>
+                              <span className="whitespace-nowrap">{c.openGigsCount || 0} open gigs</span>
                             </div>
 
                             <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
@@ -370,7 +370,7 @@ export default function AdminClientsPage() {
 
                             <div className="flex flex-wrap gap-1 mb-2">
                               {(c.categories || []).slice(0, 3).map((category) => (
-                                <span key={category} className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                                <span key={category} className="max-w-full whitespace-normal break-words text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
                                   {category}
                                 </span>
                               ))}
@@ -383,7 +383,7 @@ export default function AdminClientsPage() {
 
                             <div className="flex flex-wrap gap-1">
                               {(c.sdgTags || []).slice(0, 2).map((sdg) => (
-                                <span key={sdg} className="text-xs px-2 py-1 rounded-full border text-gray-700">
+                                <span key={sdg} className="max-w-full whitespace-normal break-words text-xs px-2 py-1 rounded-full border text-gray-700">
                                   {sdg}
                                 </span>
                               ))}
@@ -391,10 +391,10 @@ export default function AdminClientsPage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:min-w-[8.75rem]">
                           <Link
                             href={`/control/clients/${c.uid}`}
-                            className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-semibold hover:shadow-sm transition"
+                            className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border bg-white px-3 py-2 text-sm font-semibold hover:shadow-sm transition"
                           >
                             <Eye size={14} />
                             View client
@@ -404,7 +404,7 @@ export default function AdminClientsPage() {
                             {c.verification?.status !== "verified" && (
                               <button
                                 onClick={() => handleAction("verify", c)}
-                                className="inline-flex items-center gap-2 rounded-xl bg-green-600 text-white px-3 py-2 text-sm font-semibold hover:bg-green-700 transition"
+                                className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-green-600 text-white px-3 py-2 text-sm font-semibold hover:bg-green-700 transition"
                               >
                                 <CheckCircle size={14} />
                                 Verify
@@ -414,7 +414,7 @@ export default function AdminClientsPage() {
                             {c.verification?.status === "pending" && (
                               <button
                                 onClick={() => handleAction("reject", c)}
-                                className="inline-flex items-center gap-2 rounded-xl bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700 transition"
+                                className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700 transition"
                               >
                                 <X size={14} />
                                 Reject
@@ -424,7 +424,7 @@ export default function AdminClientsPage() {
                             {!c.disabled ? (
                               <button
                                 onClick={() => handleAction("disable", c)}
-                                className="inline-flex items-center gap-2 rounded-xl bg-yellow-600 text-white px-3 py-2 text-sm font-semibold hover:bg-yellow-700 transition"
+                                className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-yellow-600 text-white px-3 py-2 text-sm font-semibold hover:bg-yellow-700 transition"
                               >
                                 <Ban size={14} />
                                 Disable
@@ -432,7 +432,7 @@ export default function AdminClientsPage() {
                             ) : (
                               <button
                                 onClick={() => handleAction("enable", c)}
-                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700 transition"
+                                className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700 transition"
                               >
                                 <CheckCircle size={14} />
                                 Enable

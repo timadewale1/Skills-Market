@@ -579,7 +579,7 @@ export default function TalentGigDetailsPage() {
                           <div className="font-extrabold">
                             {clientProfile?.slug ? (
                               <Link
-                                href={`/clients/${clientProfile.slug}`}
+                                href={`/clients/${clientProfile.uid}`}
                                 className="inline-flex items-center gap-2 hover:text-[var(--primary)] transition underline-offset-4 hover:underline"
                               >
                                 {gig.clientOrgName || gig.clientName || "Client"}

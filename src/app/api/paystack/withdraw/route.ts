@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
-import type { Transaction } from "firebase-admin/firestore"
+import type { DocumentReference, Firestore, Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 
@@ -69,8 +69,8 @@ async function initiateTransfer(secret: string, recipientCode: string, amountNai
 }
 
 async function returnReservedWithdrawalFunds(
-  db: ReturnType<typeof getAdminDb>,
-  walletRef: ReturnType<ReturnType<typeof getAdminDb>["doc"]>,
+  db: Firestore,
+  walletRef: DocumentReference,
   withdrawalId: string,
   amount: number,
   error: unknown,
@@ -117,7 +117,7 @@ async function returnReservedWithdrawalFunds(
 }
 
 export async function POST(req: Request) {
-  let reservedWalletRef: ReturnType<ReturnType<typeof getAdminDb>["doc"]> | null = null
+  let reservedWalletRef: DocumentReference | null = null
   let reservedWithdrawalId = ""
   let reservedAmount = 0
   try {

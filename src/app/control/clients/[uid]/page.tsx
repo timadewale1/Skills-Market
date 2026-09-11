@@ -409,17 +409,74 @@ export default function AdminClientDetailPage() {
           <div className="control-profile-content grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* MAIN CONTENT */}
             <div className="lg:col-span-2 space-y-6">
-              {/* ABOUT */}
-              {profile.bio && (
-                <Card className="rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-extrabold">About</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
-                  </CardContent>
-                </Card>
-              )}
+              {/* This remains useful even when an organization has not completed optional fields. */}
+              <Card className="rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-lg font-extrabold">Organization overview</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <p className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
+                    {profile.bio || "This organization has not added an overview yet. Its marketplace information and activity are shown below as the profile is completed."}
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="border rounded-lg p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Organization</p>
+                      <p className="mt-1 font-semibold text-gray-800">{profile.companyName || "Not provided"}</p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Industry</p>
+                      <p className="mt-1 font-semibold text-gray-800">{profile.industry || "Not provided"}</p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Location</p>
+                      <p className="mt-1 font-semibold text-gray-800">{profile.location || "Not provided"}</p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Marketplace activity</p>
+                      <p className="mt-1 font-semibold text-gray-800">{profile.openGigsCount || 0} open gigs</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Work categories</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.categories?.length ? profile.categories.map((category) => (
+                        <Badge key={category} variant="outline" className="max-w-full whitespace-normal text-xs">{category}</Badge>
+                      )) : <p className="text-sm text-gray-500">No work categories selected yet.</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Impact focus</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.sdgTags?.length ? profile.sdgTags.map((sdg) => (
+                        <Badge key={sdg} variant="secondary" className="max-w-full whitespace-normal text-xs">{sdg}</Badge>
+                      )) : <p className="text-sm text-gray-500">No SDG focus areas selected yet.</p>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-lg font-extrabold">Marketplace records</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <Link href={`/control/clients/${profile.uid}/gigs`} className="border rounded-lg p-4 transition hover:border-orange-200 hover:bg-orange-50">
+                    <Briefcase size={18} className="mb-2 text-[var(--primary)]" />
+                    <p className="font-semibold text-gray-800">Gigs</p>
+                    <p className="text-sm text-gray-500">View posted opportunities</p>
+                  </Link>
+                  <Link href={`/control/clients/${profile.uid}/proposals`} className="border rounded-lg p-4 transition hover:border-orange-200 hover:bg-orange-50">
+                    <Building size={18} className="mb-2 text-[var(--primary)]" />
+                    <p className="font-semibold text-gray-800">Proposals</p>
+                    <p className="text-sm text-gray-500">Review talent responses</p>
+                  </Link>
+                  <Link href={`/control/clients/${profile.uid}/workspaces`} className="border rounded-lg p-4 transition hover:border-orange-200 hover:bg-orange-50">
+                    <CheckCircle size={18} className="mb-2 text-[var(--primary)]" />
+                    <p className="font-semibold text-gray-800">Workspaces</p>
+                    <p className="text-sm text-gray-500">Review active engagements</p>
+                  </Link>
+                </CardContent>
+              </Card>
 
               {/* WEBSITE */}
               {profile.website && (

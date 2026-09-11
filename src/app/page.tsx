@@ -325,6 +325,7 @@ function ProfileCard({ p, idx, inView }: { p: any; idx: number; inView: boolean 
   const reviews = isReal ? (p.reviewCount || 0) : p.reviews
   const available = isReal ? (p.available !== false) : p.available
   const photoUrl = isReal ? p.publicProfile?.photoURL : p.img
+  const impactPalBadge = isReal && Boolean(p.impactPalBadge)
 
   return (
     <div
@@ -342,6 +343,11 @@ function ProfileCard({ p, idx, inView }: { p: any; idx: number; inView: boolean 
         {available && (
           <span className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 text-emerald-600 text-[10px] font-bold backdrop-blur-sm" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Available
+          </span>
+        )}
+        {impactPalBadge && (
+          <span className="absolute bottom-3 left-3 rounded-full border border-orange-200 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#F97316] backdrop-blur-sm" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+            Impactpal
           </span>
         )}
         <button onClick={e => { e.stopPropagation(); setSaved(s => !s) }}
@@ -366,7 +372,7 @@ function ProfileCard({ p, idx, inView }: { p: any; idx: number; inView: boolean 
         </div>
         <div className="flex items-center justify-between">
           <span className="font-bold text-sm text-[#111]" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{rate}</span>
-          <Link href={`/talent/${p.slug || p.id || idx}`}
+          <Link href={`/talent/${p.uid || p.id || idx}`}
             className="text-xs font-bold text-[#F97316] flex items-center gap-1 hover:gap-2 transition-all no-underline"
             style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
             View <FiArrowRight size={11} />
@@ -422,7 +428,10 @@ export default function Home() {
         try {
           const snap = await getDocs(collection(db, "publicProfiles"))
           const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
-          profiles = all.filter((u: any) => u.role === "talent" && u.profileComplete === true).sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)).slice(0, 4)
+          profiles = all
+            .filter((u: any) => u.role === "talent" && u.profileComplete === true && u.impactPalBadge === true)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 5)
           const talents = all.filter((u: any) => u.role === "talent")
           const cnts: Record<string, number> = {}
           SDGS.forEach((s: string) => cnts[s] = 0)
@@ -795,10 +804,12 @@ Pay for what you need. Get work that counts.                </p>
               </div>
               <Link href="/hire" className="la">Browse all talent <FiArrowRight size={13} /></Link>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {(featuredProfiles.length > 0 ? featuredProfiles.slice(0, 4) : PROFILES).map((p, i) => (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+              {featuredProfiles.length ? featuredProfiles.slice(0, 5).map((p, i) => (
                 <ProfileCard key={p.id || i} p={p} idx={i} inView={profilesRef.inView} />
-              ))}
+              )) : (
+                <p className="col-span-full rounded-2xl border border-orange-100 bg-orange-50 p-6 text-sm text-gray-600">Impactpal talent profiles will appear here as they are added.</p>
+              )}
             </div>
           </div>
         </section>

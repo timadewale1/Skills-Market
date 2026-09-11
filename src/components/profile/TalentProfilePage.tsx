@@ -193,7 +193,7 @@ const [portfolioEditing, setPortfolioEditing] = useState<PortfolioItem | null>(n
       uid: user.uid,
       role: "talent",
       fullName: userDoc.fullName,
-      slug: slugifyName(userDoc.fullName),
+      slug: slugifyName(userDoc.fullName, user.uid),
       location: userDoc.location || "",
       sdgTags: userDoc.sdgTags || [],
       profileComplete: !!userDoc.profileComplete,

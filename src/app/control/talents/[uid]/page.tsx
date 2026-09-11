@@ -418,17 +418,43 @@ export default function AdminTalentDetailPage() {
           <div className="control-profile-content grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* MAIN CONTENT */}
             <div className="lg:col-span-2 space-y-6">
-              {/* ABOUT */}
-              {profile.bio && (
-                <Card className="rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-extrabold">About</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Keep the main column informative for newly created or partially completed profiles. */}
+              <Card className="rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-lg font-extrabold">Professional overview</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <p className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
+                    {profile.bio || "This talent has not added a professional summary yet. Their available marketplace information is shown below as the profile is completed."}
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="border rounded-lg p-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Role</p><p className="mt-1 font-semibold text-gray-800">{profile.roleTitle || "Not provided"}</p></div>
+                    <div className="border rounded-lg p-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Availability</p><p className="mt-1 font-semibold text-gray-800">{profile.availability || "Not provided"}</p></div>
+                    <div className="border rounded-lg p-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Work preference</p><p className="mt-1 font-semibold text-gray-800">{profile.workMode || "Not provided"}</p></div>
+                    <div className="border rounded-lg p-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Experience</p><p className="mt-1 font-semibold text-gray-800">{profile.yearsExperience ? `${profile.yearsExperience} years` : "Not provided"}</p></div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Skills</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills?.length ? profile.skills.map((skill) => <Badge key={skill} variant="outline" className="max-w-full whitespace-normal text-xs">{skill}</Badge>) : <p className="text-sm text-gray-500">No skills added yet.</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Impact focus</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.sdgTags?.length ? profile.sdgTags.map((sdg) => <Badge key={sdg} variant="secondary" className="max-w-full whitespace-normal text-xs">{sdg}</Badge>) : <p className="text-sm text-gray-500">No SDG focus areas selected yet.</p>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl">
+                <CardHeader><CardTitle className="text-lg font-extrabold">Marketplace records</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Link href={`/control/talents/${profile.uid}/proposals`} className="border rounded-lg p-4 transition hover:border-orange-200 hover:bg-orange-50"><FileText size={18} className="mb-2 text-[var(--primary)]" /><p className="font-semibold text-gray-800">Proposals</p><p className="text-sm text-gray-500">Review submitted proposals</p></Link>
+                  <Link href={`/control/talents/${profile.uid}/workspaces`} className="border rounded-lg p-4 transition hover:border-orange-200 hover:bg-orange-50"><Briefcase size={18} className="mb-2 text-[var(--primary)]" /><p className="font-semibold text-gray-800">Workspaces</p><p className="text-sm text-gray-500">Review active engagements</p></Link>
+                </CardContent>
+              </Card>
 
               {/* PORTFOLIO */}
               {profile.portfolio && profile.portfolio.length > 0 && (

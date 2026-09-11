@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
-import type { Transaction } from "firebase-admin/firestore"
+import type { Firestore, Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
@@ -15,7 +15,7 @@ async function readRawBody(req: Request) {
   return Buffer.from(arrayBuffer)
 }
 
-async function settleWithdrawalEvent(db: ReturnType<typeof getAdminDb>, event: any) {
+async function settleWithdrawalEvent(db: Firestore, event: any) {
   const reference = String(event?.data?.reference || "")
   const eventName = String(event?.event || "")
   if (!reference || !["transfer.success", "transfer.failed", "transfer.reversed"].includes(eventName)) return false

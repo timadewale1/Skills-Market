@@ -672,7 +672,7 @@ export default function GigProposalsPage() {
                           <div className="text-xs text-gray-500 font-semibold">Talent profile</div>
                           {getTalentSlug(open) ? (
                             <Link
-                              href={`/talent/${getTalentSlug(open)}`}
+                              href={`/talent/${open.talentUid || getTalentSlug(open)}`}
                               className="mt-1 inline-flex items-center gap-2 text-[var(--primary)] font-extrabold hover:underline"
                             >
                               <ExternalLink size={16} />

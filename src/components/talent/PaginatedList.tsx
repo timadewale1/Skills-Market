@@ -34,7 +34,7 @@ export default function TalentCard({
   const impactBadge = Boolean(t.impactPalBadge)
   const avg = Number(t.rating?.avg || 0)
   const count = Number(t.rating?.count || 0)
-  const href = t.slug ? `/talent/${t.slug}` : `/talent/${t.uid}`
+  const href = `/talent/${t.uid}`
 
   return (
     <motion.div

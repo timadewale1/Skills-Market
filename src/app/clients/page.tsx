@@ -158,7 +158,7 @@ export default function ClientsBrowsePage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.03, duration: 0.25 }}
                 >
-                  <Link href={`/clients/${c.slug}`} className="block">
+                  <Link href={`/clients/${c.uid}`} className="block">
                     <Card className="rounded-2xl hover:shadow-md transition bg-white">
                       <CardContent className="p-5">
                         <div className="flex items-start gap-4">

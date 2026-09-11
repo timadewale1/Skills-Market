@@ -33,6 +33,7 @@ export type PublicTalentProfile = {
   verification?: { status?: "not_submitted" | "pending" | "verified" | "rejected" }
   sdgTags?: string[]
   slug?: string
+  impactPalBadge?: boolean
   // Nested structures for details page
   talent?: {
     roleTitle?: string
@@ -82,11 +83,41 @@ const snap = await getDoc(doc(db, "publicProfiles", uid))
     verification: d?.verification || { status: "not_submitted" },
     sdgTags: d?.sdgTags || [],
     slug: d?.slug,
+    impactPalBadge: Boolean(d?.impactPalBadge),
   }
 }
 
 export async function fetchPublicTalentBySlug(slugOrUid: string): Promise<PublicTalentProfile | null> {
-  // Try by slug first
+  // Public profile document IDs are the canonical, collision-free route identifiers.
+  const direct = await getDoc(doc(db, "publicProfiles", slugOrUid))
+  if (direct.exists() && direct.data()?.role === "talent") {
+    const d: any = direct.data()
+    const p = d?.publicProfile || {}
+    const talent = d?.talent || {}
+    return {
+      uid: direct.id,
+      fullName: d?.fullName || "Unnamed Talent",
+      location: d?.location || "",
+      roleTitle: talent?.roleTitle || "",
+      photoURL: p?.photoURL || "",
+      hourlyRate: p?.hourlyRate ?? null,
+      bio: p?.bio || "",
+      skills: talent?.skills || [],
+      languages: p?.languages || [],
+      education: p?.education || [],
+      certifications: p?.certifications || [],
+      employment: p?.employment || [],
+      socials: p?.socials || {},
+      portfolio: p?.portfolio || [],
+      rating: d?.rating || { avg: 0, count: 0 },
+      verification: d?.verification || { status: "not_submitted" },
+      sdgTags: d?.sdgTags || [],
+      slug: d?.slug,
+      impactPalBadge: Boolean(d?.impactPalBadge),
+    }
+  }
+
+  // Legacy name slugs remain supported for older shared links.
   const q1 = query(
     collection(db, "publicProfiles"),
     where("slug", "==", slugOrUid),
@@ -117,6 +148,7 @@ export async function fetchPublicTalentBySlug(slugOrUid: string): Promise<Public
       verification: d?.verification || { status: "not_submitted" },
       sdgTags: d?.sdgTags || [],
       slug: d?.slug,
+      impactPalBadge: Boolean(d?.impactPalBadge),
     }
   }
 
@@ -151,6 +183,7 @@ export async function fetchPublicTalentBySlug(slugOrUid: string): Promise<Public
       verification: d?.verification || { status: "not_submitted" },
       sdgTags: d?.sdgTags || [],
       slug: d?.slug,
+      impactPalBadge: Boolean(d?.impactPalBadge),
     }
   }
 
@@ -189,6 +222,7 @@ export async function fetchPublicTalents(limitCount: number = 20): Promise<Publi
       verification: d?.verification || { status: "not_submitted" },
       sdgTags: d?.sdgTags || [],
       slug: d?.slug,
+      impactPalBadge: Boolean(d?.impactPalBadge),
     }
   })
 }
