@@ -412,9 +412,25 @@ function WalletPageContent() {
   const txStatusLabel = (status: string, settlementStatus?: string) => {
     const normalized = String(settlementStatus || status || "").toLowerCase()
     if (["paid", "completed", "success", "successful"].includes(normalized)) return "paid"
-    if (["failed", "declined", "reversed"].includes(normalized)) return "failed"
+    if (["failed", "declined"].includes(normalized)) return "failed"
+    if (normalized === "reversed") return "reversed"
     if (["processing", "requested", "pending", "initiated"].includes(normalized)) return "pending"
     return normalized || "recorded"
+  }
+
+  const txStatusClass = (tx: Tx) => {
+    if (tx.reason !== "withdrawal") return "border-gray-200 bg-gray-100 text-gray-700"
+    const normalized = String(tx.settlementStatus || tx.status || "").toLowerCase()
+    if (["paid", "completed", "success", "successful"].includes(normalized)) {
+      return "border-green-200 bg-green-100 text-green-800"
+    }
+    if (["failed", "declined"].includes(normalized)) {
+      return "border-red-200 bg-red-100 text-red-800"
+    }
+    if (normalized === "reversed") {
+      return "border-yellow-200 bg-yellow-100 text-yellow-800"
+    }
+    return "border-gray-200 bg-gray-100 text-gray-700"
   }
 
 
@@ -756,7 +772,7 @@ function WalletPageContent() {
                       <div className={`font-extrabold ${tx.type === "credit" ? "text-green-700" : "text-gray-900"}`}>
                         {tx.type === "credit" ? "+" : "-"} {money(tx.amount)}
                       </div>
-                      <Badge className="rounded-full border bg-gray-100 text-gray-700">
+                      <Badge className={`rounded-full border ${txStatusClass(tx)}`}>
                         {txStatusLabel(tx.status, tx.settlementStatus)}
                       </Badge>
                     </div>
