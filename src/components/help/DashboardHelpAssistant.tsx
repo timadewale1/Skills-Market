@@ -183,11 +183,21 @@ export default function DashboardHelpAssistant({ role }: Props) {
 
     setSendingSupport(true)
     try {
-      const threadId = supportThread?.id || `support_${user.uid}`
-      const uploadedAttachments =
-        pendingAttachments.length > 0 ? await uploadSupportAttachments(threadId, pendingAttachments) : []
-
       const token = await user.getIdToken()
+      let threadId = supportThread?.id
+      if (!threadId && pendingAttachments.length > 0) {
+        const threadResponse = await fetch("/api/support/thread", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const threadJson = await threadResponse.json()
+        if (!threadResponse.ok) throw new Error(threadJson?.error || "Failed to prepare support thread.")
+        threadId = threadJson.threadId
+      }
+      const uploadThreadId = threadId || `support_${user.uid}`
+      const uploadedAttachments =
+        pendingAttachments.length > 0 ? await uploadSupportAttachments(uploadThreadId, pendingAttachments) : []
+
       const res = await fetch("/api/support/send", {
         method: "POST",
         headers: {

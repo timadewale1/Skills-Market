@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin"
-import { getSupportThreadForUser } from "@/lib/support"
+import { ensureSupportThread, getSupportThreadForUser } from "@/lib/support"
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,5 +32,38 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error("support thread get error", error)
     return NextResponse.json({ error: error?.message || "Failed to load support thread." }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const auth = getAdminAuth()
+    const db = getAdminDb()
+    const decoded = await auth.verifyIdToken(authHeader.slice(7))
+    const userId = decoded.uid
+    const userSnap = await db.collection("users").doc(userId).get()
+    const user = userSnap.data() as any
+    const role = String(user?.role || "")
+
+    if (role !== "talent" && role !== "client") {
+      return NextResponse.json({ error: "Only dashboard users can open support chats." }, { status: 403 })
+    }
+
+    const threadId = await ensureSupportThread({
+      userUid: userId,
+      userRole: role,
+      userName: user?.client?.orgName || user?.fullName || user?.email || (role === "talent" ? "Talent" : "Client"),
+      userEmail: user?.email || decoded.email || null,
+    })
+
+    return NextResponse.json({ threadId })
+  } catch (error: any) {
+    console.error("support thread create error", error)
+    return NextResponse.json({ error: error?.message || "Failed to create support thread." }, { status: 500 })
   }
 }

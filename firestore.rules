@@ -58,6 +58,12 @@ service cloud.firestore {
           && request.resource.data.role in ["client", "talent"]
         )
         || (
+          isMe(uid)
+          && request.resource.data.uid == uid
+          && !("role" in request.resource.data)
+          && request.resource.data.keys().hasOnly(["uid", "email", "updatedAt"])
+        )
+        || (
           isAdmin()
           && request.resource.data.uid == uid
         );
@@ -70,15 +76,21 @@ service cloud.firestore {
           && (
             !("kyc" in request.resource.data)
             || (
-              kycStatusAllowed(resource.data.kyc.status, request.resource.data.kyc.status)
-              && !("adminNotes" in request.resource.data.kyc)
+              kycStatusAllowed(
+                resource.data.get("kyc", {}).get("status", "not_submitted"),
+                request.resource.data.get("kyc", {}).get("status", "not_submitted")
+              )
+              && !request.resource.data.get("kyc", {}).diff(resource.data.get("kyc", {})).affectedKeys().hasAny(["adminNotes"])
             )
           )
           && (
             !("orgKyc" in request.resource.data)
             || (
-              orgKycStatusAllowed(resource.data.orgKyc.status, request.resource.data.orgKyc.status)
-              && !("adminNotes" in request.resource.data.orgKyc)
+              orgKycStatusAllowed(
+                resource.data.get("orgKyc", {}).get("status", "not_submitted"),
+                request.resource.data.get("orgKyc", {}).get("status", "not_submitted")
+              )
+              && !request.resource.data.get("orgKyc", {}).diff(resource.data.get("orgKyc", {})).affectedKeys().hasAny(["adminNotes"])
             )
           )
         );

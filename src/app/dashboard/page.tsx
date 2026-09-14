@@ -7,7 +7,7 @@ import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
+import { doc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Briefcase,
@@ -23,6 +23,7 @@ import {
   FolderOpen,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion, animate } from "framer-motion"
 import { Wallet } from "lucide-react"
 import TalentCard, { TalentRow } from "@/components/talent/TalentCard"
@@ -37,6 +38,7 @@ type Role = "talent" | "client"
 type UserDoc = {
   role: Role
   profileComplete?: boolean
+  dashboardWelcomeSeen?: boolean
   fullName?: string
   location?: string
   sdgTags?: string[]
@@ -98,8 +100,11 @@ function sortByRecent<T extends { createdAt?: any; updatedAt?: any }>(items: T[]
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const [profile, setProfile] = useState<UserDoc | null>(null)
   const [loading, setLoading] = useState(true)
+  const [welcomeOpen, setWelcomeOpen] = useState(false)
+  const [welcomeSaving, setWelcomeSaving] = useState(false)
   const [walletTotal, setWalletTotal] = useState(0)
   const [clientWalletBalance, setClientWalletBalance] = useState(0)
 
@@ -135,6 +140,7 @@ export default function DashboardPage() {
       const data = (snap.data() as any) || null
 
       setProfile(data)
+      setWelcomeOpen(data?.dashboardWelcomeSeen !== true)
       setLoading(false)
 
       const role: Role = data?.role
@@ -492,9 +498,76 @@ export default function DashboardPage() {
 
   const role = profile?.role || "talent"
 
+  const proceedToProfile = async () => {
+    if (!user?.uid || welcomeSaving) return
+    setWelcomeSaving(true)
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        { dashboardWelcomeSeen: true, updatedAt: serverTimestamp() },
+        { merge: true }
+      )
+      setWelcomeOpen(false)
+      router.push("/dashboard/profile")
+    } catch (error) {
+      console.error("welcome modal state save failed", error)
+      setWelcomeOpen(false)
+      router.push("/dashboard/profile")
+    } finally {
+      setWelcomeSaving(false)
+    }
+  }
+
   return (
     <RequireAuth>
       <AuthNavbar />
+
+      {welcomeOpen ? (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/45 px-4 py-6">
+          <div className="w-full max-w-lg rounded-3xl border border-orange-100 bg-white p-6 shadow-2xl sm:p-8">
+            <div className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">Welcome to changeworker</div>
+            <h2 className="mt-2 text-2xl font-extrabold text-gray-900">
+              {role === "talent" ? "Find work that fits you" : "Find the right people for your work"}
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              {role === "talent"
+                ? "Changeworker helps you find meaningful projects, talk with clients, and get paid securely."
+                : "Changeworker helps you find trusted talent, manage projects, and keep payments organised. We'll guide you through each step."
+              }
+            </p>
+            <div className="mt-6 space-y-4">
+              {(role === "talent"
+                ? [
+                    ["Complete your profile", "Tell clients about your skills, experience, and the kind of work you want."],
+                    ["Find suitable work", "Browse opportunities that match your interests and apply when you are ready."],
+                    ["Work and get paid", "Use your workspace to communicate, deliver your work, and receive payment securely."],
+                  ]
+                : [
+                    ["Complete your profile", "Tell talent about your organisation, your work, and the impact you care about."],
+                    ["Post and find talent", "Share a clear project brief or search for people with the skills you need."],
+                    ["Work and pay securely", "Use your workspace to manage the project, review work, and handle payment safely."],
+                  ]
+              ).map(([title, description], index) => (
+                <div key={title} className="flex gap-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-50 text-sm font-extrabold text-[var(--primary)]">{index + 1}</div>
+                  <div>
+                    <div className="font-bold text-gray-900">{title}</div>
+                    <div className="mt-1 text-sm leading-5 text-gray-600">{description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => void proceedToProfile()}
+              disabled={welcomeSaving}
+              className="mt-7 w-full rounded-2xl bg-[var(--primary)] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+              {welcomeSaving ? "Opening your profile..." : "Proceed to complete profile to continue"}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="dashboard-page bg-transparent min-h-[calc(100vh-64px)]">
         <div className="section-shell mx-auto max-w-[90rem] px-4 py-8 lg:px-8">
@@ -526,6 +599,25 @@ export default function DashboardPage() {
               <span className="text-gray-700">SDG-first marketplace • Nigeria</span>
             </div>
           </motion.div>
+
+          {!profile?.profileComplete ? (
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={fadeUp}
+              custom={1.5}
+              className="mt-4"
+            >
+              <Link href="/dashboard/profile" className="group flex items-center justify-between gap-4 rounded-3xl border-2 border-orange-200 bg-orange-50 px-5 py-4 transition hover:border-[var(--primary)] hover:bg-orange-100 md:px-6">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">Your first step</div>
+                  <div className="mt-1 text-lg font-extrabold text-gray-900">Complete your profile before you continue</div>
+                  <div className="mt-1 text-sm text-gray-700">Add your details so we can show you the right opportunities and people.</div>
+                </div>
+                <ArrowRight className="shrink-0 text-[var(--primary)] transition group-hover:translate-x-1" size={22} />
+              </Link>
+            </motion.div>
+          ) : null}
 
           {/* Trust strip */}
           <motion.div
@@ -651,29 +743,6 @@ export default function DashboardPage() {
                 </CardHeader>
 
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {profile?.role === "talent" && !profile?.profileComplete && (
-                    <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}>
-                      <Link
-                        href="/dashboard/profile"
-                        className="action-tile group block rounded-3xl border bg-white p-5 hover:bg-white transition"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center">
-                            <TrendingUp className="text-[var(--primary)]" size={18} />
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-extrabold text-gray-900 group-hover:text-[var(--primary)] transition">
-                              Complete your profile
-                            </div>
-                            <div className="text-sm text-gray-600 mt-1">
-                              Complete your profile before you can apply for gigs.
-                            </div>
-                          </div>
-                          <ArrowRight className="text-gray-400 group-hover:text-[var(--primary)] transition" size={18} />
-                        </div>
-                      </Link>
-                    </motion.div>
-                  )}
                   {primaryActions.map((a) => {
                     const Icon = a.icon
                     return (
