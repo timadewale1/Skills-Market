@@ -60,7 +60,7 @@ export default function NotificationBell() {
   }
 
   return (
-    <div className="relative z-[200] inline-block">
+    <div className="relative z-[1100] inline-block">
       <motion.button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         animate={unread > 0 ? { scale: [1, 1.08, 1] } : {}}
@@ -80,7 +80,7 @@ export default function NotificationBell() {
       </motion.button>
 
       {dropdownOpen ? (
-        <div className="fixed right-2 left-auto top-[68px] z-[200] w-[min(24rem,calc(100vw-1rem))] overflow-y-auto rounded-[1.5rem] border bg-white shadow-xl sm:absolute sm:top-full sm:mt-2 sm:w-96" style={{ maxHeight: '80vh' }}>
+        <div className="fixed right-2 left-auto top-[68px] z-[1100] w-[min(24rem,calc(100vw-1rem))] overflow-y-auto rounded-[1.5rem] border bg-white shadow-xl sm:w-96" style={{ maxHeight: '80vh' }}>
           <div className="sticky top-0 border-b bg-white px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <div>

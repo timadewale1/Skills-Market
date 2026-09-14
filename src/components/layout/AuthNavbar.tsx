@@ -131,7 +131,7 @@ export default function AuthNavbar() {
 
   return (
     <>
-    <header className="fixed inset-x-0 top-0 z-[100] border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
+    <header className="!fixed inset-x-0 top-0 !z-[1000] border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="mx-auto flex min-w-0 max-w-7xl items-center justify-between gap-3 px-4 py-3">
         {/* LEFT */}
         <div className="flex min-w-0 items-center gap-4 md:gap-6">
