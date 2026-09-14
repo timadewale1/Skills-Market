@@ -112,11 +112,13 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAdmin() || (
         isMe(uid)
-        && request.resource.data.keys().hasNone(["verification", "rating"])
+        && request.resource.data.verification.status == "not_submitted"
+        && request.resource.data.rating.avg == 0
+        && request.resource.data.rating.count == 0
       );
       allow update: if isAdmin() || (
         isMe(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasNone(["verification", "rating"])
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["verification", "rating"])
       );
       allow delete: if isAdmin();
     }
@@ -326,7 +328,7 @@ service cloud.firestore {
           request.auth.uid == resource.data.clientUid
           || request.auth.uid == resource.data.talentUid
         )
-        && request.resource.data.diff(resource.data).affectedKeys().hasNone(["payment"])
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["payment"])
       );
 
       allow delete: if false;
