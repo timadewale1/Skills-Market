@@ -328,7 +328,7 @@ export default function DashboardHelpAssistant({ role }: Props) {
                   Chat with support
                 </div>
                 <p className="mt-2 text-sm leading-6 text-gray-600">
-                  Need a human to step in? Send a message with optional attachments and it will appear in the admin support inbox.
+                  Need a human to step in? Send a message with optional attachments.
                 </p>
 
                 <div className="mt-4 space-y-3">
