@@ -89,7 +89,10 @@ export async function POST(request: NextRequest) {
 
     let matchedTalentCount = 0
     if (gig.status === "open" && !gig.matchedTalentNotifiedAt) {
-      const publicTalentSnap = await db.collection("publicProfiles").where("role", "==", "talent").get()
+      const publicTalentSnap = await db.collection("publicProfiles")
+        .where("role", "==", "talent")
+        .where("verification.status", "==", "verified")
+        .get()
       const talents: TalentProfile[] = publicTalentSnap.docs.map((talentDoc: any) => {
         const data = talentDoc.data() || {}
         const publicProfile = data.publicProfile || {}

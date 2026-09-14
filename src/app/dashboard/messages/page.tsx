@@ -7,11 +7,8 @@ import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/lib/firebase"
-import { getAuth } from "firebase/auth"
 import {
   collection,
-  doc,
-  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -75,23 +72,6 @@ export default function MessagesPage() {
 
 
     return () => unsub()
-  }, [user?.uid])
-
-  useEffect(() => {
-    if (!user?.uid) return
-
-    ;(async () => {
-      const auth = getAuth()
-      console.log("CTX user uid:", user.uid)
-      console.log("AUTH currentUser uid:", auth.currentUser?.uid)
-
-      const token = await auth.currentUser?.getIdTokenResult()
-      console.log("TOKEN uid:", token?.claims?.user_id)
-
-      const ref = doc(db, "threads", "gig_F3FQn0JJmsLXkT__c_jK41GAnyB8Xau72BjdGfXGmor9D3__t_UfIy6Ws7v2YuhZbFlYmIOSE98pw1")
-      const snap = await getDoc(ref)
-      console.log("canReadThread:", snap.exists())
-    })()
   }, [user?.uid])
 
   const filtered = useMemo(() => {

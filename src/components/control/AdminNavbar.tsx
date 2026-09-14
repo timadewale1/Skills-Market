@@ -41,6 +41,7 @@ const navGroups: NavGroup[] = [
   ] },
   { label: "Finance", items: [
     { href: "/control/transactions", label: "Transactions", icon: HandCoins },
+    { href: "/control/payment-reconciliation", label: "Payment reconciliation", icon: ShieldCheck },
     { href: "/control/wallets", label: "Wallets", icon: Wallet },
   ] },
 ]

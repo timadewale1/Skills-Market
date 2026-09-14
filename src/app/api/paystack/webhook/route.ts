@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getAdminDb, getAdminApp } from "@/lib/firebaseAdmin"
 import admin from "firebase-admin"
-import type { Firestore, Transaction } from "firebase-admin/firestore"
+import type { DocumentReference, Firestore, Transaction } from "firebase-admin/firestore"
 import { notifyUser } from "@/lib/notifications/sendPlatformNotification"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
@@ -170,20 +170,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    // Idempotency: if already funded, skip
-    const payRef = db.doc(`workspaces/${wsId}/payments/${reference}`)
-    const paySnap = await payRef.get()
-    if (paySnap.exists && (paySnap.data() as any)?.status === "funded") {
-      console.log("[Paystack Webhook] Payment already funded, skipping")
-      return NextResponse.json({ ok: true })
-    }
-
+    const payRef = db.doc(`workspaces/${wsId}/payments/${reference}`) as DocumentReference
     console.log("[Paystack Webhook] Updating payment and workspace status...")
 
     // Update payment doc + workspace escrow status (store Paystack event id for audit)
-    const wsRef = db.doc(`workspaces/${wsId}`)
+    const wsRef = db.doc(`workspaces/${wsId}`) as DocumentReference
+    let funded = false
     await db.runTransaction(async (tx: Transaction) => {
       const eventId = String(event?.id || "")
+      const paySnap = await tx.get(payRef)
+      const wsSnap = await tx.get(wsRef)
+
+      if (paySnap.exists && (paySnap.data() as any)?.status === "funded") return
+      if (!wsSnap.exists) throw new Error("Workspace not found")
+
+      funded = true
 
       tx.set(
         payRef,
@@ -227,6 +228,11 @@ export async function POST(req: Request) {
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       })
     })
+
+    if (!funded) {
+      console.log("[Paystack Webhook] Payment already funded, skipping")
+      return NextResponse.json({ ok: true })
+    }
 
     console.log("[Paystack Webhook] Payment and workspace updated successfully")
 

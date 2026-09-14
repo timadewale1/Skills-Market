@@ -75,7 +75,7 @@ export default function TalentBrowsePage() {
       setLoading(true)
 
       // ✅ correct collection
-      const qy = query(collection(db, "publicProfiles"), where("role", "==", "talent"))
+      const qy = query(collection(db, "publicProfiles"), where("role", "==", "talent"), where("verification.status", "==", "verified"))
       const snap = await getDocs(qy)
 
       const rows: TalentRow[] = snap.docs.map((docx) => {

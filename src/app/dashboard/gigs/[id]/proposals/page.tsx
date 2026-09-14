@@ -99,6 +99,7 @@ export default function GigProposalsPage() {
   const { user } = useAuth()
 
   const [gig, setGig] = useState<Gig | null>(null)
+  const [hiresDraft, setHiresDraft] = useState("1")
   const [loading, setLoading] = useState(true)
 
   const [items, setItems] = useState<Proposal[]>([])
@@ -126,6 +127,7 @@ export default function GigProposalsPage() {
       const g = await getDoc(doc(db, "gigs", id))
       const gigData = g.exists() ? ({ id: g.id, ...(g.data() as any) } as Gig) : null
       setGig(gigData)
+      setHiresDraft(String(Math.max(1, Number(gigData?.hiresNeeded || 1))))
 
       if (!gigData) {
         setItems([])
@@ -279,11 +281,14 @@ export default function GigProposalsPage() {
       setItems(nextItems)
       setOpen((cur) => (cur && cur.talentUid === p.talentUid ? { ...cur, status: next } : cur))
 
-      // auto-close logic when accepting
-      if (next === "accepted") {
+      // Keep the gig open/closed state aligned when an accepted proposal changes.
+      {
         const nextAcceptedCount = nextItems.filter((x) => x.status === "accepted").length
         const hiresNeeded = Math.max(1, Number(gig.hiresNeeded || 1))
         await maybeAutoCloseOrReopen(nextAcceptedCount, hiresNeeded, gig.status)
+      }
+
+      if (next === "accepted") {
 
         // Send acceptance notification to talent via API
         try {
@@ -343,13 +348,14 @@ export default function GigProposalsPage() {
 
   const saveHiresNeeded = async (val: number) => {
     if (!id || !gig) return
-    const next = Math.max(1, Number.isFinite(val) ? val : 1)
+    const next = Math.max(acceptedCount, 1, Number.isFinite(val) ? Math.floor(val) : 1)
     try {
       await updateDoc(doc(db, "gigs", id), {
         hiresNeeded: next,
         updatedAt: serverTimestamp(),
       })
       setGig((g) => (g ? { ...g, hiresNeeded: next } : g))
+      setHiresDraft(String(next))
 
       // if gig was closed but you increased slots, reopen as needed
       await maybeAutoCloseOrReopen(acceptedCount, next, gig.status)
@@ -358,6 +364,11 @@ export default function GigProposalsPage() {
       console.error(e)
       toast.error(e?.message || "Failed to update hiring slots")
     }
+  }
+
+  const commitHiresDraft = () => {
+    const value = Number(hiresDraft)
+    void saveHiresNeeded(Number.isFinite(value) ? value : hiresNeeded)
   }
 
   if (loading) {
@@ -468,7 +479,21 @@ export default function GigProposalsPage() {
                 <div className="rounded-2xl border bg-white px-3 py-2 flex items-center gap-2">
                   <Users size={16} className="text-[var(--primary)]" />
                   <span className="text-xs font-extrabold text-gray-600">Hiring slots</span>
-                  <span className="text-sm font-extrabold text-gray-900">{hiresNeeded}</span>
+                  <input
+                    aria-label="Number of hiring slots"
+                    type="number"
+                    min={Math.max(1, acceptedCount)}
+                    step={1}
+                    value={hiresDraft}
+                    onChange={(event) => setHiresDraft(event.target.value)}
+                    onBlur={commitHiresDraft}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur()
+                      }
+                    }}
+                    className="w-16 rounded-lg border px-2 py-1 text-center text-sm font-extrabold text-gray-900"
+                  />
                 </div>
 
                 <div className="relative w-full md:w-[320px]">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
+import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore"
 import { Bell } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -25,7 +25,7 @@ export default function AdminNotificationBell() {
   useEffect(() => {
     if (!user) return
 
-    const q = query(collection(db, "notifications"), where("userId", "==", user.uid), orderBy("createdAt", "desc"))
+    const q = query(collection(db, "notifications"), where("userId", "==", user.uid), orderBy("createdAt", "desc"), limit(50))
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((doc) => ({
         id: doc.id,
@@ -54,6 +54,9 @@ export default function AdminNotificationBell() {
         animate={unread > 0 ? { scale: [1, 1.08, 1] } : {}}
         transition={{ repeat: unread > 0 ? Infinity : 0, duration: 1.2 }}
         className="relative rounded-full p-2 transition hover:bg-orange-100"
+        aria-label="Open admin notifications"
+        aria-expanded={dropdownOpen}
+        aria-haspopup="dialog"
         title="Admin Notifications"
       >
         <Bell size={20} className="text-[var(--primary)]" />
@@ -65,7 +68,7 @@ export default function AdminNotificationBell() {
       </motion.button>
 
       {dropdownOpen ? (
-        <div className="fixed right-2 left-auto top-[68px] z-50 w-[min(26rem,calc(100vw-1rem))] overflow-y-auto rounded-[1.5rem] border bg-white shadow-xl sm:absolute sm:top-full sm:mt-2 sm:w-[26rem]" style={{ maxHeight: '80vh' }}>
+        <div className="fixed right-2 left-auto top-[68px] z-[9999] w-[min(26rem,calc(100vw-1rem))] overflow-y-auto rounded-[1.5rem] border bg-white shadow-xl sm:absolute sm:top-full sm:mt-2 sm:w-[26rem]" style={{ maxHeight: '80vh' }}>
           <div className="sticky top-0 border-b bg-white px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -100,7 +103,9 @@ export default function AdminNotificationBell() {
                     className={`cursor-pointer border-l-4 px-5 py-4 transition hover:bg-gray-50 ${n.read ? "border-l-transparent" : meta.borderClass}`}
                     onClick={() => {
                       if (!n.read) void markAsRead(n.id)
-                      if (n.link) window.location.href = n.link
+                      if (n.link) {
+                        window.location.href = String(n.link).replace(/^\/admin(?=\/|$)/, "/control")
+                      }
                       setDropdownOpen(false)
                     }}
                   >

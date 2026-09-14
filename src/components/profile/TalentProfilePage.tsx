@@ -196,7 +196,6 @@ const [portfolioEditing, setPortfolioEditing] = useState<PortfolioItem | null>(n
       slug: slugifyName(userDoc.fullName, user.uid),
       location: userDoc.location || "",
       sdgTags: userDoc.sdgTags || [],
-      profileComplete: !!userDoc.profileComplete,
 
       talent: {
         roleTitle: userDoc?.talent?.roleTitle || "",
@@ -220,8 +219,6 @@ const [portfolioEditing, setPortfolioEditing] = useState<PortfolioItem | null>(n
         languages: userDoc?.publicProfile?.languages || [],
       },
 
-      verification: userDoc?.verification || { status: "not_submitted" },
-      rating: userDoc?.rating || { avg: 0, count: 0 },
     })
 
     // Also save to publicProfiles
@@ -239,6 +236,16 @@ const [portfolioEditing, setPortfolioEditing] = useState<PortfolioItem | null>(n
     const updatedSnap = await getDoc(doc(db, "users", user.uid))
     const updatedData = (updatedSnap.data() || {}) as any
     setUserDoc(updatedData)
+
+    try {
+      const token = await user.getIdToken()
+      await fetch("/api/admin/kyc-submitted", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch (error) {
+      console.error("admin profile verification notify failed", error)
+    }
   }
 
   const csvToArr = (v: string) =>
@@ -391,9 +398,9 @@ const addEmptyEmployment = () => ({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="profile-editor-hero flex items-start justify-between gap-4"
+          className="profile-editor-hero flex flex-col md:flex-row items-start justify-between gap-4"
         >
-          <div className="flex items-center gap-4">
+          <div className="flex w-full min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center">
             <AvatarUploader
               uid={user!.uid}
               currentUrl={photoUrl}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore"
+import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore"
 import {
   Bell,
   CheckCheck,
@@ -56,7 +56,8 @@ export default function NotificationsFeed({
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(100)
     )
 
     const unsub = onSnapshot(

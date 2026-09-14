@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
+import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore"
 import { Bell } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -29,7 +29,7 @@ export default function NotificationBell() {
     }
 
     try {
-      const q = query(collection(db, "notifications"), where("userId", "==", user.uid), orderBy("createdAt", "desc"))
+      const q = query(collection(db, "notifications"), where("userId", "==", user.uid), orderBy("createdAt", "desc"), limit(50))
       const unsub = onSnapshot(
         q,
         (snap) => {
@@ -60,12 +60,16 @@ export default function NotificationBell() {
   }
 
   return (
-    <div className="relative inline-block">
+    <div className="relative z-[200] inline-block">
       <motion.button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         animate={unread > 0 ? { scale: [1, 1.08, 1] } : {}}
         transition={{ repeat: unread > 0 ? Infinity : 0, duration: 1.2 }}
         className="relative rounded-full p-2 transition hover:bg-gray-100"
+        aria-label="Open notifications"
+        aria-expanded={dropdownOpen}
+        aria-haspopup="dialog"
+        title="Notifications"
       >
         <Bell size={20} className="text-gray-700" />
         {unread > 0 ? (
@@ -76,7 +80,7 @@ export default function NotificationBell() {
       </motion.button>
 
       {dropdownOpen ? (
-        <div className="fixed right-2 left-auto top-[68px] z-50 w-[min(24rem,calc(100vw-1rem))] overflow-y-auto rounded-[1.5rem] border bg-white shadow-xl sm:absolute sm:top-full sm:mt-2 sm:w-96" style={{ maxHeight: '80vh' }}>
+        <div className="fixed right-2 left-auto top-[68px] z-[200] w-[min(24rem,calc(100vw-1rem))] overflow-y-auto rounded-[1.5rem] border bg-white shadow-xl sm:absolute sm:top-full sm:mt-2 sm:w-96" style={{ maxHeight: '80vh' }}>
           <div className="sticky top-0 border-b bg-white px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <div>

@@ -54,7 +54,7 @@ export default function SearchPage() {
 setLoading(true)
 
 if (type === "talent") {
-  const qy = query(collection(db, "publicProfiles"), where("role", "==", "talent"))
+  const qy = query(collection(db, "publicProfiles"), where("role", "==", "talent"), where("verification.status", "==", "verified"))
   const snap = await getDocs(qy)
   const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
 

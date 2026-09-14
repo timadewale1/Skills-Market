@@ -88,7 +88,7 @@ export default function FindTalentRolePage({ params }: { params: { slug: string 
         return
       }
 
-      const qy = query(collection(db, "publicProfiles"), where("role", "==", "talent"))
+      const qy = query(collection(db, "publicProfiles"), where("role", "==", "talent"), where("verification.status", "==", "verified"))
       const snap = await getDocs(qy)
 
       const rows: TalentRow[] = snap.docs

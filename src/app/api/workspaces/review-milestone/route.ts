@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     const { workspaceId, milestoneId, decision } = await req.json()
 
-    if (!workspaceId || !milestoneId || !decision) {
+    if (!workspaceId || !milestoneId || !decision || !["approved", "rejected", "declined"].includes(decision)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -43,6 +43,10 @@ export async function POST(req: Request) {
 
     if (!milestone) {
       return NextResponse.json({ error: "Milestone not found" }, { status: 404 })
+    }
+
+    if (!["submitted", "rejected", "declined"].includes(String(milestone.status || ""))) {
+      return NextResponse.json({ error: "Milestone is not awaiting review" }, { status: 409 })
     }
 
     const status = decision === "approved" ? "approved" : "rejected"

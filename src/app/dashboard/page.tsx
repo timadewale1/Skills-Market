@@ -566,6 +566,7 @@ export default function DashboardPage() {
                   title="Recommended gigs"
                   value={statA}
                   hint="Based on your SDG focus"
+                  href="/dashboard/find-work"
                 />
                 <StatCard
                   i={1}
@@ -573,6 +574,7 @@ export default function DashboardPage() {
                   title="Active proposals"
                   value={statB}
                   hint="Track your applications"
+                  href="/dashboard/proposals"
                 />
                 <StatCard
                   i={2}
@@ -580,6 +582,7 @@ export default function DashboardPage() {
                   title="Messages"
                   value={statC}
                   hint="Client conversations"
+                  href="/dashboard/messages"
                 />
               </>
             ) : (
@@ -590,6 +593,7 @@ export default function DashboardPage() {
                   title="Suggested talent"
                   value={statA}
                   hint="Matches your SDG needs"
+                  href="/dashboard/find-talent"
                 />
                 <StatCard
                   i={1}
@@ -597,6 +601,7 @@ export default function DashboardPage() {
                   title="Open gigs"
                   value={statB}
                   hint="Roles you’re hiring for"
+                  href="/dashboard/gigs"
                 />
                 <StatCard
                   i={2}
@@ -604,6 +609,7 @@ export default function DashboardPage() {
                   title="Messages"
                   value={statC}
                   hint="Talent conversations"
+                  href="/dashboard/messages"
                 />
               </>
             )}
@@ -623,6 +629,7 @@ export default function DashboardPage() {
               title="Workspaces"
               value={workspacesCount}
               hint="Active projects"
+              href="/dashboard/workspaces"
             />
           </motion.div>
 
@@ -1009,14 +1016,16 @@ function StatCard({
   title,
   value,
   hint,
+  href,
 }: {
   i: number
   icon: React.ReactNode
   title: string
   value: number
   hint: string
+  href?: string
 }) {
-  return (
+  const card = (
     <motion.div variants={fadeUp} custom={i + 1} whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}>
       <Card className="stat-tile h-full rounded-3xl border-0 hover:shadow-md transition">
         <CardContent className="flex h-full min-h-[176px] flex-col p-6">
@@ -1036,6 +1045,8 @@ function StatCard({
       </Card>
     </motion.div>
   )
+
+  return href ? <Link href={href} className="block h-full">{card}</Link> : card
 }
 
 function RatingsCard({
@@ -1056,6 +1067,7 @@ function RatingsCard({
 
   return (
     <motion.div variants={fadeUp} custom={i + 1} whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 240, damping: 18 }}>
+      <Link href="/dashboard/profile" className="block h-full">
       <Card className="stat-tile h-full rounded-3xl border-0 hover:shadow-md transition">
         <CardContent className="flex h-full min-h-[176px] flex-col p-6">
           <div className="flex items-center justify-between">
@@ -1104,6 +1116,7 @@ function RatingsCard({
           </div>
         </CardContent>
       </Card>
+      </Link>
     </motion.div>
   )
 }

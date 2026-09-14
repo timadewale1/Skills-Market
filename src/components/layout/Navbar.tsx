@@ -48,6 +48,9 @@ export default function Navbar() {
 
           {/* DESKTOP NAV */}
           <nav className="hidden md:flex items-center gap-5 lg:gap-6 min-w-0">
+            <Link href="/" className={navItem}>
+              Home
+            </Link>
             {/* Hire */}
             <div className="relative">
               <button
@@ -256,6 +259,14 @@ export default function Navbar() {
 </form>
 
 
+
+          <Link
+            href="/"
+            className="font-bold hover:text-[var(--primary)]"
+            onClick={() => setMobileOpen(false)}
+          >
+            Home
+          </Link>
 
           {/* Hire */}
           <div>

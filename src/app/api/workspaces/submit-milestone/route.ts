@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const decoded = await adminApp.auth().verifyIdToken(token)
     const userId = decoded.uid
 
-    const { workspaceId, milestoneId, status } = await req.json()
+    const { workspaceId, milestoneId } = await req.json()
 
     if (!workspaceId || !milestoneId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -39,8 +39,17 @@ export async function POST(req: Request) {
 
     // Update milestone status
     const milestoneRef = workspaceRef.collection("milestones").doc(milestoneId)
+    const milestoneSnap = await milestoneRef.get()
+    if (!milestoneSnap.exists) {
+      return NextResponse.json({ error: "Milestone not found" }, { status: 404 })
+    }
+    const currentStatus = String(milestoneSnap.data()?.status || "draft")
+    if (["approved", "submitted"].includes(currentStatus)) {
+      return NextResponse.json({ error: "Milestone is not available for submission" }, { status: 409 })
+    }
+
     await milestoneRef.update({
-      status: status || "submitted",
+      status: "submitted",
       submittedAt: FieldValue.serverTimestamp(),
     })
 

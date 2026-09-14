@@ -13,30 +13,34 @@ export async function notifyUser({
   emailHtml,
   sendEmail: shouldSendEmail = true,
 }: any) {
-  await sendNotification({
-    userId,
-    type,
-    title,
-    message,
-    link,
-  })
+  try {
+    await sendNotification({
+      userId,
+      type,
+      title,
+      message,
+      link,
+    })
+  } catch (err) {
+    console.error("notifyUser: in-app notification error", err)
+  }
 
-  const adminDb = getAdminDb()
-  const user = await adminDb.collection("users").doc(userId).get()
+  try {
+    const adminDb = getAdminDb()
+    const user = await adminDb.collection("users").doc(userId).get()
 
-  if (user.exists) {
-    const email = user.data()?.email
-    if (email && shouldSendEmail) {
-      const htmlContent = emailHtml || buildNotificationEmail({ title, message, link })
-      try {
+    if (user.exists) {
+      const email = user.data()?.email
+      if (email && shouldSendEmail) {
+        const htmlContent = emailHtml || buildNotificationEmail({ title, message, link })
         await sendEmail({
           to: email,
           subject: emailSubject || title,
           html: htmlContent,
-        })
-      } catch (err) {
-        console.error("notifyUser: sendEmail error", err)
+        }).catch((err) => console.error("notifyUser: sendEmail error", err))
       }
     }
+  } catch (err) {
+    console.error("notifyUser: user lookup error", err)
   }
 }

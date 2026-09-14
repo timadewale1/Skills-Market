@@ -58,6 +58,7 @@ const snap = await getDoc(doc(db, "publicProfiles", uid))
   if (!snap.exists()) return null
 
   const d: any = snap.data()
+  if (d?.verification?.status !== "verified") return null
 
   // ✅ Public fields only (do NOT leak KYC)
   const p = d?.publicProfile || {}
@@ -90,7 +91,7 @@ const snap = await getDoc(doc(db, "publicProfiles", uid))
 export async function fetchPublicTalentBySlug(slugOrUid: string): Promise<PublicTalentProfile | null> {
   // Public profile document IDs are the canonical, collision-free route identifiers.
   const direct = await getDoc(doc(db, "publicProfiles", slugOrUid))
-  if (direct.exists() && direct.data()?.role === "talent") {
+  if (direct.exists() && direct.data()?.role === "talent" && direct.data()?.verification?.status === "verified") {
     const d: any = direct.data()
     const p = d?.publicProfile || {}
     const talent = d?.talent || {}
@@ -121,6 +122,7 @@ export async function fetchPublicTalentBySlug(slugOrUid: string): Promise<Public
   const q1 = query(
     collection(db, "publicProfiles"),
     where("slug", "==", slugOrUid),
+    where("verification.status", "==", "verified"),
     limit(1)
   )
   const s1 = await getDocs(q1)
@@ -156,6 +158,7 @@ export async function fetchPublicTalentBySlug(slugOrUid: string): Promise<Public
   const q2 = query(
     collection(db, "publicProfiles"),
     where("uid", "==", slugOrUid),
+    where("verification.status", "==", "verified"),
     limit(1)
   )
   const s2 = await getDocs(q2)
@@ -194,6 +197,7 @@ export async function fetchPublicTalents(limitCount: number = 20): Promise<Publi
   const q = query(
     collection(db, "publicProfiles"),
     where("role", "==", "talent"),
+    where("verification.status", "==", "verified"),
     limit(limitCount)
   )
   const snap = await getDocs(q)

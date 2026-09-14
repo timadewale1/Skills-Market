@@ -110,7 +110,14 @@ service cloud.firestore {
     // ===== PUBLIC PROFILES =====
     match /publicProfiles/{uid} {
       allow read: if true;
-      allow create, update: if isMe(uid) || isAdmin();
+      allow create: if isAdmin() || (
+        isMe(uid)
+        && request.resource.data.keys().hasNone(["verification", "rating"])
+      );
+      allow update: if isAdmin() || (
+        isMe(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasNone(["verification", "rating"])
+      );
       allow delete: if isAdmin();
     }
 
@@ -246,7 +253,16 @@ service cloud.firestore {
     // ===== WALLETS =====
     match /wallets/{uid} {
       allow read: if isMe(uid) || isAdmin();
-      allow write: if isMe(uid) || isAdmin();
+      allow create: if isAdmin() || (
+        isMe(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.availableBalance == 0
+        && request.resource.data.pendingBalance == 0
+        && request.resource.data.totalEarned == 0
+        && request.resource.data.totalWithdrawn == 0
+        && request.resource.data.totalSpent == 0
+      );
+      allow update: if isAdmin();
 
       match /transactions/{txId} {
         allow read: if isMe(uid) || isAdmin();
@@ -310,6 +326,7 @@ service cloud.firestore {
           request.auth.uid == resource.data.clientUid
           || request.auth.uid == resource.data.talentUid
         )
+        && request.resource.data.diff(resource.data).affectedKeys().hasNone(["payment"])
       );
 
       allow delete: if false;
@@ -360,6 +377,11 @@ service cloud.firestore {
         && request.resource.data.read == true;
 
       allow delete: if false;
+    }
+
+    match /paymentReconciliationCases/{caseId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // ===== DISPUTES =====

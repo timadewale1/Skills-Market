@@ -122,7 +122,6 @@ export default function ClientProfilePage() {
       slug: slugifyName(userDoc.fullName, user.uid),
       location: userDoc.location || "",
       sdgTags: nextSdgs,
-      profileComplete: !!userDoc.profileComplete,
 
       orgProfile: {
         about: nextOrgProfile.about || "",
@@ -142,8 +141,6 @@ export default function ClientProfilePage() {
         categories: nextOrgProfile.categories || [],
       },
 
-      verification: userDoc?.verification || { status: "not_submitted" },
-      rating: userDoc?.rating || { avg: 0, count: 0 },
     })
 
     // Also save to publicProfiles
@@ -161,6 +158,16 @@ export default function ClientProfilePage() {
     const updatedSnap = await getDoc(doc(db, "users", user.uid))
     const updatedData = (updatedSnap.data() || {}) as any
     setUserDoc(updatedData)
+
+    try {
+      const token = await user.getIdToken()
+      await fetch("/api/admin/kyc-submitted", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch (error) {
+      console.error("admin profile verification notify failed", error)
+    }
   }
 
   useEffect(() => {

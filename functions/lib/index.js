@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reconcileWalletBalances = exports.hourlyDefendCheckin = exports.hourlyDisputeCheckin = exports.hourlyAttachCheckinScreenshot = exports.hourlyCreateCheckin = exports.hourlyResumeWork = exports.hourlyPauseWork = exports.hourlyStartWork = exports.releasePayout = exports.autoApprovePayouts = exports.watermarkFinalWorkUpload = exports.watermarkHourlyCheckinUpload = exports.watermarkMilestoneUpload = void 0;
+exports.reconcilePaystackPayments = exports.reconcileWalletBalances = exports.hourlyDefendCheckin = exports.hourlyDisputeCheckin = exports.hourlyAttachCheckinScreenshot = exports.hourlyCreateCheckin = exports.hourlyResumeWork = exports.hourlyPauseWork = exports.hourlyStartWork = exports.releasePayout = exports.autoApprovePayouts = exports.watermarkFinalWorkUpload = exports.watermarkHourlyCheckinUpload = exports.watermarkMilestoneUpload = void 0;
 const admin = __importStar(require("firebase-admin"));
 const storage_1 = require("firebase-functions/v2/storage");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -1074,4 +1074,167 @@ exports.reconcileWalletBalances = (0, scheduler_1.onSchedule)("every day 02:00",
     }
     // Log reconciliation summary
     console.log("[reconcileWalletBalances] Complete. Drifts found:", issues.length, "Fixed:", fixCount);
+});
+// ------------------------------
+// Scheduled: reconcile Paystack payments missed by the webhook.
+// The first check happens five minutes after initiation. A second and final
+// verification is attempted before the payment is escalated for admin review.
+// Only confirmed Paystack success records are ever credited.
+// ------------------------------
+async function verifyPaystackTransaction(reference) {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret)
+        throw new Error("PAYSTACK_SECRET_KEY is not configured");
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+        headers: { Authorization: `Bearer ${secret}` },
+    });
+    const payload = await response.json().catch(() => null);
+    const success = response.ok && payload?.status === true && payload?.data?.status === "success";
+    return {
+        paid: success,
+        amount: success ? Number(payload?.data?.amount || 0) / 100 : 0,
+        payload,
+    };
+}
+async function recordPaymentReconciliationCase(data) {
+    const caseId = String(data.caseId);
+    await db.collection("paymentReconciliationCases").doc(caseId).set({
+        ...data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+}
+async function settleReconciledWalletTopup(ref, reference, amount, uid) {
+    const walletRef = db.doc(`wallets/${uid}`);
+    const txRef = walletRef.collection("transactions").doc(reference);
+    const result = await db.runTransaction(async (tx) => {
+        const [walletSnap, topupSnap, walletTxSnap] = await Promise.all([
+            tx.get(walletRef),
+            tx.get(ref),
+            tx.get(txRef),
+        ]);
+        if (!topupSnap.exists || !walletTxSnap.exists)
+            throw new Error("Wallet payment record is missing");
+        const topup = topupSnap.data();
+        const expectedAmount = Number(topup?.amount || walletTxSnap.data()?.amount || 0);
+        if (!expectedAmount || Math.abs(expectedAmount - amount) > 0.01)
+            throw new Error("Paid amount does not match pending top-up");
+        if (topup?.status === "funded")
+            return { settled: false, amount: expectedAmount };
+        const wallet = walletSnap.exists ? walletSnap.data() : {};
+        tx.set(walletRef, {
+            uid,
+            role: String(wallet?.role || "client"),
+            availableBalance: Number(wallet?.availableBalance || 0) + expectedAmount,
+            totalLoaded: Number(wallet?.totalLoaded || 0) + expectedAmount,
+            totalFundingReceived: Number(wallet?.totalFundingReceived || 0) + expectedAmount,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        tx.set(txRef, {
+            status: "completed",
+            meta: { reference, confirmedBy: "paystack_reconciliation" },
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        tx.set(ref, {
+            status: "funded",
+            paidAt: admin.firestore.FieldValue.serverTimestamp(),
+            confirmedBy: "paystack_reconciliation",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        return { settled: true, amount: expectedAmount };
+    });
+    return result;
+}
+async function settleReconciledWorkspacePayment(paymentRef, reference, amount, wsRef) {
+    return db.runTransaction(async (tx) => {
+        const [paymentSnap, wsSnap] = await Promise.all([tx.get(paymentRef), tx.get(wsRef)]);
+        if (!paymentSnap.exists || !wsSnap.exists)
+            throw new Error("Workspace payment record is missing");
+        const payment = paymentSnap.data();
+        if (Math.abs(Number(payment?.amount || 0) - amount) > 0.01)
+            throw new Error("Paid amount does not match pending workspace payment");
+        if (payment?.status === "funded")
+            return { settled: false };
+        tx.set(paymentRef, {
+            status: "funded",
+            paidAt: admin.firestore.FieldValue.serverTimestamp(),
+            fundedBy: "paystack_reconciliation",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        tx.set(wsRef, {
+            payment: {
+                status: "funded",
+                fundedAt: admin.firestore.FieldValue.serverTimestamp(),
+                fundedBy: "paystack_reconciliation",
+                reference,
+                amount,
+                escrow: true,
+            },
+            status: "active",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        tx.set(wsRef.collection("escrowLedger").doc(), {
+            type: "hold",
+            reference,
+            amount,
+            currency: "NGN",
+            fundedBy: "paystack_reconciliation",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { settled: true };
+    });
+}
+exports.reconcilePaystackPayments = (0, scheduler_1.onSchedule)("every 5 minutes", async () => {
+    const now = admin.firestore.Timestamp.now();
+    const [topups, payments] = await Promise.all([
+        db.collectionGroup("topups")
+            .where("status", "==", "initiated")
+            .where("nextReconciliationAt", "<=", now)
+            .limit(200)
+            .get(),
+        db.collectionGroup("payments")
+            .where("status", "==", "initiated")
+            .where("nextReconciliationAt", "<=", now)
+            .limit(200)
+            .get(),
+    ]);
+    for (const pending of [...topups.docs, ...payments.docs]) {
+        const data = pending.data();
+        const attempts = Number(data?.reconciliationAttempts || 0);
+        if (attempts >= 2)
+            continue;
+        const reference = String(data?.reference || pending.id);
+        const caseId = pending.ref.parent.id === "topups"
+            ? `wallet_${pending.ref.parent.parent?.id || "unknown"}_${reference}`
+            : `workspace_${pending.ref.parent.parent?.id || "unknown"}_${reference}`;
+        const attempt = attempts + 1;
+        try {
+            const verified = await verifyPaystackTransaction(reference);
+            if (verified.paid) {
+                if (pending.ref.parent.id === "topups") {
+                    const uid = pending.ref.parent.parent?.id;
+                    if (!uid)
+                        throw new Error("Wallet owner is missing");
+                    await settleReconciledWalletTopup(pending.ref, reference, verified.amount, uid);
+                }
+                else {
+                    const wsRef = pending.ref.parent.parent;
+                    if (!wsRef)
+                        throw new Error("Workspace owner is missing");
+                    await settleReconciledWorkspacePayment(pending.ref, reference, verified.amount, wsRef);
+                }
+                await recordPaymentReconciliationCase({ caseId, reference, amount: verified.amount, kind: pending.ref.parent.id === "topups" ? "wallet_topup" : "workspace_funding", ownerId: pending.ref.parent.parent?.id || "", workspaceId: pending.ref.parent.id === "payments" ? pending.ref.parent.parent?.id || "" : "", status: "resolved", attempts: attempt, resolvedAt: admin.firestore.FieldValue.serverTimestamp() });
+            }
+            else {
+                const status = attempt >= 2 ? "needs_manual_review" : "retrying";
+                await pending.ref.set({ reconciliationAttempts: attempt, lastReconciliationAt: admin.firestore.FieldValue.serverTimestamp(), nextReconciliationAt: admin.firestore.Timestamp.fromMillis(Date.now() + 5 * 60 * 1000), updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                await recordPaymentReconciliationCase({ caseId, reference, amount: Number(data?.amount || 0), kind: pending.ref.parent.id === "topups" ? "wallet_topup" : "workspace_funding", ownerId: pending.ref.parent.parent?.id || "", workspaceId: pending.ref.parent.id === "payments" ? pending.ref.parent.parent?.id || "" : "", status, attempts: attempt, lastPaystackStatus: verified.payload?.data?.status || "unknown" });
+            }
+        }
+        catch (error) {
+            const status = attempt >= 2 ? "needs_manual_review" : "retrying";
+            await pending.ref.set({ reconciliationAttempts: attempt, lastReconciliationAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            await recordPaymentReconciliationCase({ caseId, reference, amount: Number(data?.amount || 0), kind: pending.ref.parent.id === "topups" ? "wallet_topup" : "workspace_funding", ownerId: pending.ref.parent.parent?.id || "", workspaceId: pending.ref.parent.id === "payments" ? pending.ref.parent.parent?.id || "" : "", status, attempts: attempt, error: error?.message || "Reconciliation failed" });
+        }
+    }
 });

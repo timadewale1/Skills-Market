@@ -73,7 +73,7 @@ export default function SavedTalentsPage() {
           }
           try {
             const pp = await getDoc(doc(db, "publicProfiles", s.talentUid))
-            if (pp.exists()) {
+            if (pp.exists() && (pp.data() as any)?.verification?.status === "verified") {
               const p: any = pp.data()
               row.rating = p.rating || { avg: 0, count: 0 }
               row.slug = p.slug
@@ -317,7 +317,7 @@ export default function SavedTalentsPage() {
                             }
                             try {
                               const pp = await getDoc(doc(db, "publicProfiles", s.talentUid))
-                              if (pp.exists()) {
+                              if (pp.exists() && (pp.data() as any)?.verification?.status === "verified") {
                                 const p: any = pp.data()
                                 row.rating = p.rating || { avg: 0, count: 0 }
                                 row.slug = p.slug

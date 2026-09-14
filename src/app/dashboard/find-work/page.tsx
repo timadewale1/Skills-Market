@@ -314,6 +314,7 @@ return [g.id, snap.size] as const
               sdgTags: data.sdgTags || [],
               workMode: data.talent?.workMode || "",
               location: data.location || "",
+              verification: data.verification || { status: data.kyc?.status || "not_submitted" },
             }
             const matched = matchGigsToTalent(all, criteria as any)
             setSuggestedGigs(matched.slice(0, 8))

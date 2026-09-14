@@ -68,6 +68,8 @@ export async function POST(req: Request) {
       amount: amountNaira,
       currency: "NGN",
       status: "initiated",
+      reconciliationAttempts: 0,
+      nextReconciliationAt: admin.firestore.Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     })

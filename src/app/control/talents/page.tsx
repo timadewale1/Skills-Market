@@ -288,15 +288,13 @@ export default function AdminTalentsPage() {
 
       switch (action) {
         case "verify":
-          await updateDoc(publicProfileRef, {
-            "verification.status": "verified"
-          })
+          await updateDoc(publicProfileRef, { "verification.status": "verified" })
+          await updateDoc(userRef, { "kyc.status": "verified" })
           toast.success("Talent verified successfully")
           break
         case "reject":
-          await updateDoc(publicProfileRef, {
-            "verification.status": "rejected"
-          })
+          await updateDoc(publicProfileRef, { "verification.status": "rejected" })
+          await updateDoc(userRef, { "kyc.status": "rejected" })
           toast.success("Verification rejected")
           break
         case "disable":

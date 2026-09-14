@@ -91,7 +91,9 @@ function makeDocRef({
       exists,
       data: () => data,
     }),
-    update: jest.fn().mockResolvedValue(undefined),
+    update: jest.fn(async (patch: any) => {
+      if (data && typeof data === "object") Object.assign(data, patch)
+    }),
     set: jest.fn().mockResolvedValue(undefined),
     collection: jest.fn((name: string) => subcollections[name]),
   }

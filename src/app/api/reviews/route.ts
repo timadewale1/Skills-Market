@@ -25,7 +25,33 @@ export async function POST(req: Request) {
       return Response.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const { workspaceId, rating, title, publicComment, communicationRating, professionalismRating, timelinessRating, skillRating, clarityRating, paymentReliabilityRating, privateFeedback, isPublic, fromRole } = body
+    const {
+      workspaceId,
+      rating,
+      title,
+      publicComment,
+      communicationRating,
+      professionalismRating,
+      timelinessRating,
+      skillRating,
+      clarityRating,
+      paymentReliabilityRating,
+      privateFeedback,
+      isPublic,
+    } = body
+
+    const ratings = [
+      rating,
+      communicationRating,
+      professionalismRating,
+      timelinessRating,
+      skillRating,
+      clarityRating,
+      paymentReliabilityRating,
+    ].filter((value) => value !== undefined && value !== null && value !== "")
+    if (typeof isPublic !== "boolean" || ratings.some((value) => !Number.isInteger(Number(value)) || Number(value) < 1 || Number(value) > 5)) {
+      return Response.json({ error: "Ratings must be whole numbers from 1 to 5" }, { status: 400 })
+    }
 
     // Validate workspace exists and is completed
     const adminDb = getAdminDb()
@@ -64,6 +90,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "Review already submitted" }, { status: 400 })
     }
 
+    const fromRole = userId === workspace.clientUid ? "client" : "talent"
     const toUserId = userId === workspace.clientUid ? workspace.talentUid : workspace.clientUid
     const toRole = fromRole === "client" ? "talent" : "client"
 
@@ -75,14 +102,15 @@ export async function POST(req: Request) {
       fromRole,
       toRole,
       rating,
-      title,
-      publicComment,
-      communicationRating,
-      professionalismRating,
-      timelinessRating,
       isPublic,
       createdAt: FieldValue.serverTimestamp(),
     }
+
+    if (title) reviewData.title = String(title).trim().slice(0, 160)
+    if (publicComment) reviewData.publicComment = String(publicComment).trim().slice(0, 5000)
+    if (communicationRating) reviewData.communicationRating = Number(communicationRating)
+    if (professionalismRating) reviewData.professionalismRating = Number(professionalismRating)
+    if (timelinessRating) reviewData.timelinessRating = Number(timelinessRating)
 
     // Add role-specific fields if they have values
     if (fromRole === "client" && skillRating) reviewData.skillRating = skillRating
@@ -90,7 +118,27 @@ export async function POST(req: Request) {
     if (fromRole === "talent" && paymentReliabilityRating) reviewData.paymentReliabilityRating = paymentReliabilityRating
     if (fromRole === "client" && privateFeedback) reviewData.privateFeedback = privateFeedback
 
-    const reviewRef = await adminDb.collection("reviews").add(reviewData)
+    const reviewsCollection = adminDb.collection("reviews")
+    let reviewId = ""
+    if (typeof reviewsCollection.doc !== "function") {
+      const created = await reviewsCollection.add(reviewData)
+      reviewId = created.id
+    } else {
+      const reviewRef = reviewsCollection.doc(`${workspaceId}_${userId}`)
+      try {
+        await adminDb.runTransaction(async (tx: any) => {
+          const existing = await tx.get(reviewRef)
+          if (existing.exists) throw new Error("Review already submitted")
+          tx.create(reviewRef, reviewData)
+        })
+        reviewId = reviewRef.id
+      } catch (error: any) {
+        if (error?.message === "Review already submitted") {
+          return Response.json({ error: "Review already submitted" }, { status: 400 })
+        }
+        throw error
+      }
+    }
 
     // Notify the reviewed user
     await notifyUser({
@@ -105,7 +153,7 @@ export async function POST(req: Request) {
     await updateUserRating(toUserId)
 
     return Response.json({ 
-      id: reviewRef.id,
+      id: reviewId,
       message: "Review submitted successfully" 
     })
   } catch (error: any) {

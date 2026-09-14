@@ -1032,11 +1032,11 @@ export default function ThreadPage() {
                     ref={scrollerRef}
                     className="h-[55vh] overflow-y-auto p-5 space-y-3 relative"
                     style={{
-  backgroundImage: `url("/chat-doodles.png")`,
-  backgroundRepeat: "repeat, repeat",
+  backgroundColor: "#f8fafc",
+  backgroundImage: "linear-gradient(rgba(248, 250, 252, 0.96), rgba(248, 250, 252, 0.96)), url(\"/chat-doodles.png\")",
+  backgroundRepeat: "repeat",
   backgroundSize: "auto, 260px 260px",
   backgroundPosition: "0 0, 0 0",
-  backdropFilter: "blur(0px)", // keep 0 or remove; blur only works with semi-transparent overlays
 }}
                   >
                     {messages.length === 0 ? (

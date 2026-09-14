@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
+  getRedirectResult,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
@@ -61,6 +62,30 @@ export default function LoginPage() {
       router.push("/onboarding")
     }
   }
+
+  useEffect(() => {
+    let active = true
+    if (typeof getRedirectResult !== "function") return
+    void getRedirectResult(auth).then(async (result) => {
+      if (!active || !result?.user) return
+      setLoading(true)
+      try {
+        markAuthSession(result.user.uid)
+        await syncAuthSessionCookies()
+        await postLoginRedirect(result.user.uid)
+      } catch {
+        toast.error("Google sign-in could not be completed")
+      } finally {
+        if (active) setLoading(false)
+      }
+    }).catch(() => {
+      if (active) setLoading(false)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [postLoginRedirect])
 
   const handleEmailLogin = async () => {
     if (!email || !password) return toast.error("Enter email and password")

@@ -45,6 +45,8 @@ type UserDoc = {
   role?: Role
   fullName?: string
   client?: { orgName?: string }
+  profileComplete?: boolean
+  orgKyc?: { status?: string }
 }
 
 const WORK_MODE = ["Remote", "Hybrid", "On-site"] as const
@@ -325,6 +327,11 @@ export default function PostGigPage() {
   const handleSubmit = async () => {
     if (!user?.uid) return toast.error("You must be logged in")
     if (loadingProfile) return
+    if (!editing && (!profile?.profileComplete || profile?.orgKyc?.status !== "verified")) {
+      toast.error("Complete and verify your client profile before posting a gig.")
+      router.push("/dashboard/profile")
+      return
+    }
 
     const err = validate()
     if (err) return toast.error(err)

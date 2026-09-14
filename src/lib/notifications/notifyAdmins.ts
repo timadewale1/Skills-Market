@@ -13,7 +13,7 @@ interface NotifyOptions {
 
 function shouldEmailAdmin(type: string) {
   const value = String(type || "").toLowerCase()
-  return value.includes("dispute") || value.includes("payment") || value.includes("withdraw")
+  return value.includes("dispute") || value.includes("payment") || value.includes("withdraw") || value.includes("verification")
 }
 
 export async function notifyAdmins(opts: NotifyOptions) {

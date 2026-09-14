@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   PlusCircle,
   Wallet,
+  LayoutDashboard,
 } from "lucide-react"
 import { db } from "@/lib/firebase"
 import Button from "@/components/ui/Button"
@@ -81,12 +82,14 @@ export default function AuthNavbar() {
   const links = useMemo(() => {
     if (loadingRole || !role) {
       return [
+        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
       ]
     }
 
     if (role === "talent") {
       return [
+        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/dashboard/find-work", label: "Find Work", icon: Briefcase },
         { href: "/dashboard/proposals", label: "Proposals", icon: PlusCircle },
         { href: "/dashboard/workspaces", label: "Workspaces", icon: Briefcase },
@@ -94,6 +97,7 @@ export default function AuthNavbar() {
     }
 
     return [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/dashboard/find-talent", label: "Hire Talent", icon: Users },
       { href: "/dashboard/post-gig", label: "Post a Gig", icon: PlusCircle },
       { href: "/dashboard/gigs", label: "Gigs", icon: Briefcase },
@@ -102,6 +106,7 @@ export default function AuthNavbar() {
   }, [role, loadingRole])
 
   const utilityLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
     { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
   ]
@@ -126,7 +131,7 @@ export default function AuthNavbar() {
 
   return (
     <>
-    <header className="fixed inset-x-0 top-0 z-50 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
+    <header className="fixed inset-x-0 top-0 z-[100] border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="mx-auto flex min-w-0 max-w-7xl items-center justify-between gap-3 px-4 py-3">
         {/* LEFT */}
         <div className="flex min-w-0 items-center gap-4 md:gap-6">

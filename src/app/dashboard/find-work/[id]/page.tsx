@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import toast from "react-hot-toast"
 import RequireAuth from "@/components/auth/RequireAuth"
 import AuthNavbar from "@/components/layout/AuthNavbar"
 import { useAuth } from "@/context/AuthContext"
@@ -73,6 +74,7 @@ type Proposal = {
   coverLetter: string
   proposedRate?: number | null
   duration?: string
+  proposedDuration?: string
   attachments?: { name: string; url: string; size?: number; contentType?: string }[]
   viewedAt?: any | null
   createdAt?: any
@@ -119,6 +121,7 @@ export default function TalentGigDetailsPage() {
   // Proposal state
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [proposalLoading, setProposalLoading] = useState(true)
+  const [profileReady, setProfileReady] = useState(false)
 
   // Apply modal
   const [applyOpen, setApplyOpen] = useState(false)
@@ -153,6 +156,10 @@ export default function TalentGigDetailsPage() {
 
       const g = { id: snap.id, ...(snap.data() as any) } as Gig
       setGig(g)
+
+      const profileSnap = await getDoc(doc(db, "users", user.uid))
+      const profileData = profileSnap.data() as any
+      setProfileReady(Boolean(profileData?.profileComplete && profileData?.kyc?.status === "verified"))
 
       // client public profile for link
       if (g.clientUid) {
@@ -266,6 +273,7 @@ export default function TalentGigDetailsPage() {
         coverLetter: coverLetter.trim(),
         proposedRate: Number.isFinite(rateNum as any) ? rateNum : null,
         duration: proposalDuration.trim(),
+        proposedDuration: proposalDuration.trim(),
         attachments: allAttachments,
         updatedAt: serverTimestamp(),
         viewedAt: proposal?.viewedAt || null,
@@ -625,6 +633,9 @@ export default function TalentGigDetailsPage() {
                             if (!user) {
                               const next = encodeURIComponent(window.location.pathname + window.location.search)
                               router.push(`/login?next=${next}`)
+                            } else if (!profileReady) {
+                              toast.error("Complete and verify your profile before applying.")
+                              router.push("/dashboard/profile")
                             } else {
                               openProposalModal(proposal ? "view" : "create")
                             }

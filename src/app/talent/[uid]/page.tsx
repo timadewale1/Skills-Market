@@ -96,13 +96,14 @@ export default function PublicTalentProfilePage() {
         // UID is the canonical URL identifier. Slug lookup only supports legacy links.
         let raw: any = null
         const direct = await getDoc(doc(db, "publicProfiles", profileId))
-        if (direct.exists() && direct.data()?.role === "talent") {
+        if (direct.exists() && direct.data()?.role === "talent" && direct.data()?.verification?.status === "verified") {
           raw = { id: direct.id, ...direct.data() }
         } else {
           const legacy = await getDocs(query(
             collection(db, "publicProfiles"),
             where("slug", "==", profileId),
             where("role", "==", "talent"),
+            where("verification.status", "==", "verified"),
             limit(1)
           ))
           if (!legacy.empty) raw = { id: legacy.docs[0].id, ...legacy.docs[0].data() }

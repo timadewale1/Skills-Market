@@ -4,9 +4,17 @@ import admin from "firebase-admin"
 import type { Transaction } from "firebase-admin/firestore"
 import { notifyAdmins } from "@/lib/notifications/notifyAdmins"
 import { getWorkspaceNotificationContext } from "@/lib/notifications/context"
+import { requireAdmin } from "@/lib/adminGuard"
 
 export async function POST(req: Request) {
   try {
+    const authHeader = req.headers.get("authorization") || ""
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const decoded = await getAdminApp().auth().verifyIdToken(token)
+    await requireAdmin(decoded.uid)
+
     const { wsId, reference } = await req.json()
 
     if (!wsId) return NextResponse.json({ error: "wsId required" }, { status: 400 })
@@ -116,6 +124,8 @@ export async function POST(req: Request) {
 
   } catch (e: any) {
     console.error("[Manual Funding] Error:", e)
-    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 })
+    const message = e?.message || "Server error"
+    const status = message === "Unauthorized" ? 403 : 500
+    return NextResponse.json({ error: message }, { status })
   }
 }

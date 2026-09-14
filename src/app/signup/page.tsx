@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   createUserWithEmailAndPassword,
+  getRedirectResult,
   signInWithPopup,
   signInWithRedirect,
   GoogleAuthProvider,
@@ -30,6 +31,39 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const signupGuard = makeAttemptGuard("cw_signup_attempt_at", 20_000)
+
+  useEffect(() => {
+    let active = true
+    if (typeof getRedirectResult !== "function") return
+    void getRedirectResult(auth).then(async (result) => {
+      if (!active || !result?.user) return
+      setLoading(true)
+      try {
+        markAuthSession(result.user.uid)
+        await syncAuthSessionCookies()
+        await setDoc(
+          doc(db, "users", result.user.uid),
+          {
+            uid: result.user.uid,
+            email: result.user.email,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        )
+        router.push("/onboarding")
+      } catch {
+        toast.error("Google sign-up could not be completed")
+      } finally {
+        if (active) setLoading(false)
+      }
+    }).catch(() => {
+      if (active) setLoading(false)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [router])
 
   const handleSignup = async () => {
     if (!email || !password) return toast.error("Enter email and password")
@@ -61,8 +95,6 @@ export default function SignupPage() {
         {
           uid: res.user.uid,
           email: res.user.email,
-          onboardingComplete: false,
-          createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         },
         { merge: true }

@@ -63,6 +63,7 @@ function WalletPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [wallet, setWallet] = useState<WalletDoc | null>(null)
+  const [allTransactions, setAllTransactions] = useState<Tx[]>([])
   const [txs, setTxs] = useState<Tx[]>([])
   const [txPage, setTxPage] = useState(1)
   const [hasMoreTransactions, setHasMoreTransactions] = useState(false)
@@ -167,36 +168,33 @@ function WalletPageContent() {
 
   useEffect(() => {
     if (!user?.uid) return
-    const cursor = txPage > 1 ? txCursors.current[txPage - 2] : undefined
-    if (txPage > 1 && !cursor) return
-    let active = true
-
-    const loadTransactions = async () => {
-      setTransactionsLoading(true)
-      try {
-        const base = collection(db, "wallets", user.uid, "transactions")
-        const recordsQuery = cursor
-          ? query(base, orderBy("createdAt", "desc"), startAfter(cursor), limit(6))
-          : query(base, orderBy("createdAt", "desc"), limit(6))
-        const snapshot = await getDocs(recordsQuery)
-        if (!active) return
-        const visibleDocs = snapshot.docs.slice(0, 5)
-        setTxs(visibleDocs.map((item) => ({ id: item.id, ...(item.data() as any) })))
-        setHasMoreTransactions(snapshot.docs.length > 5)
-        if (visibleDocs.length === 5) {
-          txCursors.current[txPage - 1] = visibleDocs[4]
-        }
-      } catch (error) {
+    setTransactionsLoading(true)
+    const base = collection(db, "wallets", user.uid, "transactions")
+    const recordsQuery = query(base, orderBy("createdAt", "desc"))
+    const unsub = onSnapshot(
+      recordsQuery,
+      (snapshot) => {
+        const nextTransactions = snapshot.docs.map((item) => ({ id: item.id, ...(item.data() as any) }))
+        setAllTransactions(nextTransactions)
+        setTransactionsLoading(false)
+      },
+      (error) => {
         console.error("wallet history failed to load", error)
-        if (active) toast.error("Unable to load wallet history")
-      } finally {
-        if (active) setTransactionsLoading(false)
+        toast.error("Unable to load wallet history")
+        setTransactionsLoading(false)
       }
-    }
+    )
 
-    void loadTransactions()
-    return () => { active = false }
-  }, [historyRefresh, txPage, user?.uid])
+    return () => unsub()
+  }, [user?.uid, historyRefresh])
+
+  useEffect(() => {
+    const pageSize = 5
+    const start = (txPage - 1) * pageSize
+    const visible = allTransactions.slice(start, start + pageSize)
+    setTxs(visible)
+    setHasMoreTransactions(start + pageSize < allTransactions.length)
+  }, [allTransactions, txPage])
 
   const tokenGetter = useMemo(
     () => async () => {

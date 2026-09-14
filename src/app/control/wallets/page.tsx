@@ -12,6 +12,16 @@ import {
 
 export const dynamic = "force-dynamic"
 
+const PAGE_SIZE = 10
+
+type WalletsPageProps = {
+  searchParams?: Promise<{
+    q?: string
+    role?: string
+    page?: string
+  }>
+}
+
 async function getWallets() {
   const db = getAdminDb()
   const indexes = await getAdminIndexes()
@@ -39,7 +49,10 @@ async function getWallets() {
     current.total += Number(data.amount || 0)
     if (String(data.status || "").toLowerCase() === "requested") current.pending += 1
     if (String(data.status || "").toLowerCase() === "processing") current.processing += 1
-    current.lastAt = current.lastAt || data.updatedAt || data.createdAt
+    const candidate = data.updatedAt || data.createdAt
+    if (!current.lastAt || Number((candidate?.toMillis?.() ?? candidate?._seconds ? candidate._seconds * 1000 : 0) || 0) > Number((current.lastAt?.toMillis?.() ?? current.lastAt?._seconds ? current.lastAt._seconds * 1000 : 0) || 0)) {
+      current.lastAt = candidate
+    }
     withdrawalStats.set(walletUid, current)
   })
 
@@ -64,14 +77,49 @@ async function getWallets() {
   return wallets
 }
 
-export default async function WalletsPage() {
+function walletHref(q: string, role: string, page: number) {
+  const params = new URLSearchParams()
+  if (q) params.set("q", q)
+  if (role && role !== "all") params.set("role", role)
+  if (page > 1) params.set("page", String(page))
+  const value = params.toString()
+  return value ? `/control/wallets?${value}` : "/control/wallets"
+}
+
+export default async function WalletsPage({ searchParams }: WalletsPageProps) {
+  const resolvedSearchParams = (await searchParams) || {}
+  const q = String(resolvedSearchParams.q || "").trim().toLowerCase()
+  const role = String(resolvedSearchParams.role || "all")
+  const page = Math.max(1, Number(resolvedSearchParams.page || 1))
+
   const wallets: any[] = await getWallets()
-  const totalBalance = wallets.reduce((sum, wallet) => sum + Number(wallet.availableBalance || 0), 0)
-  const totalEscrow = wallets.reduce(
+  const filteredWallets = wallets.filter((wallet) => {
+    const matchesRole = role === "all" || String(wallet.role || wallet.owner.role || "").toLowerCase() === role
+    if (!matchesRole) return false
+
+    if (!q) return true
+    const searchText = [
+      wallet.owner?.name,
+      wallet.owner?.email,
+      wallet.id,
+      String(wallet.role || wallet.owner?.role || ""),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+    return searchText.includes(q)
+  })
+
+  const totalPages = Math.max(1, Math.ceil(filteredWallets.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const visibleWallets = filteredWallets.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const totalBalance = filteredWallets.reduce((sum, wallet) => sum + Number(wallet.availableBalance || 0), 0)
+  const totalEscrow = filteredWallets.reduce(
     (sum, wallet) => sum + Number(wallet.activeEscrow || wallet.pendingBalance || 0),
     0
   )
-  const pendingWithdrawals = wallets.reduce(
+  const pendingWithdrawals = filteredWallets.reduce(
     (sum, wallet) => sum + Number(wallet.withdrawals?.pending || 0) + Number(wallet.withdrawals?.processing || 0),
     0
   )
@@ -83,20 +131,39 @@ export default async function WalletsPage() {
         title="Wallets and balances"
         description="Inspect balances, client escrow exposure, talent withdrawal requests, and each user wallet’s latest settlement context."
         stats={[
-          { label: "Wallets", value: wallets.length },
+          { label: "Wallets", value: filteredWallets.length },
           { label: "Talent balances", value: formatAdminMoney(totalBalance) },
           { label: "Client escrow", value: formatAdminMoney(totalEscrow) },
           { label: "Pending withdrawals", value: pendingWithdrawals },
         ]}
       />
 
+      <Card className="rounded-[1.75rem] border-0 shadow-sm">
+        <CardContent className="p-6">
+          <form action="/control/wallets" className="flex flex-col gap-3 lg:flex-row">
+            <input
+              name="q"
+              defaultValue={resolvedSearchParams.q || ""}
+              placeholder="Search by user name or email"
+              className="w-full rounded-full border px-4 py-2 text-sm"
+            />
+            <select name="role" defaultValue={role} className="rounded-full border px-4 py-2 text-sm">
+              <option value="all">All roles</option>
+              <option value="client">Clients</option>
+              <option value="talent">Talents</option>
+            </select>
+            <button className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white">Search</button>
+          </form>
+        </CardContent>
+      </Card>
+
       <div className="space-y-4">
-        {wallets.length === 0 ? (
+        {visibleWallets.length === 0 ? (
           <Card className="rounded-[1.75rem] border-0 shadow-sm">
             <CardContent className="p-10 text-center text-gray-600">No wallets found.</CardContent>
           </Card>
         ) : (
-          wallets.map((wallet) => (
+          visibleWallets.map((wallet) => (
             <Card key={wallet.id} className="rounded-[1.75rem] border-0 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -181,6 +248,20 @@ export default async function WalletsPage() {
           ))
         )}
       </div>
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-center gap-3">
+          <Link href={walletHref(String(resolvedSearchParams.q || ""), role, Math.max(1, safePage - 1))} className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700">
+            Previous
+          </Link>
+          <div className="text-sm font-semibold text-gray-600">
+            Page {safePage} of {totalPages}
+          </div>
+          <Link href={walletHref(String(resolvedSearchParams.q || ""), role, Math.min(totalPages, safePage + 1))} className="rounded-full border px-4 py-2 text-sm font-semibold text-gray-700">
+            Next
+          </Link>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     const { workspaceId, decision } = await req.json()
 
-    if (!workspaceId || !decision) {
+    if (!workspaceId || !decision || !["approved", "rejected", "declined"].includes(decision)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -39,6 +39,10 @@ export async function POST(req: Request) {
 
     // Update final work approval
     const finalWorkRef = workspaceRef.collection("finalWork").doc("submission")
+    const finalWorkSnap = await finalWorkRef.get()
+    if (!finalWorkSnap.exists || !["submitted", "rejected", "declined"].includes(String(finalWorkSnap.data()?.status || ""))) {
+      return NextResponse.json({ error: "Final work is not awaiting review" }, { status: 409 })
+    }
     const status = decision === "approved" ? "approved" : "rejected"
     
     await finalWorkRef.update({

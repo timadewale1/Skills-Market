@@ -126,6 +126,7 @@ describe("Marketplace client and talent logic", () => {
           sdgTags: ["SDG 8"],
           workMode: "Remote",
           location: "Abuja",
+          verification: { status: "verified" },
         },
         {
           uid: "talent-2",
@@ -175,6 +176,7 @@ describe("Marketplace client and talent logic", () => {
         categories: ["Frontend"],
         workMode: "Remote",
         location: "lagos",
+        verification: { status: "verified" },
       })
 
       expect(matches).toHaveLength(1)
@@ -192,6 +194,7 @@ describe("Marketplace client and talent logic", () => {
             fullName: "Ada Developer",
             skills: ["React"],
             categories: ["Frontend"],
+            verification: { status: "verified" },
           },
           {
             uid: "talent-2",
