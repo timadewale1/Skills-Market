@@ -304,7 +304,7 @@ async function validateFileBeforeStorage(tmpIn, filename, contentType) {
 // Firestore: workspaces/{wsId}/milestones/{milestoneId}
 // Supports: Images (watermarked to JPEG), Videos, PDFs, Documents (copied as-is)
 // ------------------------------
-exports.watermarkMilestoneUpload = (0, storage_1.onObjectFinalized)(async (event) => {
+exports.watermarkMilestoneUpload = (0, storage_1.onObjectFinalized)({ bucket: "changeworker-e1770.firebasestorage.app" }, async (event) => {
     try {
         const filePath = event.data.name || "";
         const contentType = event.data.contentType || "";
@@ -430,7 +430,7 @@ exports.watermarkMilestoneUpload = (0, storage_1.onObjectFinalized)(async (event
 // Writes preview url into:
 // Firestore: workspaces/{wsId}/hourly/session/checkins/{checkinId}
 // ------------------------------
-exports.watermarkHourlyCheckinUpload = (0, storage_1.onObjectFinalized)(async (event) => {
+exports.watermarkHourlyCheckinUpload = (0, storage_1.onObjectFinalized)({ bucket: "changeworker-e1770.firebasestorage.app" }, async (event) => {
     const filePath = event.data.name || "";
     const contentType = event.data.contentType || "";
     if (!filePath.startsWith("workspaces/"))
@@ -472,7 +472,7 @@ exports.watermarkHourlyCheckinUpload = (0, storage_1.onObjectFinalized)(async (e
 // Firestore: workspaces/{wsId}/finalWork/submission
 // Supports: Images (watermarked to JPEG), Videos, PDFs, Documents (copied as-is)
 // ------------------------------
-exports.watermarkFinalWorkUpload = (0, storage_1.onObjectFinalized)(async (event) => {
+exports.watermarkFinalWorkUpload = (0, storage_1.onObjectFinalized)({ bucket: "changeworker-e1770.firebasestorage.app" }, async (event) => {
     try {
         const filePath = event.data.name || "";
         const contentType = event.data.contentType || "";

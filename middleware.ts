@@ -28,6 +28,8 @@ const rateStore = (globalThis as typeof globalThis & {
   __skillsMarketRateStore?: Map<string, RateBucket>
 }).__skillsMarketRateStore || new Map<string, RateBucket>()
 
+const MAX_RATE_BUCKETS = 10_000
+
 ;(globalThis as typeof globalThis & {
   __skillsMarketRateStore?: Map<string, RateBucket>
 }).__skillsMarketRateStore = rateStore
@@ -82,6 +84,13 @@ export function middleware(request: NextRequest) {
   const clientKey = `${getClientKey(request)}:${rule.prefix}`
   const now = Date.now()
   const bucket = rateStore.get(clientKey)
+
+  if (rateStore.size > MAX_RATE_BUCKETS) {
+    for (const [key, value] of rateStore) {
+      if (value.resetAt <= now) rateStore.delete(key)
+    }
+    if (rateStore.size > MAX_RATE_BUCKETS) rateStore.clear()
+  }
 
   if (!bucket || bucket.resetAt <= now) {
     rateStore.set(clientKey, { count: 1, resetAt: now + rule.windowMs })

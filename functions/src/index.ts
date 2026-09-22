@@ -271,7 +271,7 @@ async function validateFileBeforeStorage(tmpIn: string, filename: string, conten
 // Firestore: workspaces/{wsId}/milestones/{milestoneId}
 // Supports: Images (watermarked to JPEG), Videos, PDFs, Documents (copied as-is)
 // ------------------------------
-export const watermarkMilestoneUpload = onObjectFinalized(async (event) => {
+export const watermarkMilestoneUpload = onObjectFinalized({ bucket: "changeworker-e1770.firebasestorage.app" }, async (event) => {
   try {
     const filePath = event.data.name || ""
     const contentType = event.data.contentType || ""
@@ -410,7 +410,7 @@ export const watermarkMilestoneUpload = onObjectFinalized(async (event) => {
 // Writes preview url into:
 // Firestore: workspaces/{wsId}/hourly/session/checkins/{checkinId}
 // ------------------------------
-export const watermarkHourlyCheckinUpload = onObjectFinalized(async (event) => {
+export const watermarkHourlyCheckinUpload = onObjectFinalized({ bucket: "changeworker-e1770.firebasestorage.app" }, async (event) => {
   const filePath = event.data.name || ""
   const contentType = event.data.contentType || ""
 
@@ -463,7 +463,7 @@ export const watermarkHourlyCheckinUpload = onObjectFinalized(async (event) => {
 // Firestore: workspaces/{wsId}/finalWork/submission
 // Supports: Images (watermarked to JPEG), Videos, PDFs, Documents (copied as-is)
 // ------------------------------
-export const watermarkFinalWorkUpload = onObjectFinalized(async (event) => {
+export const watermarkFinalWorkUpload = onObjectFinalized({ bucket: "changeworker-e1770.firebasestorage.app" }, async (event) => {
   try {
     const filePath = event.data.name || ""
     const contentType = event.data.contentType || ""
